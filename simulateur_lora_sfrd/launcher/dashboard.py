@@ -19,10 +19,10 @@ ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 if ROOT_DIR not in sys.path:
     sys.path.insert(0, ROOT_DIR)
 
-from .simulator import Simulator  # noqa: E402
-from .channel import Channel  # noqa: E402
-from . import adr_standard_1, adr_2, adr_3  # noqa: E402
-from .compare_flora import load_flora_metrics  # noqa: E402
+from launcher.simulator import Simulator  # noqa: E402
+from launcher.channel import Channel  # noqa: E402
+from launcher import adr_standard_1, adr_2, adr_3  # noqa: E402
+from launcher.compare_flora import load_flora_metrics  # noqa: E402
 
 # --- Initialisation Panel ---
 pn.extension("plotly", raw_css=[
@@ -674,7 +674,7 @@ def setup_simulation(seed_offset: int = 0):
     # Choisir le modèle de mobilité
     mobility_instance = None
     if mobility_model_select.value == "Path":
-        from .path_mobility import PathMobility
+        from launcher.path_mobility import PathMobility
         mobility_instance = PathMobility(
             float(area_input.value),
             path_map or [[0]],
@@ -683,7 +683,7 @@ def setup_simulation(seed_offset: int = 0):
             dynamic_obstacles=dyn_map,
         )
     elif mobility_model_select.value == "RandomWaypoint":
-        from .random_waypoint import RandomWaypoint
+        from launcher.random_waypoint import RandomWaypoint
         mobility_instance = RandomWaypoint(
             float(area_input.value),
             min_speed=float(mobility_speed_min_input.value),
@@ -691,7 +691,7 @@ def setup_simulation(seed_offset: int = 0):
             terrain=terrain_map,
         )
     else:
-        from .smooth_mobility import SmoothMobility
+        from launcher.smooth_mobility import SmoothMobility
         mobility_instance = SmoothMobility(
             float(area_input.value),
             float(mobility_speed_min_input.value),
