@@ -88,6 +88,8 @@ class AdvancedChannel:
         humidity_std_percent: float = 0.0,
         humidity_noise_coeff_dB: float = 0.0,
         phase_noise_std_dB: float = 0.0,
+        phase_offset_rad: float = 0.0,
+        phase_offset_std_rad: float = 0.0,
         clock_jitter_std_s: float = 0.0,
         frontend_filter_order: int = 0,
         frontend_filter_bw: float | None = None,
@@ -100,6 +102,8 @@ class AdvancedChannel:
         multipath_paths: int = 1,
         indoor_n_floors: int = 0,
         indoor_floor_loss_dB: float = 15.0,
+        tx_start_delay_s: float = 0.0,
+        rx_start_delay_s: float = 0.0,
         **kwargs,
     ) -> None:
         """Initialise the advanced channel with optional propagation models.
@@ -150,6 +154,10 @@ class AdvancedChannel:
             d'humidité pour moduler le bruit (dB).
         :param phase_noise_std_dB: Bruit de phase appliqué au SNR (écart-type en
             dB).
+        :param phase_offset_rad: Décalage de phase moyen (radians) appliqué lors
+            du calcul de la synchronisation.
+        :param phase_offset_std_rad: Variation temporelle du décalage de phase
+            (radians).
         :param clock_jitter_std_s: Gigue d'horloge (s) appliquée au décalage
             temporel à chaque calcul.
         :param frontend_filter_order: Ordre du filtre passe-bande simulé.
@@ -159,6 +167,8 @@ class AdvancedChannel:
             ``itu_indoor``.
         :param indoor_floor_loss_dB: Perte moyenne par étage pour
             ``itu_indoor``.
+        :param tx_start_delay_s: Délai d'activation de l'émetteur (s).
+        :param rx_start_delay_s: Délai d'activation du récepteur (s).
         :param obstacle_map: Maillage décrivant les pertes additionnelles (dB)
             sur le trajet. Une valeur négative bloque totalement la liaison.
         :param map_area_size: Taille (mètres) correspondant au maillage pour
@@ -240,6 +250,17 @@ class AdvancedChannel:
             fading_correlation,
         )
         self._phase_noise = _CorrelatedValue(0.0, phase_noise_std_dB, fading_correlation)
+        self._phase_offset = _CorrelatedValue(
+            phase_offset_rad,
+            phase_offset_std_rad,
+            fading_correlation,
+        )
+        self.tx_start_delay_s = float(tx_start_delay_s)
+        self.rx_start_delay_s = float(rx_start_delay_s)
+        self._tx_timer = 0.0
+        self._rx_timer = 0.0
+        self.tx_state = "on" if self.tx_start_delay_s == 0.0 else "off"
+        self.rx_state = "on" if self.rx_start_delay_s == 0.0 else "off"
         if obstacle_map is None and obstacle_map_file:
             from .map_loader import load_map
             obstacle_map = load_map(obstacle_map_file)
@@ -256,6 +277,42 @@ class AdvancedChannel:
             self._cols = len((obstacle_map or obstacle_height_map)[0]) if self._rows else 0
         else:
             self._rows = self._cols = 0
+
+    # ------------------------------------------------------------------
+    # Transceiver state helpers
+    # ------------------------------------------------------------------
+    def start_tx(self) -> None:
+        """Activate transmitter after a startup delay."""
+        if self.tx_start_delay_s > 0.0:
+            self.tx_state = "starting"
+            self._tx_timer = self.tx_start_delay_s
+        else:
+            self.tx_state = "on"
+
+    def start_rx(self) -> None:
+        """Activate receiver after a startup delay."""
+        if self.rx_start_delay_s > 0.0:
+            self.rx_state = "starting"
+            self._rx_timer = self.rx_start_delay_s
+        else:
+            self.rx_state = "on"
+
+    def stop_tx(self) -> None:
+        self.tx_state = "off"
+
+    def stop_rx(self) -> None:
+        self.rx_state = "off"
+
+    def update(self, dt: float) -> None:
+        """Advance internal timers by ``dt`` seconds."""
+        if self.tx_state == "starting":
+            self._tx_timer -= dt
+            if self._tx_timer <= 0.0:
+                self.tx_state = "on"
+        if self.rx_state == "starting":
+            self._rx_timer -= dt
+            if self._rx_timer <= 0.0:
+                self.rx_state = "on"
 
     # ------------------------------------------------------------------
     # Propagation models
@@ -407,6 +464,8 @@ class AdvancedChannel:
         ``tx_pos`` and ``rx_pos`` may include an optional altitude as third
         coordinate to interact with ``obstacle_height_map``.
         """
+        if self.rx_state != "on":
+            return -float("inf"), -float("inf")
         if freq_offset_hz is None:
             freq_offset_hz = self._freq_offset.sample()
         # Include time-varying frequency drift
@@ -469,8 +528,11 @@ class AdvancedChannel:
         noise += model.noise_variation()
         rssi += self.fading_model.sample_db()
 
+        rssi -= self.base._filter_attenuation_db(freq_offset_hz)
+
+        phase = self._phase_offset.sample()
         # Additional penalty if transmissions are not perfectly aligned
-        penalty = self._interference_penalty_db(freq_offset_hz, sync_offset_s, sf)
+        penalty = self._interference_penalty_db(freq_offset_hz, sync_offset_s, phase, sf)
         noise += penalty
 
         snr = rssi - noise - abs(self._phase_noise.sample())
@@ -483,6 +545,7 @@ class AdvancedChannel:
         self,
         freq_offset_hz: float,
         sync_offset_s: float,
+        phase_offset_rad: float,
         sf: int | None,
     ) -> float:
         """Simple penalty model for imperfect alignment."""
@@ -495,4 +558,5 @@ class AdvancedChannel:
         time_factor = abs(sync_offset_s) / symbol_time
         if freq_factor >= 1.0 and time_factor >= 1.0:
             return float("inf")
-        return 10 * math.log10(1.0 + freq_factor ** 2 + time_factor ** 2)
+        phase_factor = abs(math.sin(phase_offset_rad / 2.0))
+        return 10 * math.log10(1.0 + freq_factor ** 2 + time_factor ** 2 + phase_factor ** 2)
