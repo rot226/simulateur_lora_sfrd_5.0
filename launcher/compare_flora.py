@@ -138,7 +138,7 @@ def load_flora_metrics(path: str | Path) -> dict[str, Any]:
     sf_cols = [
         c
         for c in df.columns
-        if c.startswith("sf") and not c.startswith("sf_collisions")
+        if c.startswith("sf") and not c.startswith("collisions_sf")
     ]
     sf_hist = {int(c[2:]): int(df[c].sum()) for c in sf_cols}
 
