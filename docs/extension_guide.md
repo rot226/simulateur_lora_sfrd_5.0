@@ -38,5 +38,4 @@ ajouter de nouvelles logiques.
 
 ## Conseils aux contributeurs
 
-Avant de proposer une pull request, v\u00e9rifiez que `pytest` s'ex\u00e9cute sans
-\u00e9chec et ajoutez des tests lorsque c'est pertinent.
+Avant de proposer une pull request, v\u00e9rifiez que `pytest` s'ex\u00e9cute sans \u00e9chec et ajoutez des tests lorsque c'est pertinent.
