@@ -72,6 +72,7 @@ class Simulator:
                  phy_model: str = "",
                  terrain_map: str | list[list[float]] | None = None,
                  path_map: str | list[list[float]] | None = None,
+                 dynamic_obstacles: str | list[dict] | None = None,
                  beacon_drift: float = 0.0,
                  *,
                  clock_accuracy: float = 0.0,
@@ -128,6 +129,8 @@ class Simulator:
         :param path_map: Carte de type obstacle où un chemin doit être trouvé
             entre deux positions. Lorsque défini, la mobilité suit les
             plus courts chemins évitant les obstacles.
+        :param dynamic_obstacles: Fichier JSON ou liste décrivant des obstacles
+            mouvants pour ``PathMobility``.
         :param beacon_drift: Dérive relative appliquée aux beacons (ppm).
         :param clock_accuracy: Écart-type de la dérive d'horloge des nœuds
             (ppm). Chaque nœud se voit attribuer un décalage aléatoire selon
@@ -177,6 +180,7 @@ class Simulator:
                 path_map,
                 min_speed=mobility_speed[0],
                 max_speed=mobility_speed[1],
+                dynamic_obstacles=dynamic_obstacles,
             )
         elif terrain_map is not None:
             if isinstance(terrain_map, (str, Path)):

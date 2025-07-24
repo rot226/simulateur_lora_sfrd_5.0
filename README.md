@@ -110,7 +110,10 @@ donc continus et sans téléportation.
 Un modèle `PathMobility` permet également de suivre des chemins définis sur une
 grille en évitant les obstacles et peut prendre en compte un relief ainsi que
 des hauteurs de bâtiments. L'altitude du nœud est alors mise à jour à chaque
-déplacement pour un calcul radio plus réaliste.
+déplacement pour un calcul radio plus réaliste. Ce modèle peut désormais lire
+une **carte d'obstacles dynamiques** (fichier JSON) listant les positions,
+rayons et vitesses des objets à éviter. Le tableau de bord propose un champ
+« Carte d’obstacles dynamiques » pour charger ce fichier.
 Deux champs « Vitesse min » et « Vitesse max » sont disponibles dans le
 `dashboard` pour définir cette plage avant de lancer la simulation.
 Plusieurs schémas supplémentaires peuvent être utilisés :

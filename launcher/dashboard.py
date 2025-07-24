@@ -188,6 +188,8 @@ ini_file_label = pn.pane.Str("", width=200)
 # Map for path-based mobility
 path_map_input = pn.widgets.FileInput(name="Carte de parcours", accept=".json")
 path_map_label = pn.pane.Str("", width=200)
+dyn_obs_input = pn.widgets.FileInput(name="Carte d'obstacles dynamiques", accept=".json")
+dyn_obs_label = pn.pane.Str("", width=200)
 flora_csv_input = pn.widgets.FileInput(name="CSV FLoRa", accept=".csv")
 flora_csv_label = pn.pane.Str("", width=200)
 
@@ -622,6 +624,15 @@ def setup_simulation(seed_offset: int = 0):
         tmp_map.flush()
         path_map = tmp_map.name
 
+    dyn_map = None
+    if dyn_obs_input.value:
+        import tempfile
+
+        tmp_dyn = tempfile.NamedTemporaryFile(delete=False, suffix=".json")
+        tmp_dyn.write(dyn_obs_input.value.encode())
+        tmp_dyn.flush()
+        dyn_map = tmp_dyn.name
+
     global flora_metrics
     flora_metrics = None
     if flora_csv_input.value:
@@ -665,6 +676,7 @@ def setup_simulation(seed_offset: int = 0):
         min_interference_time=float(min_interference_input.value),
         config_file=config_path,
         path_map=path_map,
+        dynamic_obstacles=dyn_map,
         seed=seed,
     )
 
@@ -1166,12 +1178,17 @@ def on_map_filename(event):
     path_map_label.object = event.new or ""
 
 
+def on_dyn_filename(event):
+    dyn_obs_label.object = event.new or ""
+
+
 def on_csv_filename(event):
     flora_csv_label.object = event.new or ""
 
 
 ini_file_input.param.watch(on_ini_filename, "filename")
 path_map_input.param.watch(on_map_filename, "filename")
+dyn_obs_input.param.watch(on_dyn_filename, "filename")
 flora_csv_input.param.watch(on_csv_filename, "filename")
 
 # --- Boutons ADR ---
@@ -1196,6 +1213,7 @@ controls = pn.WidgetBox(
     num_runs_input,
     pn.Row(ini_file_input, ini_file_label),
     pn.Row(path_map_input, path_map_label),
+    pn.Row(dyn_obs_input, dyn_obs_label),
     pn.Row(flora_csv_input, flora_csv_label),
     adr_node_checkbox,
     adr_server_checkbox,

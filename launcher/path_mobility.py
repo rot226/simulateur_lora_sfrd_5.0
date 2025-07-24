@@ -1,7 +1,9 @@
+import json
 import math
 import random
 
-from typing import List, Tuple
+from pathlib import Path
+from typing import List, Tuple, Iterable
 
 
 class PathMobility:
@@ -18,6 +20,7 @@ class PathMobility:
         obstacle_height_map: List[List[float]] | None = None,
         max_height: float = 0.0,
         step: float = 1.0,
+        dynamic_obstacles: Iterable[dict] | str | Path | None = None,
     ) -> None:
         self.area_size = float(area_size)
         self.path_map = path_map
@@ -39,6 +42,11 @@ class PathMobility:
             self.h_cols = len(obstacle_height_map[0]) if self.h_rows else 0
         else:
             self.h_rows = self.h_cols = 0
+        if isinstance(dynamic_obstacles, (str, Path)):
+            data = Path(dynamic_obstacles).read_text()
+            dynamic_obstacles = json.loads(data)
+        self.dynamic_obstacles = [dict(o) for o in (dynamic_obstacles or [])]
+        self._last_obs_update = 0.0
 
     # ------------------------------------------------------------------
     def _height_cell(self, cx: int, cy: int) -> float:
@@ -49,6 +57,24 @@ class PathMobility:
         hx = min(max(hx, 0), self.h_cols - 1)
         hy = min(max(hy, 0), self.h_rows - 1)
         return float(self.obstacle_height_map[hy][hx])
+
+    def _update_dynamic_obstacles(self, dt: float) -> None:
+        for obs in self.dynamic_obstacles:
+            obs["x"] = float(obs.get("x", 0.0) + obs.get("vx", 0.0) * dt)
+            obs["y"] = float(obs.get("y", 0.0) + obs.get("vy", 0.0) * dt)
+            if obs["x"] < 0.0 or obs["x"] > self.area_size:
+                obs["vx"] = -obs.get("vx", 0.0)
+                obs["x"] = min(max(obs["x"], 0.0), self.area_size)
+            if obs["y"] < 0.0 or obs["y"] > self.area_size:
+                obs["vy"] = -obs.get("vy", 0.0)
+                obs["y"] = min(max(obs["y"], 0.0), self.area_size)
+
+    def _dynamic_blocked(self, x: float, y: float) -> bool:
+        for obs in self.dynamic_obstacles:
+            radius = float(obs.get("radius", 0.0))
+            if math.hypot(x - obs.get("x", 0.0), y - obs.get("y", 0.0)) <= radius:
+                return True
+        return False
 
     def _elevation(self, x: float, y: float) -> float:
         if not self.elevation or self.e_rows == 0 or self.e_cols == 0:
@@ -138,6 +164,9 @@ class PathMobility:
         dt = current_time - node.last_move_time
         if dt <= 0:
             return
+        if self.dynamic_obstacles:
+            self._update_dynamic_obstacles(current_time - self._last_obs_update)
+            self._last_obs_update = current_time
         distance = dt * node.speed
         while distance > 0 and node.path_index < len(node.path) - 1:
             dest_x, dest_y = node.path[node.path_index + 1]
@@ -145,15 +174,23 @@ class PathMobility:
             dy = dest_y - node.y
             seg_len = math.hypot(dx, dy)
             if distance >= seg_len:
-                node.x = dest_x
-                node.y = dest_y
-                node.path_index += 1
-                distance -= seg_len
+                new_x, new_y = dest_x, dest_y
+                move_len = seg_len
             else:
                 ratio = distance / seg_len
-                node.x += dx * ratio
-                node.y += dy * ratio
+                new_x = node.x + dx * ratio
+                new_y = node.y + dy * ratio
+                move_len = distance
+            if self.dynamic_obstacles and self._dynamic_blocked(new_x, new_y):
+                node.path = self._new_path(node.x, node.y)
+                node.path_index = 0
                 distance = 0
+                break
+            node.x = new_x
+            node.y = new_y
+            distance -= move_len
+            if move_len == seg_len:
+                node.path_index += 1
         if node.path_index >= len(node.path) - 1:
             node.path = self._new_path(node.x, node.y)
             node.path_index = 0
