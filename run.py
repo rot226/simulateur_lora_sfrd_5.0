@@ -92,16 +92,19 @@ def simulate(nodes, gateways, mode, interval, steps, channels=1,
                         else:
                             collisions += 1
                     else:
-                        collisions += nb_tx - 1
                         winner = random.choice(nodes_on_ch)
-                        for n in nodes_on_ch:
-                            if n == winner:
-                                delivered += 1
-                                delays.append(t - pending[n])
-                                del pending[n]
-                            else:
-                                # reste en attente pour le prochain tour
-                                pass
+                        success = True
+                        if fine_fading_std > 0.0 and random.gauss(0.0, fine_fading_std) < -3.0:
+                            success = False
+                        if noise_std > 0.0 and random.gauss(0.0, noise_std) > 3.0:
+                            success = False
+                        if success:
+                            collisions += nb_tx - 1
+                            delivered += 1
+                            delays.append(t - pending[winner])
+                            del pending[winner]
+                        else:
+                            collisions += nb_tx
 
     # Calcul des métriques finales
     pdr = (
