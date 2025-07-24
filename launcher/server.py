@@ -208,6 +208,10 @@ class NetworkServer:
             (at_time if at_time is not None else self.simulator.current_time)
             + self.process_delay
         )
+        if process_time <= self.simulator.current_time:
+            # Pas de délai de traitement -> traiter immédiatement
+            self.receive(event_id, node_id, gateway_id, rssi, frame)
+            return
         from .simulator import Event, EventType
 
         eid = self.simulator.event_id_counter
