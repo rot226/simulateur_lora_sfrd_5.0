@@ -534,6 +534,7 @@ class Simulator:
                         )
                     ),
                     flora_phy=node.channel.flora_phy if node.channel.phy_model == "flora" else None,
+                    orthogonal_sf=node.channel.orthogonal_sf,
                 )
 
             # Retenir le meilleur RSSI/SNR mesuré pour cette transmission
