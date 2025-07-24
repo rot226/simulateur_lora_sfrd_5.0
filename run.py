@@ -49,7 +49,8 @@ def simulate(nodes, gateways, mode, interval, steps, channels=1,
     node_gateways = {node: node % max(1, gateways) for node in range(nodes)}
     for node in range(nodes):
         if mode_lower == "periodic":
-            t = 0.0
+            # Randomize the initial offset like the full Simulator
+            t = random.random() * interval
             while t < steps:
                 send_times[node].append(int(round(t)))
                 t += interval
