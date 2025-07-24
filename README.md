@@ -334,7 +334,7 @@ mais simplifie volontairement certains aspects.
 - interface graphique OMNeT++ et couche physique détaillée
 
 ### Écarts connus avec FLoRa
-- le canal radio reste moins détaillé (propagation et capture simplifiées)
+- le canal radio est maintenant plus détaillé (multipath, interférences cumulées, sensibilité par SF) mais peut encore différer légèrement
 - absence de modélisation fine du moteur d'événements OMNeT++
 - certaines temporisations ou files d'attente du serveur diffèrent
 - la sensibilité et le bruit thermiques sont approchés de manière empirique
@@ -436,8 +436,9 @@ Les points suivants ont été intégrés au simulateur :
 Le simulateur reste volontairement léger et certaines fonctionnalités manquent
 encore de maturité :
 
-- La couche physique est simplifiée et n'imite pas parfaitement les comportements
-  réels des modems LoRa.
+- La couche physique modélise désormais le multipath, l'interférence cumulative
+  et la sensibilité dépendante du SF. Certains écarts subsistent néanmoins avec
+  les modems LoRa réels.
 - La mobilité par défaut s'appuie sur des trajets de Bézier. Un modèle RandomWaypoint peut exploiter une carte de terrain pour éviter les obstacles. Un module de navigation peut désormais planifier des chemins à partir d'une carte d'obstacles.
 - La sécurité LoRaWAN s'appuie désormais sur un chiffrement AES-128 complet et la validation du MIC. Le serveur de jointure gère l'ensemble de la procédure OTAA.
 

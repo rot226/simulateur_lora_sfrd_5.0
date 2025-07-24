@@ -49,6 +49,7 @@ class Channel:
         path_loss_exp: float = 2.7,
         shadowing_std: float = 6.0,
         fast_fading_std: float = 0.0,
+        multipath_paths: int = 1,
         cable_loss_dB: float = 0.0,
         tx_antenna_gain_dB: float = 0.0,
         rx_antenna_gain_dB: float = 0.0,
@@ -98,6 +99,7 @@ class Channel:
         :param path_loss_exp: Exposant de perte de parcours (log-distance).
         :param shadowing_std: Écart-type du shadowing (variations aléatoires en dB), 0 pour ignorer.
         :param fast_fading_std: Variation rapide de l'amplitude (dB) pour simuler le fading multipath.
+        :param multipath_paths: Nombre de trajets additionnés pour modéliser les échos.
         :param cable_loss_dB: Pertes fixes dues au câble/connectique (dB).
         :param tx_antenna_gain_dB: Gain de l'antenne émettrice (dB).
         :param rx_antenna_gain_dB: Gain de l'antenne réceptrice (dB).
@@ -188,6 +190,7 @@ class Channel:
         self.path_loss_exp = path_loss_exp
         self.shadowing_std = shadowing_std  # σ en dB (ex: 6.0 pour environnement urbain/suburbain)
         self.fast_fading_std = fast_fading_std
+        self.multipath_paths = max(1, int(multipath_paths))
         self.cable_loss_dB = cable_loss_dB
         self.tx_antenna_gain_dB = tx_antenna_gain_dB
         self.rx_antenna_gain_dB = rx_antenna_gain_dB
@@ -344,7 +347,10 @@ class Channel:
         if self.tx_power_std > 0:
             rssi += random.gauss(0, self.tx_power_std)
         if self.fast_fading_std > 0:
-            rssi += random.gauss(0, self.fast_fading_std)
+            fading = 0.0
+            for _ in range(self.multipath_paths):
+                fading += random.gauss(0, self.fast_fading_std)
+            rssi += fading / self.multipath_paths
         if self.time_variation_std > 0:
             rssi += random.gauss(0, self.time_variation_std)
         rssi += self.omnet.fine_fading()
