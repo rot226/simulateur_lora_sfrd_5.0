@@ -205,13 +205,19 @@ export_message = pn.pane.HTML("Cliquez sur Exporter pour générer le fichier CS
 
 # --- Indicateurs de métriques ---
 pdr_indicator = pn.indicators.Number(name="PDR", value=0, format="{value:.1%}")
-collisions_indicator = pn.indicators.Number(name="Collisions", value=0, format="{value:d}")
+# Display collisions as a float in case multiple runs are averaged
+collisions_indicator = pn.indicators.Number(
+    name="Collisions", value=0.0, format="{value:.1f}"
+)
 energy_indicator = pn.indicators.Number(name="Énergie Tx (J)", value=0.0, format="{value:.3f}")
 delay_indicator = pn.indicators.Number(name="Délai moyen (s)", value=0.0, format="{value:.3f}")
 throughput_indicator = pn.indicators.Number(name="Débit (bps)", value=0.0, format="{value:.2f}")
 
 # Indicateur de retransmissions
-retrans_indicator = pn.indicators.Number(name="Retransmissions", value=0, format="{value:d}")
+# Same for retransmissions which may also be averaged across runs
+retrans_indicator = pn.indicators.Number(
+    name="Retransmissions", value=0.0, format="{value:.1f}"
+)
 
 # Barre de progression pour l'accélération
 fast_forward_progress = pn.indicators.Progress(name="Avancement", value=0, width=200, visible=False)
