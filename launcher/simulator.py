@@ -122,7 +122,8 @@ class Simulator:
             exécution.
         :param class_c_rx_interval: Période entre deux vérifications de
             downlink pour les nœuds de classe C (s).
-        :param phy_model: "omnet" pour activer le modèle physique OMNeT++.
+        :param phy_model: "omnet" ou "flora" pour activer un modèle physique
+            inspiré de FLoRa.
         :param terrain_map: Carte de terrain utilisée pour la mobilité
             aléatoire (chemin JSON/texte ou matrice). Les valeurs négatives
             indiquent les obstacles et ralentissements éventuels.
@@ -523,9 +524,13 @@ class Simulator:
                     bandwidth=node.channel.bandwidth,
                     noise_floor=node.channel.noise_floor_dBm(),
                     capture_mode=(
-                        "omnet" if node.channel.phy_model == "omnet"
-                        else ("advanced" if node.channel.advanced_capture else "basic")
+                        "omnet" if node.channel.phy_model == "omnet" else (
+                            "flora" if node.channel.phy_model == "flora" else (
+                                "advanced" if node.channel.advanced_capture else "basic"
+                            )
+                        )
                     ),
+                    flora_phy=node.channel.flora_phy if node.channel.phy_model == "flora" else None,
                 )
 
             # Retenir le meilleur RSSI/SNR mesuré pour cette transmission

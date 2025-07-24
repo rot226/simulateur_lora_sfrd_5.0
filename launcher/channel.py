@@ -271,9 +271,16 @@ class Channel:
                 pa_non_linearity_std_dB=pa_non_linearity_std_dB,
                 phase_noise_std_dB=phase_noise_std_dB,
             )
+            self.flora_phy = None
+            self.advanced_capture = True
+        elif self.phy_model == "flora":
+            from .flora_phy import FloraPHY
+            self.flora_phy = FloraPHY(self)
+            self.omnet_phy = None
             self.advanced_capture = True
         else:
             self.omnet_phy = None
+            self.flora_phy = None
 
     def noise_floor_dBm(self) -> float:
         """Retourne le niveau de bruit (dBm) pour la bande passante configurée.
@@ -302,6 +309,8 @@ class Channel:
         """Calcule la perte de parcours (en dB) pour une distance donnée (m)."""
         if self.omnet_phy:
             return self.omnet_phy.path_loss(distance)
+        if getattr(self, "flora_phy", None):
+            return self.flora_phy.path_loss(distance)
         if distance <= 0:
             return 0.0
         freq_mhz = self.frequency_hz / 1e6
@@ -332,7 +341,7 @@ class Channel:
                 sync_offset_s=sync_offset_s,
             )
         loss = self.path_loss(distance)
-        if self.shadowing_std > 0:
+        if self.shadowing_std > 0 and not getattr(self, "flora_phy", None):
             loss += random.gauss(0, self.shadowing_std)
 
         tx_power_dBm += self._pa_nl.sample()

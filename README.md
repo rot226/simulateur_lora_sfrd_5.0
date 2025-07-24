@@ -217,6 +217,8 @@ réception :
   `(freq, bw, dB)` appliqués au calcul du bruit.
 - `environment` : preset rapide pour le modèle de propagation
   (`urban`, `urban_dense`, `suburban`, `rural`, `indoor` ou `flora`).
+- `phy_model` : "omnet" ou "flora" pour utiliser un modèle physique avancé
+  reprenant les formules de FLoRa.
 
 ```python
 from launcher.channel import Channel
