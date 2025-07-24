@@ -189,7 +189,8 @@ réception :
 
 - `cable_loss` : pertes fixes (dB) entre le transceiver et l'antenne.
 - `receiver_noise_floor` : bruit thermique de référence en dBm/Hz (par défaut
-  `-174`).
+  `-174`). Cette valeur est utilisée directement par le modèle OMNeT++ pour le
+  calcul du bruit de fond.
 - `noise_figure` : facteur de bruit du récepteur en dB.
 - `noise_floor_std` : écart-type de la variation aléatoire du bruit (dB).
 - `fast_fading_std` : amplitude du fading multipath en dB.
@@ -213,6 +214,10 @@ réception :
 - `oscillator_leakage_dB` / `oscillator_leakage_std_dB` : fuite
   d'oscillateur ajoutée au bruit.
 - `rx_fault_std_dB` : défauts de réception aléatoires pénalisant le SNR.
+- `freq_offset_std_hz` et `sync_offset_std_s` : variations du décalage
+  fréquentiel et temporel prises en compte par le modèle OMNeT++.
+- `dev_frequency_offset_hz` / `dev_freq_offset_std_hz` : dérive propre à
+  chaque émetteur.
 - `band_interference` : liste de brouilleurs sélectifs sous la forme
   `(freq, bw, dB)` appliqués au calcul du bruit.
 - `environment` : preset rapide pour le modèle de propagation

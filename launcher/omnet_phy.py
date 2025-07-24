@@ -31,6 +31,8 @@ class OmnetPHY:
         self,
         channel,
         *,
+        freq_offset_std_hz: float = 0.0,
+        sync_offset_std_s: float = 0.0,
         dev_frequency_offset_hz: float = 0.0,
         dev_freq_offset_std_hz: float = 0.0,
         temperature_std_K: float = 0.0,
@@ -56,6 +58,16 @@ class OmnetPHY:
             temperature_K=channel.omnet.temperature_K,
         )
         corr = channel.omnet.correlation
+        self._freq_offset = _CorrelatedValue(
+            channel.frequency_offset_hz,
+            freq_offset_std_hz,
+            corr,
+        )
+        self._sync_offset = _CorrelatedValue(
+            channel.sync_offset_s,
+            sync_offset_std_s,
+            corr,
+        )
         self._dev_freq = _CorrelatedValue(
             dev_frequency_offset_hz,
             dev_freq_offset_std_hz,
@@ -83,6 +95,7 @@ class OmnetPHY:
             corr,
         )
         self._rx_fault = _CorrelatedValue(0.0, rx_fault_std_dB, corr)
+        self.receiver_noise_floor_dBm = channel.receiver_noise_floor_dBm
         self.tx_start_delay_s = float(tx_start_delay_s)
         self.rx_start_delay_s = float(rx_start_delay_s)
         self.tx_state = "on" if self.tx_start_delay_s == 0.0 else "off"
@@ -136,14 +149,17 @@ class OmnetPHY:
     def noise_floor(self) -> float:
         """Return the noise floor (dBm) including optional variations."""
         ch = self.channel
-        if self._temperature.std > 0.0:
-            temp = self._temperature.sample()
-            original = self.model.temperature_K
-            self.model.temperature_K = temp
-            thermal = self.model.thermal_noise_dBm(ch.bandwidth)
-            self.model.temperature_K = original
+        if ch.receiver_noise_floor_dBm != -174.0:
+            thermal = ch.receiver_noise_floor_dBm
         else:
-            thermal = self.model.thermal_noise_dBm(ch.bandwidth)
+            if self._temperature.std > 0.0:
+                temp = self._temperature.sample()
+                original = self.model.temperature_K
+                self.model.temperature_K = temp
+                thermal = self.model.thermal_noise_dBm(ch.bandwidth)
+                self.model.temperature_K = original
+            else:
+                thermal = self.model.thermal_noise_dBm(ch.bandwidth)
         noise = thermal + ch.noise_figure_dB + ch.interference_dB
         if ch.humidity_noise_coeff_dB != 0.0:
             noise += ch.humidity_noise_coeff_dB * (ch._humidity.sample() / 100.0)
@@ -174,12 +190,12 @@ class OmnetPHY:
             loss += random.gauss(0.0, ch.shadowing_std)
 
         if freq_offset_hz is None:
-            freq_offset_hz = ch.frequency_offset_hz
+            freq_offset_hz = self._freq_offset.sample()
         # Include time-varying frequency drift
         freq_offset_hz += self.model.frequency_drift()
         freq_offset_hz += self._dev_freq.sample()
         if sync_offset_s is None:
-            sync_offset_s = ch.sync_offset_s
+            sync_offset_s = self._sync_offset.sample()
         # Include short-term clock jitter
         sync_offset_s += self.model.clock_drift()
 
