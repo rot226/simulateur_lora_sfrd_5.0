@@ -227,6 +227,16 @@ canal = Channel(environment="urban")
 
 Ces valeurs influencent le calcul du RSSI et du SNR retournés par
 `Channel.compute_rssi`.
+Un module **`propagation_models.py`** regroupe des fonctions de perte de parcours log-distance, de shadowing et de fading multipath.
+Il reprend les paramètres des fichiers INI de FLoRa, par exemple `sigma=3.57` pour le preset *flora*.
+
+```python
+from launcher.propagation_models import LogDistanceShadowing, multipath_fading_db
+model = LogDistanceShadowing(environment="flora")
+loss = model.path_loss(1000)
+fad = multipath_fading_db(taps=3)
+```
+
 
 Depuis cette mise à jour, la largeur de bande (`bandwidth`) et le codage
 (`coding_rate`) sont également configurables lors de la création d'un
