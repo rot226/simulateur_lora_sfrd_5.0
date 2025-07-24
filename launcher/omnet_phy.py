@@ -37,9 +37,13 @@ class OmnetPHY:
         pa_non_linearity_dB: float = 0.0,
         pa_non_linearity_std_dB: float = 0.0,
         phase_noise_std_dB: float = 0.0,
+        phase_offset_rad: float = 0.0,
+        phase_offset_std_rad: float = 0.0,
         oscillator_leakage_dB: float = 0.0,
         oscillator_leakage_std_dB: float = 0.0,
         rx_fault_std_dB: float = 0.0,
+        tx_start_delay_s: float = 0.0,
+        rx_start_delay_s: float = 0.0,
     ) -> None:
         """Initialise helper with optional hardware impairments."""
         self.channel = channel
@@ -68,12 +72,56 @@ class OmnetPHY:
             corr,
         )
         self._phase_noise = _CorrelatedValue(0.0, phase_noise_std_dB, corr)
+        self._phase_offset = _CorrelatedValue(
+            phase_offset_rad,
+            phase_offset_std_rad,
+            corr,
+        )
         self._osc_leak = _CorrelatedValue(
             oscillator_leakage_dB,
             oscillator_leakage_std_dB,
             corr,
         )
         self._rx_fault = _CorrelatedValue(0.0, rx_fault_std_dB, corr)
+        self.tx_start_delay_s = float(tx_start_delay_s)
+        self.rx_start_delay_s = float(rx_start_delay_s)
+        self.tx_state = "on" if self.tx_start_delay_s == 0.0 else "off"
+        self.rx_state = "on" if self.rx_start_delay_s == 0.0 else "off"
+        self._tx_timer = 0.0
+        self._rx_timer = 0.0
+
+    # ------------------------------------------------------------------
+    # Transceiver state helpers
+    # ------------------------------------------------------------------
+    def start_tx(self) -> None:
+        if self.tx_start_delay_s > 0.0:
+            self.tx_state = "starting"
+            self._tx_timer = self.tx_start_delay_s
+        else:
+            self.tx_state = "on"
+
+    def start_rx(self) -> None:
+        if self.rx_start_delay_s > 0.0:
+            self.rx_state = "starting"
+            self._rx_timer = self.rx_start_delay_s
+        else:
+            self.rx_state = "on"
+
+    def stop_tx(self) -> None:
+        self.tx_state = "off"
+
+    def stop_rx(self) -> None:
+        self.rx_state = "off"
+
+    def update(self, dt: float) -> None:
+        if self.tx_state == "starting":
+            self._tx_timer -= dt
+            if self._tx_timer <= 0.0:
+                self.tx_state = "on"
+        if self.rx_state == "starting":
+            self._rx_timer -= dt
+            if self._rx_timer <= 0.0:
+                self.rx_state = "on"
 
     # ------------------------------------------------------------------
     def path_loss(self, distance: float) -> float:
@@ -118,6 +166,8 @@ class OmnetPHY:
         freq_offset_hz: float | None = None,
         sync_offset_s: float | None = None,
     ) -> tuple[float, float]:
+        if self.rx_state != "on":
+            return -float("inf"), -float("inf")
         ch = self.channel
         loss = self.path_loss(distance)
         if ch.shadowing_std > 0:
@@ -132,6 +182,8 @@ class OmnetPHY:
             sync_offset_s = ch.sync_offset_s
         # Include short-term clock jitter
         sync_offset_s += self.model.clock_drift()
+
+        phase = self._phase_offset.sample()
 
         tx_power_dBm += self._pa_nl.sample()
         rssi = (
@@ -152,7 +204,7 @@ class OmnetPHY:
         rssi -= ch._filter_attenuation_db(freq_offset_hz)
 
         snr = rssi - self.noise_floor() + ch.snr_offset_dB
-        penalty = self._alignment_penalty_db(freq_offset_hz, sync_offset_s, sf)
+        penalty = self._alignment_penalty_db(freq_offset_hz, sync_offset_s, phase, sf)
         snr -= penalty
         snr -= abs(self._phase_noise.sample())
         snr -= abs(self._rx_fault.sample())
@@ -161,7 +213,7 @@ class OmnetPHY:
         return rssi, snr
 
     def _alignment_penalty_db(
-        self, freq_offset_hz: float, sync_offset_s: float, sf: int | None
+        self, freq_offset_hz: float, sync_offset_s: float, phase_offset_rad: float, sf: int | None
     ) -> float:
         """Return SNR penalty for imperfect alignment."""
         bw = self.channel.bandwidth
@@ -173,7 +225,8 @@ class OmnetPHY:
         time_factor = abs(sync_offset_s) / symbol_time
         if freq_factor >= 1.0 and time_factor >= 1.0:
             return float("inf")
-        return 10 * math.log10(1.0 + freq_factor ** 2 + time_factor ** 2)
+        phase_factor = abs(math.sin(phase_offset_rad / 2.0))
+        return 10 * math.log10(1.0 + freq_factor ** 2 + time_factor ** 2 + phase_factor ** 2)
 
     def capture(self, rssi_list: list[float]) -> list[bool]:
         """Return list of booleans indicating which signals are captured."""
