@@ -261,14 +261,14 @@ class Channel:
         # Low Data Rate Optimization activée au-delà de ce SF
         self.low_data_rate_threshold = 11  # SF >= 11 -> Low Data Rate Optimization activée
 
-        # Sensibilité approximative par SF (dBm) pour BW=125kHz, CR=4/5
+        # Sensibilité par SF (dBm) basée sur la table Semtech SX1272/73
         self.sensitivity_dBm = {
-            7: -123,
-            8: -126,
-            9: -129,
-            10: -132,
-            11: -134.5,
-            12: -137
+            7: -124,
+            8: -127,
+            9: -130,
+            10: -133,
+            11: -135,
+            12: -137,
         }
         # Seuil de capture (différence de RSSI en dB pour qu'un signal plus fort capture la réception)
         self.capture_threshold_dB = capture_threshold_dB
