@@ -4,11 +4,12 @@ import heapq
 class DownlinkScheduler:
     """Simple scheduler for downlink frames for class B/C nodes."""
 
-    def __init__(self):
+    def __init__(self, link_delay: float = 0.0):
         self.queue: dict[int, list[tuple[float, int, int, object, object]]] = {}
         self._counter = 0
         # Track when each gateway becomes free to transmit
         self._gateway_busy: dict[int, float] = {}
+        self.link_delay = link_delay
 
     @staticmethod
     def _payload_length(frame) -> int:
@@ -58,6 +59,7 @@ class DownlinkScheduler:
         busy = self._gateway_busy.get(gateway.id, 0.0)
         if t < busy:
             t = busy
+        t += self.link_delay
         self.schedule(node.id, t, frame, gateway, priority=priority)
         self._gateway_busy[gateway.id] = t + duration
         return t
@@ -68,6 +70,7 @@ class DownlinkScheduler:
         busy = self._gateway_busy.get(gateway.id, 0.0)
         if time < busy:
             time = busy
+        time += self.link_delay
         self.schedule(node.id, time, frame, gateway, priority=priority)
         self._gateway_busy[gateway.id] = time + duration
         return time
@@ -77,6 +80,7 @@ class DownlinkScheduler:
         from .lorawan import next_beacon_time
 
         t = next_beacon_time(after_time, beacon_interval)
+        t += self.link_delay
         self.schedule(0, t, frame, gateway, priority=priority)
         return t
 

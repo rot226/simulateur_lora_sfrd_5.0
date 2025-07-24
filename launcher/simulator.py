@@ -68,6 +68,7 @@ class Simulator:
                  detection_threshold_dBm: float = -float("inf"),
                  min_interference_time: float = 0.0,
                  flora_mode: bool = False,
+                 flora_timing: bool = False,
                  config_file: str | None = None,
                  seed: int | None = None,
                  class_c_rx_interval: float = 1.0,
@@ -118,6 +119,8 @@ class Simulator:
             transmissions avant de les considérer en collision (s).
         :param flora_mode: Active automatiquement les réglages du mode FLoRa
             complet (seuil -110 dBm et 5 s d'interférence minimale).
+        :param flora_timing: Utilise les temporisations du projet FLoRa
+            (délai réseau de 10 ms et traitement serveur de 1,2 s).
         :param config_file: Fichier INI listant les positions des nœuds et
             passerelles à charger. Lorsque défini, ``num_nodes`` et
             ``num_gateways`` sont ignorés.
@@ -174,6 +177,7 @@ class Simulator:
         self.detection_threshold_dBm = detection_threshold_dBm
         self.min_interference_time = min_interference_time
         self.flora_mode = flora_mode
+        self.flora_timing = flora_timing
         self.config_file = config_file
         self.phy_model = phy_model
         # Activation ou non de la mobilité des nœuds
@@ -252,8 +256,19 @@ class Simulator:
 
         # Compatibilité : premier canal par défaut
         self.channel = self.multichannel.channels[0]
+        # Réglages de temporisation inspirés de FLoRa
+        if flora_timing:
+            proc_delay = 1.2
+            net_delay = 0.01
+        else:
+            proc_delay = 0.0
+            net_delay = 0.0
         # Traiter immédiatement les paquets reçus pour éviter un retard artificiel
-        self.network_server = NetworkServer(simulator=self, process_delay=0.0)
+        self.network_server = NetworkServer(
+            simulator=self,
+            process_delay=proc_delay,
+            network_delay=net_delay,
+        )
         self.network_server.beacon_interval = self.beacon_interval
         self.network_server.beacon_drift = self.beacon_drift
         self.network_server.ping_slot_interval = self.ping_slot_interval
