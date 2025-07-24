@@ -117,9 +117,13 @@ class Node:
         self.energy_rx = 0.0
         self.energy_sleep = 0.0
         self.energy_processing = 0.0
+        # Transmission counters
         self.packets_sent = 0
         self.packets_success = 0
         self.packets_collision = 0
+        # Counters used for PDR calculation
+        self.tx_attempted = 0
+        self.rx_delivered = 0
 
         # Batterie (énergie disponible restante)
         self.battery_capacity_j = (
@@ -282,6 +286,8 @@ class Node:
             "packets_sent": self.packets_sent,
             "packets_success": self.packets_success,
             "packets_collision": self.packets_collision,
+            "tx_attempted": self.tx_attempted,
+            "rx_delivered": self.rx_delivered,
             "downlink_pending": self.downlink_pending,
             "acks_received": self.acks_received,
             "ack_history": self.ack_history,
@@ -292,10 +298,12 @@ class Node:
     def increment_sent(self):
         """Incrémente le compteur de paquets envoyés."""
         self.packets_sent += 1
+        self.tx_attempted += 1
 
     def increment_success(self):
         """Incrémente le compteur de paquets transmis avec succès."""
         self.packets_success += 1
+        self.rx_delivered += 1
 
     def increment_collision(self):
         """Incrémente le compteur de paquets perdus en collision."""
@@ -309,7 +317,7 @@ class Node:
     def pdr(self) -> float:
         """Retourne le PDR global de ce nœud."""
         return (
-            self.packets_success / self.packets_sent if self.packets_sent > 0 else 0.0
+            self.rx_delivered / self.tx_attempted if self.tx_attempted > 0 else 0.0
         )
 
     @property
