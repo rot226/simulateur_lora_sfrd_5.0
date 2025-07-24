@@ -1,4 +1,3 @@
-import pytest
 from launcher.channel import Channel
 
 
