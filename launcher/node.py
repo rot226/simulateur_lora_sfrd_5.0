@@ -207,6 +207,7 @@ class Node:
         self.last_snr: float | None = None
         self.downlink_pending: int = 0
         self.acks_received: int = 0
+        self.ack_history: list[bool] = []
 
         # ADR helper flags
         self.last_adr_ack_req: bool = False
@@ -283,6 +284,7 @@ class Node:
             "packets_collision": self.packets_collision,
             "downlink_pending": self.downlink_pending,
             "acks_received": self.acks_received,
+            "ack_history": self.ack_history,
             "beacon_loss_prob": self.beacon_loss_prob,
             "beacon_drift": self.beacon_drift,
         }
@@ -318,6 +320,12 @@ class Node:
             return 0.0
         success = sum(1 for e in self.history if e.get("delivered"))
         return success / total
+
+    def _record_ack(self, success: bool) -> None:
+        """Store ACK result in history (max 32 values)."""
+        self.ack_history.append(success)
+        if len(self.ack_history) > 32:
+            self.ack_history.pop(0)
 
     def add_energy(self, energy_joules: float, state: str = "tx"):
         """Ajoute de l'énergie consommée pour un état donné."""
@@ -366,6 +374,10 @@ class Node:
     def prepare_uplink(self, payload: bytes, confirmed: bool = False):
         """Build an uplink LoRaWAN frame or OTAA JoinRequest."""
         from .lorawan import LoRaWANFrame, JoinRequest
+
+        if self.awaiting_ack:
+            self._record_ack(False)
+            self.awaiting_ack = False
 
         if not self.activated:
             req = JoinRequest(self.join_eui, self.dev_eui, self.devnonce)
@@ -466,6 +478,7 @@ class Node:
             # ACK bit set -> the server acknowledged our last uplink
             self.awaiting_ack = False
             self.acks_received += 1
+            self._record_ack(True)
 
         if frame.confirmed:
             # Confirmed downlink -> we must acknowledge on next uplink
@@ -704,17 +717,16 @@ class Node:
 
     def _check_adr_ack_delay(self) -> None:
         """Reduce data rate when ADR_ACK_DELAY has elapsed with no downlink."""
-        from .lorawan import TX_POWER_INDEX_TO_DBM
+        from .lorawan import TX_POWER_INDEX_TO_DBM, DBM_TO_TX_POWER_INDEX
 
         if self.adr_ack_cnt >= self.adr_ack_limit + self.adr_ack_delay:
             if self.sf < 12:
                 self.sf += 1
             else:
-                # LoRaWAN augmente normalement la puissance
-                # par paliers lorsque SF=12 et qu'aucun downlink
-                # n'est reçu. Ici nous passons directement à la
-                # puissance maximale pour simplifier.
-                self.tx_power = TX_POWER_INDEX_TO_DBM[0]
+                idx = DBM_TO_TX_POWER_INDEX.get(int(self.tx_power), 0)
+                if idx > 0:
+                    idx -= 1
+                    self.tx_power = TX_POWER_INDEX_TO_DBM[idx]
             self.adr_ack_cnt = 0
 
     def schedule_receive_windows(self, end_time: float):

@@ -457,6 +457,8 @@ Les points suivants ont été intégrés au simulateur :
 - **Historique glissant et indicateurs QoS.** Le simulateur calcule désormais le délai moyen de livraison ainsi que le nombre de retransmissions sur la période récente.
 - **Indicateurs supplémentaires.** La méthode `get_metrics()` retourne le PDR par SF, passerelle, classe et nœud. Le tableau de bord affiche un récapitulatif et l'export produit deux fichiers CSV : un pour les événements détaillés et un pour les métriques agrégées.
 - **Moteur d'événements précis.** La file de priorité gère désormais un délai de traitement serveur et la détection des collisions pendant la réception pour se rapprocher du modèle OMNeT++.
+- **Suivi détaillé des ACK.** Chaque nœud mémorise les confirmations reçues pour appliquer fidèlement la logique ADR de FLoRa.
+- **Scheduler de downlinks prioritaire.** Le module `downlink_scheduler.py` organise les transmissions B/C en donnant la priorité aux commandes et accusés de réception.
 
 ## Limites actuelles
 
