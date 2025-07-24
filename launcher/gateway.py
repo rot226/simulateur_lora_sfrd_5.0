@@ -2,6 +2,7 @@ import logging
 import math
 
 logger = logging.getLogger(__name__)
+diag_logger = logging.getLogger("diagnostics")
 
 class Gateway:
     """Représente une passerelle LoRa recevant les paquets des nœuds."""
@@ -206,7 +207,12 @@ class Gateway:
                 self.active_map.setdefault(key, []).append(new_transmission)
                 self.active_by_event[event_id] = (key, new_transmission)
             # Sinon, la nouvelle transmission est perdue (on ne l'ajoute pas)
-            logger.debug(f"Gateway {self.id}: collision avec capture – paquet {strongest['event_id']} capturé, autres perdus.")
+            logger.debug(
+                f"Gateway {self.id}: collision avec capture – paquet {strongest['event_id']} capturé, autres perdus.")
+            diag_logger.info(
+                f"t={current_time:.2f} gw={self.id} capture winner={strongest['event_id']} "
+                f"losers={[t['event_id'] for t in colliders if t is not strongest]}"
+            )
         else:
             # Aucun signal ne peut être décodé (collision totale)
             for t in colliders:
@@ -219,7 +225,11 @@ class Gateway:
                 except (ValueError, KeyError):
                     pass
             # Ne pas ajouter la nouvelle transmission car tout est perdu (pas de décodage possible)
-            logger.debug(f"Gateway {self.id}: collision sans capture – toutes les transmissions en collision sont perdues.")
+            logger.debug(
+                f"Gateway {self.id}: collision sans capture – toutes les transmissions en collision sont perdues.")
+            diag_logger.info(
+                f"t={current_time:.2f} gw={self.id} collision={[t['event_id'] for t in colliders]} none"
+            )
             # **Simplification** : après une collision totale, on considère le canal libre (les signaux brouillés ne sont pas conservés).
             return
 
