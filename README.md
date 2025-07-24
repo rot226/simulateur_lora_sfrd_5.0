@@ -311,6 +311,9 @@ variance de shadowing correspondants. Les champs restent modifiables si ce mode
 est désactivé. Pour reproduire fidèlement les scénarios FLoRa d'origine, pensez
 également à renseigner les positions des nœuds telles qu'indiquées dans l'INI.
 L'équivalent en script consiste à passer `flora_mode=True` au constructeur `Simulator`.
+Lorsque `phy_model="flora"` est utilisé (par exemple en mode FLoRa), le preset
+`environment="flora"` est désormais appliqué automatiquement afin de conserver
+un exposant de 2,7 et un shadowing de 3,57 dB identiques au modèle d'origine.
 
 ## SF et puissance initiaux
 
