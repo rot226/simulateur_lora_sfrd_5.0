@@ -91,6 +91,7 @@ class Channel:
         environment: str | None = None,
         region: str | None = None,
         channel_index: int = 0,
+        orthogonal_sf: bool = True,
     ):
         """
         Initialise le canal radio avec paramètres de propagation.
@@ -161,6 +162,8 @@ class Channel:
             la fréquence correspondante du canal ``channel_index``.
         :param channel_index: Index du canal à utiliser dans le plan de la
             région choisie.
+        :param orthogonal_sf: Si ``True``, les transmissions de SF différents
+            n'interfèrent pas entre elles.
         """
 
         if environment is not None:
@@ -261,6 +264,7 @@ class Channel:
         }
         # Seuil de capture (différence de RSSI en dB pour qu'un signal plus fort capture la réception)
         self.capture_threshold_dB = capture_threshold_dB
+        self.orthogonal_sf = orthogonal_sf
 
         if self.phy_model == "omnet":
             from .omnet_phy import OmnetPHY

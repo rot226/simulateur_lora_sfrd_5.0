@@ -54,6 +54,7 @@ class Gateway:
         noise_floor: float | None = None,
         capture_mode: str = "basic",
         flora_phy=None,
+        orthogonal_sf: bool = True,
     ):
         """
         Tente de démarrer la réception d'une nouvelle transmission sur cette passerelle.
@@ -73,6 +74,8 @@ class Gateway:
             un calcul basé sur le SNR.
         :param flora_phy: Instance ``FloraPHY`` lorsque ``capture_mode`` vaut
             "flora".
+        :param orthogonal_sf: Si ``True``, les transmissions de SF différents
+            sont ignorées pour la détection de collision.
         """
         key = (sf, frequency)
         concurrent_transmissions = [
@@ -82,6 +85,8 @@ class Gateway:
         # Filtrer les transmissions dont le chevauchement est significatif
         interfering_transmissions = []
         for t in concurrent_transmissions:
+            if orthogonal_sf and t.get('sf') != sf:
+                continue
             overlap = min(t['end_time'], end_time) - current_time
             if overlap > min_interference_time:
                 interfering_transmissions.append(t)
