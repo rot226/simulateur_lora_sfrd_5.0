@@ -1,13 +1,7 @@
 """Exécution d'un scénario FLoRa prêt à l'emploi."""
 
-import os
-import sys
-
-# Ajoute le répertoire parent pour résoudre les imports du package ``launcher``
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-
-from launcher import Simulator
-from launcher.adr_standard_1 import apply as adr1
+from simulateur_lora_sfrd.launcher import Simulator
+from simulateur_lora_sfrd.launcher.adr_standard_1 import apply as adr1
 
 CONFIG = "flora-master/simulations/examples/n100-gw1.ini"
 

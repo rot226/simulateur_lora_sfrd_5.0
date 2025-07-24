@@ -1,5 +1,5 @@
 import pytest
-from run import simulate, PAYLOAD_SIZE
+from simulateur_lora_sfrd.run import simulate, PAYLOAD_SIZE
 
 
 def test_simulate_single_node_periodic():

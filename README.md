@@ -9,11 +9,11 @@ Bienvenue ! Ce projet est un **simulateur complet de réseau LoRa**, inspiré du
    ```bash
    python3 -m venv env
    source env/bin/activate  # Sous Windows : env\Scripts\activate
-   pip install -r requirements.txt
+   pip install -e .
    ```
 3. **Lancez le tableau de bord :**
 ```bash
-panel serve launcher/dashboard.py --show
+panel serve simulateur_lora_sfrd/launcher/dashboard.py --show
 ```
 Définissez la valeur du champ **Graine** pour réutiliser le même placement de
 nœuds d'une simulation à l'autre. Le champ **Nombre de runs** permet quant à lui
@@ -25,9 +25,9 @@ ou `gw,id=1,x=10,y=80`. Cela permet notamment de reprendre les positions
 fournies dans l'INI de FLoRa.
 4. **Exécutez des simulations en ligne de commande :**
    ```bash
-   python run.py --nodes 30 --gateways 1 --mode Random --interval 10 --steps 100 --output résultats.csv
-   python run.py --nodes 20 --mode Random --interval 15
-   python run.py --nodes 5 --mode Periodic --interval 10
+   python -m simulateur_lora_sfrd.run --nodes 30 --gateways 1 --mode Random --interval 10 --steps 100 --output résultats.csv
+   python -m simulateur_lora_sfrd.run --nodes 20 --mode Random --interval 15
+   python -m simulateur_lora_sfrd.run --nodes 5 --mode Periodic --interval 10
    ```
     Ajoutez l'option `--seed` pour reproduire exactement le placement des nœuds
     et passerelles.
@@ -36,7 +36,7 @@ fournies dans l'INI de FLoRa.
 
 5. **Démarrez l'API REST/WebSocket (optionnelle) :**
    ```bash
-   uvicorn launcher.web_api:app --reload
+   uvicorn simulateur_lora_sfrd.launcher.web_api:app --reload
    ```
    L'endpoint `POST /simulations/start` accepte un JSON
    `{"command": "start_sim", "params": {...}}` pour lancer une simulation.
@@ -49,11 +49,11 @@ Quelques commandes pour tester des scénarios plus complexes :
 
 ```bash
 # Simulation multi-canaux avec mobilité
-python run.py --nodes 50 --gateways 2 --channels 3 \
+python -m simulateur_lora_sfrd.run --nodes 50 --gateways 2 --channels 3 \
   --mobility --steps 500 --output advanced.csv
 
 # Démonstration LoRaWAN avec downlinks
-python run.py --lorawan-demo --steps 100 --output lorawan.csv
+python -m simulateur_lora_sfrd.run --lorawan-demo --steps 100 --output lorawan.csv
 ```
 
 ### Exemples classes B et C
@@ -61,7 +61,7 @@ python run.py --lorawan-demo --steps 100 --output lorawan.csv
 Utilisez l'API Python pour tester les modes B et C :
 
 ```python
-from launcher import Simulator
+from simulateur_lora_sfrd.launcher import Simulator
 
 # Nœuds en classe B avec slots réguliers
 sim_b = Simulator(num_nodes=10, node_class="B", beacon_interval=128,
@@ -79,7 +79,7 @@ sim_c.run(500)
 Les déplacements peuvent être rendus plus doux en ajustant la plage de vitesses :
 
 ```python
-from launcher import Simulator
+from simulateur_lora_sfrd.launcher import Simulator
 
 sim = Simulator(num_nodes=20, num_gateways=3, area_size=2000.0, mobility=True,
                 mobility_speed=(1.0, 5.0))
@@ -226,7 +226,7 @@ réception :
   reprenant les formules de FLoRa.
 
 ```python
-from launcher.channel import Channel
+from simulateur_lora_sfrd.launcher.channel import Channel
 canal = Channel(environment="urban")
 ```
 
@@ -236,7 +236,7 @@ Un module **`propagation_models.py`** regroupe des fonctions de perte de parcour
 Il reprend les paramètres des fichiers INI de FLoRa, par exemple `sigma=3.57` pour le preset *flora*.
 
 ```python
-from launcher.propagation_models import LogDistanceShadowing, multipath_fading_db
+from simulateur_lora_sfrd.launcher.propagation_models import LogDistanceShadowing, multipath_fading_db
 model = LogDistanceShadowing(environment="flora")
 loss = model.path_loss(1000)
 fad = multipath_fading_db(taps=3)
@@ -275,7 +275,7 @@ de l'humidité peut également être activé grâce aux paramètres
 `humidity_percent` et `humidity_noise_coeff_dB`.
 
 ```python
-from launcher.advanced_channel import AdvancedChannel
+from simulateur_lora_sfrd.launcher.advanced_channel import AdvancedChannel
 ch = AdvancedChannel(
     propagation_model="okumura_hata",
     terrain="suburban",
@@ -341,7 +341,7 @@ adaptée ici sous une forme plus légère sans OMNeT++.
 Lancer l'exemple minimal :
 
 ```bash
-python run.py --lorawan-demo
+python -m simulateur_lora_sfrd.run --lorawan-demo
 ```
 
 Le tableau de bord inclut désormais un sélecteur **Classe LoRaWAN** permettant de choisir entre les modes A, B ou C pour l'ensemble des nœuds, ainsi qu'un champ **Taille payload (o)** afin de définir la longueur utilisée pour calculer l'airtime. Ces réglages facilitent la reproduction fidèle des scénarios FLoRa.
@@ -385,7 +385,7 @@ Pour reproduire un scénario FLoRa :
    `Simulator` (ou activez **Mode FLoRa complet**). Cela applique un seuil de
    détection à -110 dBm, une fenêtre d'interférence de 5 s ainsi que les délais
    réseau de FLoRa.
-2. Appliquez l'algorithme ADR1 via `from launcher.adr_standard_1 import apply as adr1` puis `adr1(sim)`.
+2. Appliquez l'algorithme ADR1 via `from simulateur_lora_sfrd.launcher.adr_standard_1 import apply as adr1` puis `adr1(sim)`.
    Cette fonction reprend la logique du serveur FLoRa original.
 3. Fournissez le chemin du fichier INI à `Simulator(config_file=...)` ou
    saisissez les coordonnées manuellement via **Positions manuelles**.
@@ -437,11 +437,11 @@ python examples/analyse_runs.py résultats.csv
 
 ## Nettoyage des résultats
 
-Le script `launcher/clean_results.py` supprime les doublons et les valeurs
+Le script `simulateur_lora_sfrd/launcher/clean_results.py` supprime les doublons et les valeurs
 manquantes d'un fichier CSV, puis sauvegarde `<fichier>_clean.csv` :
 
 ```bash
-python launcher/clean_results.py résultats.csv
+python simulateur_lora_sfrd/launcher/clean_results.py résultats.csv
 ```
 
 ## Validation des résultats

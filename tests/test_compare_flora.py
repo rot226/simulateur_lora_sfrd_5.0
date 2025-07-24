@@ -1,8 +1,8 @@
 import pytest
 from pathlib import Path
 
-from launcher.simulator import Simulator
-from launcher.compare_flora import (
+from simulateur_lora_sfrd.launcher.simulator import Simulator
+from simulateur_lora_sfrd.launcher.compare_flora import (
     compare_with_sim,
     load_flora_metrics,
     load_flora_rx_stats,
