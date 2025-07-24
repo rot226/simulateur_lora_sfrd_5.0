@@ -34,6 +34,15 @@ fournies dans l'INI de FLoRa.
     Utilisez `--runs <n>` pour exécuter plusieurs simulations d'affilée et
     obtenir une moyenne des métriques.
 
+5. **Démarrez l'API REST/WebSocket (optionnelle) :**
+   ```bash
+   uvicorn launcher.web_api:app --reload
+   ```
+   L'endpoint `POST /simulations/start` accepte un JSON
+   `{"command": "start_sim", "params": {...}}` pour lancer une simulation.
+   Les métriques en temps réel sont diffusées sur le WebSocket `/ws` sous la
+   forme `{"event": "metrics", "data": {...}}`.
+
 ## Exemples d'utilisation avancés
 
 Quelques commandes pour tester des scénarios plus complexes :
