@@ -1,4 +1,4 @@
-from launcher.simulator import Simulator
+from simulateur_lora_sfrd.launcher import Simulator
 
 
 def test_rx_chain_single_node():

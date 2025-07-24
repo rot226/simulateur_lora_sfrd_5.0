@@ -1,7 +1,7 @@
 import random
-from launcher.server import NetworkServer
-from launcher.gateway import Gateway
-from launcher.node import Node
+from ..server import NetworkServer
+from ..gateway import Gateway
+from ..node import Node
 
 
 def test_adr_ack_req_resets_counter():

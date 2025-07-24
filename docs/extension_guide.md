@@ -1,6 +1,6 @@
 # Guide d'extension du tableau de bord
 
-Ce document explique comment personnaliser `launcher/dashboard.py` et ajouter de
+Ce document explique comment personnaliser `simulateur_lora_sfrd/launcher/dashboard.py` et ajouter de
 nouvelles fonctionnalit\u00e9s au simulateur.
 
 ## Principe g\u00e9n\u00e9ral
@@ -23,7 +23,7 @@ Vous pouvez remplacer les classes du simulateur pour tester d'autres
 comportements :
 
 ```python
-from launcher import Simulator, PathMobility
+from simulateur_lora_sfrd.launcher import Simulator, PathMobility
 
 class MyMobility(PathMobility):
     def step(self, node, dt):

@@ -1,6 +1,6 @@
 import random
-from launcher.simulator import Simulator
-from launcher.lorawan import TX_POWER_INDEX_TO_DBM
+from ..simulator import Simulator
+from ..lorawan import TX_POWER_INDEX_TO_DBM
 
 
 def test_adr_ack_delay_adjustment():

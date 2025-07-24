@@ -1,6 +1,6 @@
-from launcher.server import NetworkServer
-from launcher.gateway import Gateway
-from launcher.node import Node
+from simulateur_lora_sfrd.launcher import NetworkServer
+from simulateur_lora_sfrd.launcher import Gateway
+from simulateur_lora_sfrd.launcher import Node
 
 
 def test_deduplicate_packets():

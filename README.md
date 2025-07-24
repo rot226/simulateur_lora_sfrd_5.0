@@ -5,15 +5,15 @@ Bienvenue ! Ce projet est un **simulateur complet de réseau LoRa**, inspiré du
 ## 🛠️ Installation
 
 1. **Clonez ou téléchargez** le projet.
-2. **Créez un environnement virtuel et installez les dépendances :**
-   ```bash
+2. **Créez un environnement virtuel puis installez le projet en mode développement :**
+```bash
    python3 -m venv env
    source env/bin/activate  # Sous Windows : env\Scripts\activate
-   pip install -r requirements.txt
-   ```
+   pip install -e .
+```
 3. **Lancez le tableau de bord :**
 ```bash
-panel serve launcher/dashboard.py --show
+panel serve simulateur_lora_sfrd/launcher/dashboard.py --show
 ```
 Définissez la valeur du champ **Graine** pour réutiliser le même placement de
 nœuds d'une simulation à l'autre. Le champ **Nombre de runs** permet quant à lui

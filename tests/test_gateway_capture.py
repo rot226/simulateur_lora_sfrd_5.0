@@ -1,5 +1,5 @@
-from launcher.gateway import Gateway
-from launcher.server import NetworkServer
+from simulateur_lora_sfrd.launcher import Gateway
+from simulateur_lora_sfrd.launcher import NetworkServer
 
 
 def test_orthogonal_sf_no_collision():

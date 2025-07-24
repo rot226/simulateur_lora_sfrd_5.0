@@ -1,6 +1,6 @@
 import random
-from launcher.terrain_mobility import TerrainMapMobility
-from launcher.node import Node
+from simulateur_lora_sfrd.launcher.terrain_mobility import TerrainMapMobility
+from simulateur_lora_sfrd.launcher import Node
 
 
 def test_terrain_mobility_path_avoids_obstacle():

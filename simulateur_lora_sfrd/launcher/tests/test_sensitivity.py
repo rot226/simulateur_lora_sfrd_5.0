@@ -1,4 +1,4 @@
-from launcher.channel import Channel
+from ..channel import Channel
 
 
 def test_channel_sensitivity_values():
