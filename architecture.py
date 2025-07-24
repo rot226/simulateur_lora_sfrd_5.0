@@ -24,6 +24,7 @@ class GatewayConfig:
     x: float
     y: float
     altitude: float = 0.0
+    rx_gain_dB: float = 0.0
 
 
 @dataclass
@@ -53,7 +54,13 @@ class Gateway(_Gateway):
     """Passerelle LoRa."""
 
     def __init__(self, gateway_id: int, cfg: GatewayConfig):
-        super().__init__(gateway_id, cfg.x, cfg.y, cfg.altitude)
+        super().__init__(
+            gateway_id,
+            cfg.x,
+            cfg.y,
+            cfg.altitude,
+            rx_gain_dB=cfg.rx_gain_dB,
+        )
 
 
 class NetworkServer(_NetworkServer):
