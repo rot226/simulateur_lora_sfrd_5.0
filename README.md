@@ -25,9 +25,9 @@ ou `gw,id=1,x=10,y=80`. Cela permet notamment de reprendre les positions
 fournies dans l'INI de FLoRa.
 4. **Exécutez des simulations en ligne de commande :**
    ```bash
-   python VERSION_4/run.py --nodes 30 --gateways 1 --mode Random --interval 10 --steps 100 --output résultats.csv
-   python VERSION_4/run.py --nodes 20 --mode Random --interval 15
-   python VERSION_4/run.py --nodes 5 --mode Periodic --interval 10
+   python run.py --nodes 30 --gateways 1 --mode Random --interval 10 --steps 100 --output résultats.csv
+   python run.py --nodes 20 --mode Random --interval 15
+   python run.py --nodes 5 --mode Periodic --interval 10
    ```
     Ajoutez l'option `--seed` pour reproduire exactement le placement des nœuds
     et passerelles.
@@ -49,11 +49,11 @@ Quelques commandes pour tester des scénarios plus complexes :
 
 ```bash
 # Simulation multi-canaux avec mobilité
-python VERSION_4/run.py --nodes 50 --gateways 2 --channels 3 \
+python run.py --nodes 50 --gateways 2 --channels 3 \
   --mobility --steps 500 --output advanced.csv
 
 # Démonstration LoRaWAN avec downlinks
-python VERSION_4/run.py --lorawan-demo --steps 100 --output lorawan.csv
+python run.py --lorawan-demo --steps 100 --output lorawan.csv
 ```
 
 ### Exemples classes B et C
@@ -308,7 +308,7 @@ adaptée ici sous une forme plus légère sans OMNeT++.
 Lancer l'exemple minimal :
 
 ```bash
-python VERSION_4/run.py --lorawan-demo
+python run.py --lorawan-demo
 ```
 
 Le tableau de bord inclut désormais un sélecteur **Classe LoRaWAN** permettant de choisir entre les modes A, B ou C pour l'ensemble des nœuds, ainsi qu'un champ **Taille payload (o)** afin de définir la longueur utilisée pour calculer l'airtime. Ces réglages facilitent la reproduction fidèle des scénarios FLoRa.
@@ -350,7 +350,7 @@ Pour reproduire un scénario FLoRa :
 1. Passez `flora_mode=True` lors de la création du `Simulator` (ou activez
    **Mode FLoRa complet**). Cela applique un seuil de détection à -110 dBm et une
    fenêtre d'interférence de 5 s.
-2. Appliquez l'algorithme ADR1 via `from VERSION_4.launcher.adr_standard_1 import apply as adr1` puis `adr1(sim)`.
+2. Appliquez l'algorithme ADR1 via `from launcher.adr_standard_1 import apply as adr1` puis `adr1(sim)`.
    Cette fonction reprend la logique du serveur FLoRa original.
 3. Fournissez le chemin du fichier INI à `Simulator(config_file=...)` ou
    saisissez les coordonnées manuellement via **Positions manuelles**.
@@ -406,7 +406,7 @@ Le script `launcher/clean_results.py` supprime les doublons et les valeurs
 manquantes d'un fichier CSV, puis sauvegarde `<fichier>_clean.csv` :
 
 ```bash
-python VERSION_4/launcher/clean_results.py résultats.csv
+python launcher/clean_results.py résultats.csv
 ```
 
 ## Validation des résultats
