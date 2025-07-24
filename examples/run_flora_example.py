@@ -1,3 +1,10 @@
+"""Example reproducing a FLoRa scenario."""
+
+import os
+import sys
+
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
 from launcher import Simulator
 from launcher.adr_standard_1 import apply as adr1
 
