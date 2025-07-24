@@ -1,7 +1,7 @@
 import math
-from launcher.downlink_scheduler import DownlinkScheduler
-from launcher.gateway import Gateway
-from launcher.node import Node
+from simulateur_lora_sfrd.launcher.downlink_scheduler import DownlinkScheduler
+from simulateur_lora_sfrd.launcher.gateway import Gateway
+from simulateur_lora_sfrd.launcher.node import Node
 
 
 def test_schedule_beacon_time():

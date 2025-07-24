@@ -5,11 +5,11 @@ Bienvenue ! Ce projet est un **simulateur complet de réseau LoRa**, inspiré du
 ## 🛠️ Installation
 
 1. **Clonez ou téléchargez** le projet.
-2. **Créez un environnement virtuel et installez les dépendances :**
+2. **Créez un environnement virtuel et installez le projet :**
    ```bash
    python3 -m venv env
    source env/bin/activate  # Sous Windows : env\Scripts\activate
-   pip install -r requirements.txt
+   pip install -e .
    ```
 3. **Lancez le tableau de bord :**
 ```bash
@@ -61,7 +61,7 @@ python run.py --lorawan-demo --steps 100 --output lorawan.csv
 Utilisez l'API Python pour tester les modes B et C :
 
 ```python
-from launcher import Simulator
+from simulateur_lora_sfrd.launcher import Simulator
 
 # Nœuds en classe B avec slots réguliers
 sim_b = Simulator(num_nodes=10, node_class="B", beacon_interval=128,
@@ -79,7 +79,7 @@ sim_c.run(500)
 Les déplacements peuvent être rendus plus doux en ajustant la plage de vitesses :
 
 ```python
-from launcher import Simulator
+from simulateur_lora_sfrd.launcher import Simulator
 
 sim = Simulator(num_nodes=20, num_gateways=3, area_size=2000.0, mobility=True,
                 mobility_speed=(1.0, 5.0))
@@ -226,7 +226,7 @@ réception :
   reprenant les formules de FLoRa.
 
 ```python
-from launcher.channel import Channel
+from simulateur_lora_sfrd.launcher.channel import Channel
 canal = Channel(environment="urban")
 ```
 
@@ -236,7 +236,7 @@ Un module **`propagation_models.py`** regroupe des fonctions de perte de parcour
 Il reprend les paramètres des fichiers INI de FLoRa, par exemple `sigma=3.57` pour le preset *flora*.
 
 ```python
-from launcher.propagation_models import LogDistanceShadowing, multipath_fading_db
+from simulateur_lora_sfrd.launcher.propagation_models import LogDistanceShadowing, multipath_fading_db
 model = LogDistanceShadowing(environment="flora")
 loss = model.path_loss(1000)
 fad = multipath_fading_db(taps=3)
@@ -275,7 +275,7 @@ de l'humidité peut également être activé grâce aux paramètres
 `humidity_percent` et `humidity_noise_coeff_dB`.
 
 ```python
-from launcher.advanced_channel import AdvancedChannel
+from simulateur_lora_sfrd.launcher.advanced_channel import AdvancedChannel
 ch = AdvancedChannel(
     propagation_model="okumura_hata",
     terrain="suburban",
@@ -385,7 +385,7 @@ Pour reproduire un scénario FLoRa :
    `Simulator` (ou activez **Mode FLoRa complet**). Cela applique un seuil de
    détection à -110 dBm, une fenêtre d'interférence de 5 s ainsi que les délais
    réseau de FLoRa.
-2. Appliquez l'algorithme ADR1 via `from launcher.adr_standard_1 import apply as adr1` puis `adr1(sim)`.
+2. Appliquez l'algorithme ADR1 via `from simulateur_lora_sfrd.launcher.adr_standard_1 import apply as adr1` puis `adr1(sim)`.
    Cette fonction reprend la logique du serveur FLoRa original.
 3. Fournissez le chemin du fichier INI à `Simulator(config_file=...)` ou
    saisissez les coordonnées manuellement via **Positions manuelles**.
