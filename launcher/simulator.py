@@ -495,6 +495,8 @@ class Simulator:
                     sf,
                     **kwargs,
                 )
+                rssi += getattr(gw, "rx_gain_dB", 0.0)
+                snr += getattr(gw, "rx_gain_dB", 0.0)
                 if rssi < node.channel.detection_threshold_dBm:
                     continue  # trop faible pour être détecté
                 snr_threshold = (
@@ -925,6 +927,7 @@ class Simulator:
         return {
             'PDR': pdr,
             'collisions': self.packets_lost_collision,
+            'duplicates': self.network_server.duplicate_packets,
             'energy_J': self.total_energy_J,
             'avg_delay_s': avg_delay,
             'throughput_bps': throughput_bps,

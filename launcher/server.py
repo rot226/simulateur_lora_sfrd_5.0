@@ -35,6 +35,8 @@ class NetworkServer:
         self.event_gateway = {}
         # Compteur de paquets reçus
         self.packets_received = 0
+        # Nombre de doublons ignorés
+        self.duplicate_packets = 0
         # Indicateur ADR serveur
         self.adr_enabled = False
         # Références pour ADR serveur
@@ -274,6 +276,7 @@ class NetworkServer:
             logger.debug(
                 f"NetworkServer: duplicate packet event {event_id} from node {node_id} (ignored)."
             )
+            self.duplicate_packets += 1
             return
         # Nouveau paquet reçu
         self.received_events.add(event_id)

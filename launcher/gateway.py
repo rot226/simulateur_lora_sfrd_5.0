@@ -6,17 +6,29 @@ logger = logging.getLogger(__name__)
 class Gateway:
     """Représente une passerelle LoRa recevant les paquets des nœuds."""
 
-    def __init__(self, gateway_id: int, x: float, y: float, altitude: float = 0.0):
+    def __init__(
+        self,
+        gateway_id: int,
+        x: float,
+        y: float,
+        altitude: float = 0.0,
+        *,
+        rx_gain_dB: float = 0.0,
+    ):
         """
         Initialise une passerelle LoRa.
+
         :param gateway_id: Identifiant de la passerelle.
         :param x: Position X (mètres).
         :param y: Position Y (mètres).
+        :param altitude: Altitude de l'antenne (mètres).
+        :param rx_gain_dB: Gain/rayon de couverture additionnel (dB).
         """
         self.id = gateway_id
         self.x = x
         self.y = y
         self.altitude = altitude
+        self.rx_gain_dB = rx_gain_dB
         # Transmissions en cours indexées par (sf, frequency)
         self.active_map: dict[tuple[int, float], list[dict]] = {}
         # Mapping event_id -> (key, dict) for quick removal
