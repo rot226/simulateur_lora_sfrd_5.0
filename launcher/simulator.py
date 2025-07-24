@@ -18,7 +18,6 @@ from .server import NetworkServer
 from .duty_cycle import DutyCycleManager
 from .smooth_mobility import SmoothMobility
 from .id_provider import next_node_id, next_gateway_id, reset as reset_ids
-from .random_waypoint import RandomWaypoint
 
 
 class EventType(IntEnum):
