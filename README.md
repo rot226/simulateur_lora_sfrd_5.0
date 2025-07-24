@@ -335,7 +335,6 @@ mais simplifie volontairement certains aspects.
 
 ### Écarts connus avec FLoRa
 - le canal radio reste moins détaillé (propagation et capture simplifiées)
-- absence de modélisation fine du moteur d'événements OMNeT++
 - certaines temporisations ou files d'attente du serveur diffèrent
 - la sensibilité et le bruit thermiques sont approchés de manière empirique
 
@@ -430,6 +429,7 @@ Les points suivants ont été intégrés au simulateur :
 - **PDR par nœud et par type de trafic.** Chaque nœud maintient l'historique de ses vingt dernières transmissions afin de calculer un taux de livraison global et récent. Ces valeurs sont visibles dans le tableau de bord et exportées dans un fichier `metrics_*.csv`.
 - **Historique glissant et indicateurs QoS.** Le simulateur calcule désormais le délai moyen de livraison ainsi que le nombre de retransmissions sur la période récente.
 - **Indicateurs supplémentaires.** La méthode `get_metrics()` retourne le PDR par SF, passerelle, classe et nœud. Le tableau de bord affiche un récapitulatif et l'export produit deux fichiers CSV : un pour les événements détaillés et un pour les métriques agrégées.
+- **Moteur d'événements précis.** La file de priorité gère désormais un délai de traitement serveur et la détection des collisions pendant la réception pour se rapprocher du modèle OMNeT++.
 
 ## Limites actuelles
 

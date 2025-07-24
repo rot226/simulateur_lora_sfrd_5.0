@@ -195,7 +195,9 @@ class Gateway:
             except (ValueError, KeyError):
                 pass
             if not t['lost_flag']:
-                network_server.receive(event_id, node_id, self.id, t['rssi'])
+                network_server.schedule_receive(
+                    event_id, node_id, self.id, t['rssi'], at_time=t['end_time']
+                )
                 logger.debug(
                     f"Gateway {self.id}: successfully received event {event_id} from node {node_id}."
                 )

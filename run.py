@@ -201,7 +201,7 @@ def main(argv=None):
         from launcher.server import NetworkServer
 
         gw = Gateway(0, 0, 0)
-        ns = NetworkServer()
+        ns = NetworkServer(process_delay=0.001)
         ns.gateways = [gw]
         node = Node(0, 0, 0, 7, 20)
         frame = node.prepare_uplink(b"ping", confirmed=True)

@@ -71,7 +71,7 @@ def build_from_config(cfg: SimulationConfig) -> tuple[List[Node], List[Gateway],
     """Instancie nœuds et passerelles selon ``cfg``."""
     nodes = [Node(i, ncfg) for i, ncfg in enumerate(cfg.nodes)]
     gws = [Gateway(i, gcfg) for i, gcfg in enumerate(cfg.gateways)]
-    server = NetworkServer()
+    server = NetworkServer(process_delay=0.001)
     server.nodes = nodes
     server.gateways = gws
     return nodes, gws, server
