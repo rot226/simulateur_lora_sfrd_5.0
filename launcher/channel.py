@@ -67,7 +67,11 @@ class Channel:
         rssi_offset_dB: float = 0.0,
         snr_offset_dB: float = 0.0,
         frequency_offset_hz: float = 0.0,
+        freq_offset_std_hz: float = 0.0,
         sync_offset_s: float = 0.0,
+        sync_offset_std_s: float = 0.0,
+        dev_frequency_offset_hz: float = 0.0,
+        dev_freq_offset_std_hz: float = 0.0,
         freq_drift_std_hz: float = 0.0,
         clock_drift_std_s: float = 0.0,
         temperature_K: float = 290.0,
@@ -206,7 +210,11 @@ class Channel:
         self.band_interference = list(band_interference or [])
         self.detection_threshold_dBm = detection_threshold_dBm
         self.frequency_offset_hz = frequency_offset_hz
+        self.freq_offset_std_hz = freq_offset_std_hz
         self.sync_offset_s = sync_offset_s
+        self.sync_offset_std_s = sync_offset_std_s
+        self.dev_frequency_offset_hz = dev_frequency_offset_hz
+        self.dev_freq_offset_std_hz = dev_freq_offset_std_hz
         self.freq_drift_std_hz = freq_drift_std_hz
         self.clock_drift_std_s = clock_drift_std_s
         self.temperature_K = temperature_K
@@ -270,6 +278,10 @@ class Channel:
             from .omnet_phy import OmnetPHY
             self.omnet_phy = OmnetPHY(
                 self,
+                freq_offset_std_hz=self.freq_offset_std_hz,
+                sync_offset_std_s=self.sync_offset_std_s,
+                dev_frequency_offset_hz=dev_frequency_offset_hz,
+                dev_freq_offset_std_hz=dev_freq_offset_std_hz,
                 temperature_std_K=temperature_std_K,
                 pa_non_linearity_dB=pa_non_linearity_dB,
                 pa_non_linearity_std_dB=pa_non_linearity_std_dB,

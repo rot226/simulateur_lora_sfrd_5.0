@@ -2,7 +2,11 @@ import pytest
 from pathlib import Path
 
 from launcher.simulator import Simulator
-from launcher.compare_flora import compare_with_sim, load_flora_metrics
+from launcher.compare_flora import (
+    compare_with_sim,
+    load_flora_metrics,
+    load_flora_rx_stats,
+)
 
 
 def test_compare_with_flora(tmp_path):
@@ -74,3 +78,29 @@ def test_compare_with_flora_mismatch(tmp_path):
 
     wrong_metrics = {"PDR": 0.0, "sf_distribution": {7: 0}}
     assert not compare_with_sim(wrong_metrics, flora_copy, pdr_tol=0.01)
+
+
+def test_rssi_snr_match(tmp_path):
+    """Parsed RSSI/SNR values should match simulator results."""
+    pytest.importorskip('pandas')
+    sim = Simulator(
+        num_nodes=1,
+        num_gateways=1,
+        transmission_mode="Periodic",
+        packet_interval=1.0,
+        packets_to_send=1,
+        mobility=False,
+        fixed_sf=7,
+        seed=0,
+    )
+    sim.run()
+    df = sim.get_events_dataframe()
+    rssi = float(df["rssi_dBm"].dropna().mean())
+    snr = float(df["snr_dB"].dropna().mean())
+    sca = tmp_path / "run.sca"
+    sca.write_text(
+        f"scalar sim sent 1\nscalar sim received 1\nscalar sim rssi {rssi}\nscalar sim snr {snr}\n"
+    )
+    stats = load_flora_rx_stats(sca)
+    assert stats["rssi"] == pytest.approx(rssi)
+    assert stats["snr"] == pytest.approx(snr)
