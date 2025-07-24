@@ -8,7 +8,7 @@ from .server import NetworkServer
 from .simulator import Simulator
 from .duty_cycle import DutyCycleManager
 from .smooth_mobility import SmoothMobility
-from .mobility import RandomWaypoint
+from .random_waypoint import RandomWaypoint
 from .path_mobility import PathMobility
 from .terrain_mobility import TerrainMapMobility
 from .gauss_markov import GaussMarkov
