@@ -109,6 +109,7 @@ class NetworkServer:
                 payload=raw,
                 confirmed=confirmed,
             )
+        priority = -1 if confirmed or adr_command or request_ack or isinstance(frame, JoinAccept) else 0
         if adr_command and isinstance(frame, LoRaWANFrame):
             if len(adr_command) == 2:
                 sf, power = adr_command
@@ -140,9 +141,11 @@ class NetworkServer:
                     self.ping_slot_interval,
                     self.ping_slot_offset,
                     last_beacon_time=getattr(node, "last_beacon_time", None),
+                    priority=priority,
                 )
             elif node.class_type.upper() == "C":
-                gw.buffer_downlink(node.id, frame)
+                after = self.simulator.current_time if self.simulator else 0.0
+                self.scheduler.schedule_class_c(node, after, frame, gw, priority=priority)
             else:
                 gw.buffer_downlink(node.id, frame)
         else:
@@ -156,9 +159,10 @@ class NetworkServer:
                     self.ping_slot_interval,
                     self.ping_slot_offset,
                     last_beacon_time=getattr(node, "last_beacon_time", None),
+                    priority=priority,
                 )
             elif node.class_type.upper() == "C":
-                self.scheduler.schedule_class_c(node, at_time, frame, gw)
+                self.scheduler.schedule_class_c(node, at_time, frame, gw, priority=priority)
                 if self.simulator is not None:
                     from .simulator import Event, EventType
 
@@ -169,7 +173,7 @@ class NetworkServer:
                         Event(at_time, EventType.RX_WINDOW, eid, node.id),
                     )
             else:
-                self.scheduler.schedule(node.id, at_time, frame, gw)
+                self.scheduler.schedule(node.id, at_time, frame, gw, priority=priority)
         try:
             node.downlink_pending += 1
         except AttributeError:

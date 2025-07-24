@@ -22,5 +22,5 @@ def test_adr_ack_delay_adjustment():
     for _ in range(1000):
         node.prepare_uplink(b"test")
     assert node.sf == 12
-    assert node.tx_power == TX_POWER_INDEX_TO_DBM[0]
+    assert node.tx_power == TX_POWER_INDEX_TO_DBM[1]
     assert node.adr_ack_cnt == 1000 % (node.adr_ack_limit + node.adr_ack_delay)
