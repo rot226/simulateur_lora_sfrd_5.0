@@ -1,8 +1,10 @@
 import pytest
 from run import simulate, PAYLOAD_SIZE
+import random
 
 
 def test_simulate_single_node_periodic():
+    random.seed(0)
     delivered, collisions, pdr, energy, avg_delay, throughput = simulate(
         1,
         1,
@@ -10,15 +12,16 @@ def test_simulate_single_node_periodic():
         1,
         10,
     )
-    assert delivered == 10
+    assert delivered == 9
     assert collisions == 0
     assert pdr == 100.0
-    assert energy == 10.0
+    assert energy == 9.0
     assert avg_delay == 0
-    assert throughput == PAYLOAD_SIZE * 8
+    assert throughput == PAYLOAD_SIZE * 8 * delivered / 10
 
 
 def test_simulate_periodic_float_interval():
+    random.seed(0)
     delivered, collisions, pdr, _, _, _ = simulate(
         1,
         1,
@@ -26,7 +29,7 @@ def test_simulate_periodic_float_interval():
         2.5,
         10,
     )
-    assert delivered == 4
+    assert delivered == 3
     assert collisions == 0
     assert pdr == 100.0
 

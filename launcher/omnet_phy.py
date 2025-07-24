@@ -213,6 +213,8 @@ class OmnetPHY:
             rssi += random.gauss(0.0, ch.tx_power_std)
         if ch.fast_fading_std > 0:
             rssi += random.gauss(0.0, ch.fast_fading_std)
+        if ch.multipath_taps > 1:
+            rssi += self._multipath_fading_db()
         if ch.time_variation_std > 0:
             rssi += random.gauss(0.0, ch.time_variation_std)
         rssi += self.model.fine_fading()
@@ -256,4 +258,14 @@ class OmnetPHY:
         if rssi_list[order[0]] - rssi_list[order[1]] >= self.channel.capture_threshold_dB:
             winners[order[0]] = True
         return winners
+
+    def _multipath_fading_db(self) -> float:
+        """Return a fading value in dB based on multiple Rayleigh paths."""
+        taps = self.channel.multipath_taps
+        if taps <= 1:
+            return 0.0
+        i = sum(random.gauss(0.0, 1.0) for _ in range(taps))
+        q = sum(random.gauss(0.0, 1.0) for _ in range(taps))
+        amp = math.sqrt(i * i + q * q) / math.sqrt(taps)
+        return 20 * math.log10(max(amp, 1e-12))
 
