@@ -57,6 +57,7 @@ class Simulator:
                  transmission_mode: str = 'Random', packet_interval: float = 60.0,
                  interval_variation: float = 0.0,
                  packets_to_send: int = 0, adr_node: bool = False, adr_server: bool = False,
+                 adr_method: str = "max",
                  duty_cycle: float | None = 0.01, mobility: bool = True,
                  channels=None, channel_distribution: str = "round-robin",
                  mobility_speed: tuple[float, float] = (2.0, 10.0),
@@ -98,6 +99,8 @@ class Simulator:
             d'arrêter la simulation (0 = infini).
         :param adr_node: Activation de l'ADR côté nœud.
         :param adr_server: Activation de l'ADR côté serveur.
+        :param adr_method: Méthode d'agrégation du SNR pour l'ADR
+            (``"max"`` ou ``"avg"``).
         :param duty_cycle: Facteur de duty cycle (ex: 0.01 pour 1 %). Par
             défaut à 0.01. Si None, le duty cycle est désactivé.
         :param mobility: Active la mobilité aléatoire des nœuds lorsqu'il est
@@ -164,6 +167,7 @@ class Simulator:
         self.packets_to_send = packets_to_send
         self.adr_node = adr_node
         self.adr_server = adr_server
+        self.adr_method = adr_method
         self.fixed_sf = fixed_sf
         self.fixed_tx_power = fixed_tx_power
         self.battery_capacity_j = battery_capacity_j
@@ -268,6 +272,7 @@ class Simulator:
             simulator=self,
             process_delay=proc_delay,
             network_delay=net_delay,
+            adr_method=self.adr_method,
         )
         self.network_server.beacon_interval = self.beacon_interval
         self.network_server.beacon_drift = self.beacon_drift
