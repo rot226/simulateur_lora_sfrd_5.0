@@ -395,17 +395,21 @@ class Simulator:
         # Indicateur d'exécution de la simulation
         self.running = True
 
-    def _sample_interval(self) -> float:
-        """Retourne un délai tiré de la loi exponentielle avec jitter."""
-        interval = random.expovariate(1.0 / self.packet_interval)
-        if interval > 5 * self.packet_interval:
-            interval = 5 * self.packet_interval
-        if self.interval_variation > 0.0:
-            low = max(0.0, 1.0 - self.interval_variation)
-            high = 1.0 + self.interval_variation
-            factor = random.uniform(low, high)
-            interval *= factor
-        return interval
+    def _sample_interval(self, min_interval: float = 0.0) -> float:
+        """Retourne un délai tiré de la loi exponentielle avec jitter.
+
+        Les intervalles trop courts sont rééchantillonnés jusqu'à dépasser
+        ``min_interval`` (durée du paquet précédent).
+        """
+        while True:
+            interval = random.expovariate(1.0 / self.packet_interval)
+            if self.interval_variation > 0.0:
+                low = max(0.0, 1.0 - self.interval_variation)
+                high = 1.0 + self.interval_variation
+                factor = random.uniform(low, high)
+                interval *= factor
+            if interval >= min_interval:
+                return interval
 
     def schedule_event(self, node: Node, time: float):
         """Planifie un événement de transmission pour un nœud à l'instant donné."""
@@ -467,6 +471,7 @@ class Simulator:
             tx_power = node.tx_power
             # Durée de la transmission
             duration = node.channel.airtime(sf, payload_size=self.payload_size_bytes)
+            node.last_airtime = duration
             end_time = time + duration
             if self.duty_cycle_manager:
                 self.duty_cycle_manager.update_after_tx(node_id, time, duration)
@@ -687,7 +692,7 @@ class Simulator:
             else:
                 if self.packets_to_send == 0 or node.packets_sent < self.packets_to_send:
                     if self.transmission_mode.lower() == 'random':
-                        next_interval = self._sample_interval()
+                        next_interval = self._sample_interval(node.last_airtime)
                     else:
                         next_interval = self.packet_interval
                     next_time = self.current_time + next_interval
