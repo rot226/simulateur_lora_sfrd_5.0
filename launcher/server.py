@@ -29,12 +29,17 @@ class NetworkServer:
         simulator=None,
         process_delay: float = 0.0,
         network_delay: float = 0.0,
+        adr_method: str = "max",
     ):
         """Initialise le serveur réseau.
 
         :param join_server: Instance facultative de serveur d'activation OTAA.
         :param simulator: Référence au :class:`Simulator` pour planifier
             éventuellement certains événements (classe C).
+        :param process_delay: Délai de traitement du serveur (s).
+        :param network_delay: Délai de propagation des messages (s).
+        :param adr_method: Méthode d'agrégation du SNR pour l'ADR
+            (``"max"`` ou ``"avg"``).
         """
         # Ensemble des identifiants d'événements déjà reçus (pour éviter les doublons)
         self.received_events = set()
@@ -57,6 +62,7 @@ class NetworkServer:
         self.simulator = simulator
         self.process_delay = process_delay
         self.network_delay = network_delay
+        self.adr_method = adr_method
         self.pending_process: dict[int, tuple[int, int, int, float | None, object]] = {}
         self.beacon_interval = 128.0
         self.beacon_drift = 0.0
@@ -350,9 +356,12 @@ class NetworkServer:
                 if len(node.snr_history) > 20:
                     node.snr_history.pop(0)
                 if len(node.snr_history) >= 20:
-                    max_snr = max(node.snr_history)
+                    if self.adr_method == "avg":
+                        snr_m = sum(node.snr_history) / len(node.snr_history)
+                    else:
+                        snr_m = max(node.snr_history)
                     required = REQUIRED_SNR.get(node.sf, -20.0)
-                    margin = max_snr - required - MARGIN_DB
+                    margin = snr_m - required - MARGIN_DB
                     nstep = round(margin / 3.0)
 
                     sf = node.sf
