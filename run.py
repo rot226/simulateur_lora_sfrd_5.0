@@ -49,10 +49,11 @@ def simulate(nodes, gateways, mode, interval, steps, channels=1,
     node_gateways = {node: node % max(1, gateways) for node in range(nodes)}
     for node in range(nodes):
         if mode_lower == "periodic":
-            t = 0
+            t = 0.0
             while t < steps:
-                send_times[node].append(t)
+                send_times[node].append(int(round(t)))
                 t += interval
+            send_times[node] = sorted(set(send_times[node]))
         else:  # mode "Random"
             # Émission aléatoire avec probabilité 1/interval à chaque pas de temps
             for t in range(steps):
