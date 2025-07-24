@@ -278,6 +278,18 @@ class AdvancedChannel:
         else:
             self._rows = self._cols = 0
 
+    def __getattr__(self, name: str):
+        """Delegate attribute access to the underlying :class:`Channel`."""
+        return getattr(self.base, name)
+
+    def noise_floor_dBm(self) -> float:
+        """Return the noise floor computed by the base channel."""
+        return self.base.noise_floor_dBm()
+
+    def airtime(self, sf: int, payload_size: int = 20) -> float:
+        """Delegate airtime computation to the base channel."""
+        return self.base.airtime(sf, payload_size)
+
     # ------------------------------------------------------------------
     # Transceiver state helpers
     # ------------------------------------------------------------------
