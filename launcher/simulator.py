@@ -18,6 +18,7 @@ from .server import NetworkServer
 from .duty_cycle import DutyCycleManager
 from .smooth_mobility import SmoothMobility
 from .id_provider import next_node_id, next_gateway_id, reset as reset_ids
+from .random_waypoint import RandomWaypoint
 
 
 class EventType(IntEnum):
@@ -74,6 +75,7 @@ class Simulator:
                  terrain_map: str | list[list[float]] | None = None,
                  path_map: str | list[list[float]] | None = None,
                  dynamic_obstacles: str | list[dict] | None = None,
+                 mobility_model=None,
                  beacon_drift: float = 0.0,
                  *,
                  clock_accuracy: float = 0.0,
@@ -134,6 +136,8 @@ class Simulator:
             plus courts chemins évitant les obstacles.
         :param dynamic_obstacles: Fichier JSON ou liste décrivant des obstacles
             mouvants pour ``PathMobility``.
+        :param mobility_model: Instance personnalisée de modèle de mobilité
+            (prioritaire sur ``terrain_map`` et ``path_map``).
         :param beacon_drift: Dérive relative appliquée aux beacons (ppm).
         :param clock_accuracy: Écart-type de la dérive d'horloge des nœuds
             (ppm). Chaque nœud se voit attribuer un décalage aléatoire selon
@@ -174,7 +178,9 @@ class Simulator:
         self.phy_model = phy_model
         # Activation ou non de la mobilité des nœuds
         self.mobility_enabled = mobility
-        if path_map is not None:
+        if mobility_model is not None:
+            self.mobility_model = mobility_model
+        elif path_map is not None:
             if isinstance(path_map, (str, Path)):
                 from .map_loader import load_map
                 path_map = load_map(path_map)
@@ -190,7 +196,7 @@ class Simulator:
             if isinstance(terrain_map, (str, Path)):
                 from .map_loader import load_map
                 terrain_map = load_map(terrain_map)
-            from .mobility import RandomWaypoint
+            from .random_waypoint import RandomWaypoint
             self.mobility_model = RandomWaypoint(
                 area_size,
                 min_speed=mobility_speed[0],

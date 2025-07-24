@@ -142,6 +142,13 @@ mobility_speed_min_input = pn.widgets.FloatInput(name="Vitesse min (m/s)", value
 mobility_speed_max_input = pn.widgets.FloatInput(name="Vitesse max (m/s)", value=10.0, step=0.5, start=0.1)
 show_paths_checkbox = pn.widgets.Checkbox(name="Afficher trajectoires", value=False)
 
+# Choix du modèle de mobilité
+mobility_model_select = pn.widgets.Select(
+    name="Modèle de mobilité",
+    options=["Smooth", "RandomWaypoint", "Path"],
+    value="Smooth",
+)
+
 # --- Durée réelle de simulation et bouton d'accélération ---
 real_time_duration_input = pn.widgets.FloatInput(name="Durée réelle max (s)", value=0.0, step=1.0, start=0.0)
 fast_forward_button = pn.widgets.Button(
@@ -188,6 +195,8 @@ ini_file_label = pn.pane.Str("", width=200)
 # Map for path-based mobility
 path_map_input = pn.widgets.FileInput(name="Carte de parcours", accept=".json")
 path_map_label = pn.pane.Str("", width=200)
+terrain_map_input = pn.widgets.FileInput(name="Carte de terrain", accept=".json")
+terrain_map_label = pn.pane.Str("", width=200)
 dyn_obs_input = pn.widgets.FileInput(name="Carte d'obstacles dynamiques", accept=".json")
 dyn_obs_label = pn.pane.Str("", width=200)
 flora_csv_input = pn.widgets.FileInput(name="CSV FLoRa", accept=".csv")
@@ -630,6 +639,15 @@ def setup_simulation(seed_offset: int = 0):
         tmp_map.flush()
         path_map = tmp_map.name
 
+    terrain_map = None
+    if terrain_map_input.value:
+        import tempfile
+
+        tmp_terrain = tempfile.NamedTemporaryFile(delete=False, suffix=".json")
+        tmp_terrain.write(terrain_map_input.value.encode())
+        tmp_terrain.flush()
+        terrain_map = tmp_terrain.name
+
     dyn_map = None
     if dyn_obs_input.value:
         import tempfile
@@ -652,6 +670,33 @@ def setup_simulation(seed_offset: int = 0):
         except Exception as exc:
             flora_metrics = None
             export_message.object = f"⚠️ Erreur CSV FLoRa : {exc}"
+
+    # Choisir le modèle de mobilité
+    mobility_instance = None
+    if mobility_model_select.value == "Path":
+        from launcher.path_mobility import PathMobility
+        mobility_instance = PathMobility(
+            float(area_input.value),
+            path_map or [[0]],
+            min_speed=float(mobility_speed_min_input.value),
+            max_speed=float(mobility_speed_max_input.value),
+            dynamic_obstacles=dyn_map,
+        )
+    elif mobility_model_select.value == "RandomWaypoint":
+        from launcher.random_waypoint import RandomWaypoint
+        mobility_instance = RandomWaypoint(
+            float(area_input.value),
+            min_speed=float(mobility_speed_min_input.value),
+            max_speed=float(mobility_speed_max_input.value),
+            terrain=terrain_map,
+        )
+    else:
+        from launcher.smooth_mobility import SmoothMobility
+        mobility_instance = SmoothMobility(
+            float(area_input.value),
+            float(mobility_speed_min_input.value),
+            float(mobility_speed_max_input.value),
+        )
 
     sim = Simulator(
         num_nodes=int(num_nodes_input.value),
@@ -681,8 +726,7 @@ def setup_simulation(seed_offset: int = 0):
         detection_threshold_dBm=float(detection_threshold_input.value),
         min_interference_time=float(min_interference_input.value),
         config_file=config_path,
-        path_map=path_map,
-        dynamic_obstacles=dyn_map,
+        mobility_model=mobility_instance,
         seed=seed,
     )
 
@@ -1184,6 +1228,10 @@ def on_map_filename(event):
     path_map_label.object = event.new or ""
 
 
+def on_terrain_filename(event):
+    terrain_map_label.object = event.new or ""
+
+
 def on_dyn_filename(event):
     dyn_obs_label.object = event.new or ""
 
@@ -1194,6 +1242,7 @@ def on_csv_filename(event):
 
 ini_file_input.param.watch(on_ini_filename, "filename")
 path_map_input.param.watch(on_map_filename, "filename")
+terrain_map_input.param.watch(on_terrain_filename, "filename")
 dyn_obs_input.param.watch(on_dyn_filename, "filename")
 flora_csv_input.param.watch(on_csv_filename, "filename")
 
@@ -1219,6 +1268,7 @@ controls = pn.WidgetBox(
     num_runs_input,
     pn.Row(ini_file_input, ini_file_label),
     pn.Row(path_map_input, path_map_label),
+    pn.Row(terrain_map_input, terrain_map_label),
     pn.Row(dyn_obs_input, dyn_obs_label),
     pn.Row(flora_csv_input, flora_csv_label),
     adr_node_checkbox,
@@ -1231,6 +1281,7 @@ controls = pn.WidgetBox(
     num_channels_input,
     channel_dist_select,
     mobility_checkbox,
+    mobility_model_select,
     mobility_speed_min_input,
     mobility_speed_max_input,
     flora_mode_toggle,
