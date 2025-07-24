@@ -5,7 +5,7 @@ from . import server
 from .advanced_channel import AdvancedChannel
 
 
-def apply(sim: Simulator, *, degrade_channel: bool = True) -> None:
+def apply(sim: Simulator, *, degrade_channel: bool = False) -> None:
     """Configure ADR variant ``adr_standard_1`` (LoRaWAN defaults).
 
     Parameters
@@ -13,9 +13,8 @@ def apply(sim: Simulator, *, degrade_channel: bool = True) -> None:
     sim : Simulator
         Instance to modify in-place.
     degrade_channel : bool, optional
-        When ``True`` (default) apply additional propagation
-        impairments to reduce the Packet Delivery Ratio.  Only the ADR1
-        preset applies these changes.
+        Deprecated. Previously enabled additional propagation impairments
+        when set to ``True``. This option no longer has any effect.
     """
     Simulator.MARGIN_DB = 15.0
     server.MARGIN_DB = Simulator.MARGIN_DB
@@ -31,20 +30,5 @@ def apply(sim: Simulator, *, degrade_channel: bool = True) -> None:
         node.adr_ack_limit = 64
         node.adr_ack_delay = 32
 
-    if degrade_channel:
-        for ch in sim.multichannel.channels:
-            base = ch.base if isinstance(ch, AdvancedChannel) else ch
-            # Slightly stronger constant interference
-            base.interference_dB = max(base.interference_dB, 8.0)
-            # Increase the fast fading variance a little more
-            base.fast_fading_std = max(base.fast_fading_std, 4.5)
-            # Raise the extra path loss exponent just a bit further
-            base.path_loss_exp = max(base.path_loss_exp, 3.6)
-            # Detection threshold marginally above previous value
-            base.detection_threshold_dBm = max(base.detection_threshold_dBm, -92.0)
-            # Allow slow noise variations with slightly higher amplitude
-            base.noise_floor_std = max(base.noise_floor_std, 2.1)
-            if isinstance(ch, AdvancedChannel):
-                ch.fading = "rayleigh"
-                ch.weather_loss_dB_per_km = max(ch.weather_loss_dB_per_km, 1.2)
-        sim.detection_threshold_dBm = -92.0
+    # Channel degradation has been disabled; the parameter is kept for
+    # backward compatibility but no additional impairments are applied.
