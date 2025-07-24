@@ -115,13 +115,25 @@ class Gateway:
             return 10 * math.log10(1.0 + freq_factor ** 2 + time_factor ** 2)
 
         if capture_mode in {"advanced", "omnet"} and noise_floor is not None:
-            snrs = [t['rssi'] - noise_floor for t in colliders]
+            def _snr(i: int) -> float:
+                rssi_i = colliders[i]['rssi']
+                total = 10 ** (noise_floor / 10)
+                for j, other in enumerate(colliders):
+                    if j == i:
+                        continue
+                    pen = _penalty(colliders[i], other)
+                    if pen == float('inf'):
+                        continue
+                    total += 10 ** ((other['rssi'] - pen) / 10)
+                return rssi_i - 10 * math.log10(total)
+
+            snrs = [ _snr(i) for i in range(len(colliders)) ]
             indices = sorted(range(len(colliders)), key=lambda i: snrs[i], reverse=True)
             strongest = colliders[indices[0]]
             strongest_metric = snrs[indices[0]]
             second = None
             for idx in indices[1:]:
-                metric = snrs[idx] - _penalty(strongest, colliders[idx])
+                metric = snrs[idx]
                 if second is None or metric > second:
                     second = metric
         else:
