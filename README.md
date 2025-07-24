@@ -190,6 +190,8 @@ réception :
 - `noise_figure` : facteur de bruit du récepteur en dB.
 - `noise_floor_std` : écart-type de la variation aléatoire du bruit (dB).
 - `fast_fading_std` : amplitude du fading multipath en dB.
+- `multipath_taps` : nombre de trajets multipath simulés pour un
+  fading plus réaliste.
 - `fine_fading_std` : écart-type du fading fin corrélé.
 - `variable_noise_std` : bruit thermique lentement variable (dB).
 - `freq_drift_std_hz` et `clock_drift_std_s` : dérives de fréquence et
@@ -224,7 +226,8 @@ Ces valeurs influencent le calcul du RSSI et du SNR retournés par
 Depuis cette mise à jour, la largeur de bande (`bandwidth`) et le codage
 (`coding_rate`) sont également configurables lors de la création d'un
 `Channel`. On peut modéliser des interférences externes via `interference_dB`
-et simuler un environnement multipath avec `fast_fading_std`. Des variations
+et simuler un environnement multipath avec `fast_fading_std` et
+`multipath_taps`. Des variations
 aléatoires de puissance sont possibles grâce à `tx_power_std`. Un seuil de
 détection peut être fixé via `detection_threshold_dBm` (par
 exemple `-110` dBm comme dans FLoRa) pour ignorer les signaux trop faibles.
@@ -326,7 +329,7 @@ Cette réécriture en Python reprend la majorité des concepts du modèle OMNeT+
 mais simplifie volontairement certains aspects.
 
 **Fonctionnalités entièrement prises en charge**
-- respect du duty cycle et effet capture
+- respect du duty cycle, effet capture et interférence cumulative
 - transmissions multi-canaux et distribution configurable
 - mobilité des nœuds avec trajectoires lissées
 - consommation d'énergie basée sur le profil FLoRa
@@ -341,16 +344,18 @@ mais simplifie volontairement certains aspects.
 - interface graphique OMNeT++ et couche physique détaillée
 
 ### Écarts connus avec FLoRa
-- le canal radio reste moins détaillé (propagation et capture simplifiées)
+- le canal radio est désormais plus complet (multipath, interférences
+  cumulées et sensibilité par SF) mais certains paramètres restent
+  approximés
 - certaines temporisations ou files d'attente du serveur diffèrent
 - la sensibilité et le bruit thermiques sont approchés de manière empirique
 
 Le simulateur gère désormais l'ensemble des commandes MAC de LoRaWAN : réglage
 des paramètres ADR, réinitialisation de clés, rejoins et changement de classe.
 
-Pour des résultats plus proches du terrain, activez `fast_fading_std` pour
-simuler un canal multipath et utilisez `interference_dB` pour introduire un
-bruit extérieur constant ou variable.
+Pour des résultats plus proches du terrain, activez `fast_fading_std` et
+`multipath_taps` pour simuler un canal multipath. Utilisez également
+`interference_dB` pour introduire un bruit extérieur constant ou variable.
 
 Pour reproduire un scénario FLoRa :
 1. Passez `flora_mode=True` lors de la création du `Simulator` (ou activez

@@ -49,6 +49,7 @@ class Channel:
         path_loss_exp: float = 2.7,
         shadowing_std: float = 6.0,
         fast_fading_std: float = 0.0,
+        multipath_taps: int = 1,
         cable_loss_dB: float = 0.0,
         tx_antenna_gain_dB: float = 0.0,
         rx_antenna_gain_dB: float = 0.0,
@@ -98,6 +99,7 @@ class Channel:
         :param path_loss_exp: Exposant de perte de parcours (log-distance).
         :param shadowing_std: Écart-type du shadowing (variations aléatoires en dB), 0 pour ignorer.
         :param fast_fading_std: Variation rapide de l'amplitude (dB) pour simuler le fading multipath.
+        :param multipath_taps: Nombre de trajets multipath additionnels simulés.
         :param cable_loss_dB: Pertes fixes dues au câble/connectique (dB).
         :param tx_antenna_gain_dB: Gain de l'antenne émettrice (dB).
         :param rx_antenna_gain_dB: Gain de l'antenne réceptrice (dB).
@@ -188,6 +190,7 @@ class Channel:
         self.path_loss_exp = path_loss_exp
         self.shadowing_std = shadowing_std  # σ en dB (ex: 6.0 pour environnement urbain/suburbain)
         self.fast_fading_std = fast_fading_std
+        self.multipath_taps = int(multipath_taps)
         self.cable_loss_dB = cable_loss_dB
         self.tx_antenna_gain_dB = tx_antenna_gain_dB
         self.rx_antenna_gain_dB = rx_antenna_gain_dB
@@ -345,6 +348,8 @@ class Channel:
             rssi += random.gauss(0, self.tx_power_std)
         if self.fast_fading_std > 0:
             rssi += random.gauss(0, self.fast_fading_std)
+        if self.multipath_taps > 1:
+            rssi += self._multipath_fading_db()
         if self.time_variation_std > 0:
             rssi += random.gauss(0, self.time_variation_std)
         rssi += self.omnet.fine_fading()
@@ -365,6 +370,15 @@ class Channel:
         if sf is not None:
             snr += 10 * math.log10(2 ** sf)
         return rssi, snr
+
+    def _multipath_fading_db(self) -> float:
+        """Return a fading value in dB based on multiple Rayleigh paths."""
+        if self.multipath_taps <= 1:
+            return 0.0
+        i = sum(random.gauss(0.0, 1.0) for _ in range(self.multipath_taps))
+        q = sum(random.gauss(0.0, 1.0) for _ in range(self.multipath_taps))
+        amp = math.sqrt(i * i + q * q) / math.sqrt(self.multipath_taps)
+        return 20 * math.log10(max(amp, 1e-12))
 
     def _filter_attenuation_db(self, freq_offset_hz: float) -> float:
         """Return attenuation due to the front-end filter."""
