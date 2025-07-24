@@ -344,6 +344,9 @@ class Simulator:
         self.total_energy_J = 0.0
         self.total_delay = 0.0
         self.delivered_count = 0
+        # Counters for PDR computation
+        self.tx_attempted = 0
+        self.rx_delivered = 0
         self.retransmissions = 0
 
         # Journal des événements (pour export CSV)
@@ -459,6 +462,7 @@ class Simulator:
                 self.duty_cycle_manager.update_after_tx(node_id, time, duration)
             # Mettre à jour les compteurs de paquets émis
             self.packets_sent += 1
+            self.tx_attempted += 1
             node.increment_sent()
             # Énergie consommée par la transmission (E = I * V * t)
             current_a = node.profile.get_tx_current(tx_power)
@@ -589,6 +593,7 @@ class Simulator:
             delivered = event_id in self.network_server.received_events
             if delivered:
                 self.packets_delivered += 1
+                self.rx_delivered += 1
                 node.increment_success()
                 # Délai = temps de fin - temps de début de l'émission
                 start_time = next(item for item in self.events_log if item['event_id'] == event_id)['start_time']
@@ -887,8 +892,8 @@ class Simulator:
 
     def get_metrics(self) -> dict:
         """Retourne un dictionnaire des métriques actuelles de la simulation."""
-        total_sent = self.packets_sent
-        delivered = self.packets_delivered
+        total_sent = self.tx_attempted
+        delivered = self.rx_delivered
         pdr = delivered / total_sent if total_sent > 0 else 0.0
         avg_delay = self.total_delay / self.delivered_count if self.delivered_count > 0 else 0.0
         sim_time = self.current_time
@@ -902,22 +907,25 @@ class Simulator:
         pdr_by_sf: dict[int, float] = {}
         for sf in range(7, 13):
             nodes_sf = [n for n in self.nodes if n.sf == sf]
-            sent_sf = sum(n.packets_sent for n in nodes_sf)
-            delivered_sf = sum(n.packets_success for n in nodes_sf)
+            sent_sf = sum(n.tx_attempted for n in nodes_sf)
+            delivered_sf = sum(n.rx_delivered for n in nodes_sf)
             pdr_by_sf[sf] = delivered_sf / sent_sf if sent_sf > 0 else 0.0
 
         gateway_counts = {gw.id: 0 for gw in self.gateways}
         for gw_id in self.network_server.event_gateway.values():
             if gw_id in gateway_counts:
                 gateway_counts[gw_id] += 1
-        pdr_by_gateway = {gw_id: count / total_sent if total_sent > 0 else 0.0 for gw_id, count in gateway_counts.items()}
+        pdr_by_gateway = {
+            gw_id: count / total_sent if total_sent > 0 else 0.0
+            for gw_id, count in gateway_counts.items()
+        }
 
         pdr_by_class: dict[str, float] = {}
         class_types = {n.class_type for n in self.nodes}
         for ct in class_types:
             nodes_cls = [n for n in self.nodes if n.class_type == ct]
-            sent_cls = sum(n.packets_sent for n in nodes_cls)
-            delivered_cls = sum(n.packets_success for n in nodes_cls)
+            sent_cls = sum(n.tx_attempted for n in nodes_cls)
+            delivered_cls = sum(n.rx_delivered for n in nodes_cls)
             pdr_by_class[ct] = delivered_cls / sent_cls if sent_cls > 0 else 0.0
 
         energy_by_class = {
@@ -966,6 +974,8 @@ class Simulator:
         df['packets_sent'] = df['node_id'].apply(lambda nid: node_dict[nid].packets_sent)
         df['packets_success'] = df['node_id'].apply(lambda nid: node_dict[nid].packets_success)
         df['packets_collision'] = df['node_id'].apply(lambda nid: node_dict[nid].packets_collision)
+        df['tx_attempted'] = df['node_id'].apply(lambda nid: node_dict[nid].tx_attempted)
+        df['rx_delivered'] = df['node_id'].apply(lambda nid: node_dict[nid].rx_delivered)
         df['energy_consumed_J_node'] = df['node_id'].apply(lambda nid: node_dict[nid].energy_consumed)
         df['battery_capacity_J'] = df['node_id'].apply(lambda nid: node_dict[nid].battery_capacity_j)
         df['battery_remaining_J'] = df['node_id'].apply(lambda nid: node_dict[nid].battery_remaining_j)
@@ -976,6 +986,7 @@ class Simulator:
             'event_id', 'node_id', 'initial_x', 'initial_y', 'final_x', 'final_y',
             'initial_sf', 'final_sf', 'initial_tx_power', 'final_tx_power',
             'packets_sent', 'packets_success', 'packets_collision',
+            'tx_attempted', 'rx_delivered',
             'energy_consumed_J_node', 'battery_capacity_J', 'battery_remaining_J',
             'downlink_pending', 'acks_received',
             'start_time', 'end_time', 'energy_J', 'rssi_dBm', 'snr_dB',
