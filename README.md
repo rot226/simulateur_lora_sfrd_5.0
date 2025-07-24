@@ -160,6 +160,7 @@ scénarios FLoRa. Voici la liste complète des options :
   écarts trop importants d'une exécution à l'autre.
 - `packets_to_send` : nombre de paquets émis **par nœud** avant arrêt (0 = infini).
 - `adr_node` / `adr_server` : active l'ADR côté nœud ou serveur.
+- `adr_method` : agrégation du SNR pour l'ADR (`"avg"` ou `"max"`).
 - `duty_cycle` : quota d'émission appliqué à chaque nœud (`None` pour désactiver).
 - `mobility` : active la mobilité aléatoire selon `mobility_speed`.
 - `channels` : instance de `MultiChannel` ou liste de fréquences/`Channel`.
