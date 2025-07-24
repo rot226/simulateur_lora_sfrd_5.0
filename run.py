@@ -9,9 +9,17 @@ PAYLOAD_SIZE = 20  # octets simulés par paquet
 # Configuration du logger pour afficher les informations
 logging.basicConfig(level=logging.INFO, format="%(message)s")
 
+# Logger dédié aux diagnostics (collisions, etc.)
+diag_logger = logging.getLogger("diagnostics")
+if not diag_logger.handlers:
+    handler = logging.FileHandler("diagnostics.log", mode="w")
+    handler.setFormatter(logging.Formatter("%(message)s"))
+    diag_logger.addHandler(handler)
+diag_logger.setLevel(logging.INFO)
+
 
 def simulate(nodes, gateways, mode, interval, steps, channels=1,
-             *, fine_fading_std=0.0, noise_std=0.0):
+             *, fine_fading_std=0.0, noise_std=0.0, debug_rx=False):
     """Exécute une simulation LoRa simplifiée et retourne les métriques.
 
     Les transmissions peuvent se faire sur plusieurs canaux et plusieurs
@@ -90,8 +98,19 @@ def simulate(nodes, gateways, mode, interval, steps, channels=1,
                             delivered += 1
                             delays.append(t - pending[n])
                             del pending[n]
+                            if debug_rx:
+                                logging.debug(
+                                    f"t={t} Node {n} GW {gw} CH {ch} reçu"
+                                )
                         else:
                             collisions += 1
+                            if debug_rx:
+                                logging.debug(
+                                    f"t={t} Node {n} GW {gw} CH {ch} rejeté (bruit)"
+                                )
+                                diag_logger.info(
+                                    f"t={t} gw={gw} ch={ch} collision=[{n}] cause=noise"
+                                )
                     else:
                         winner = random.choice(nodes_on_ch)
                         success = True
@@ -104,8 +123,29 @@ def simulate(nodes, gateways, mode, interval, steps, channels=1,
                             delivered += 1
                             delays.append(t - pending[winner])
                             del pending[winner]
+                            if debug_rx:
+                                for n in nodes_on_ch:
+                                    if n == winner:
+                                        logging.debug(
+                                            f"t={t} Node {n} GW {gw} CH {ch} reçu après collision"
+                                        )
+                                    else:
+                                        logging.debug(
+                                            f"t={t} Node {n} GW {gw} CH {ch} perdu (collision)"
+                                        )
+                            diag_logger.info(
+                                f"t={t} gw={gw} ch={ch} collision={nodes_on_ch} winner={winner}"
+                            )
                         else:
                             collisions += nb_tx
+                            if debug_rx:
+                                for n in nodes_on_ch:
+                                    logging.debug(
+                                        f"t={t} Node {n} GW {gw} CH {ch} perdu (collision/bruit)"
+                                    )
+                            diag_logger.info(
+                                f"t={t} gw={gw} ch={ch} collision={nodes_on_ch} none"
+                            )
 
     # Calcul des métriques finales
     pdr = (
@@ -189,7 +229,15 @@ def main(argv=None):
         default=0.0,
         help="Écart-type du bruit thermique variable (dB)",
     )
+    parser.add_argument(
+        "--debug-rx",
+        action="store_true",
+        help="Trace chaque paquet reçu ou rejeté",
+    )
     args = parser.parse_args(argv)
+
+    if args.debug_rx:
+        logging.getLogger().setLevel(logging.DEBUG)
 
     if args.runs < 1:
         parser.error("--runs must be >= 1")
@@ -231,6 +279,7 @@ def main(argv=None):
             args.channels,
             fine_fading_std=args.fine_fading,
             noise_std=args.noise_std,
+            debug_rx=args.debug_rx,
         )
         results.append(
             (delivered, collisions, pdr, energy, avg_delay, throughput)

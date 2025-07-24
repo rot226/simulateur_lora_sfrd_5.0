@@ -40,6 +40,7 @@ class Event:
     node_id: int
 
 logger = logging.getLogger(__name__)
+diag_logger = logging.getLogger("diagnostics")
 
 class Simulator:
     """Gère la simulation du réseau LoRa (nœuds, passerelles, événements)."""
@@ -78,7 +79,8 @@ class Simulator:
                  clock_accuracy: float = 0.0,
                  beacon_loss_prob: float = 0.0,
                  ping_slot_interval: float = 1.0,
-                 ping_slot_offset: float = 2.0):
+                 ping_slot_offset: float = 2.0,
+                 debug_rx: bool = False):
         """
         Initialise la simulation LoRa avec les entités et paramètres donnés.
         :param num_nodes: Nombre de nœuds à simuler.
@@ -141,6 +143,7 @@ class Simulator:
             (s).
         :param ping_slot_offset: Décalage initial entre le beacon et le premier
             ping slot (s).
+        :param debug_rx: Active la journalisation détaillée des paquets reçus ou rejetés.
         """
         # Paramètres de simulation
         self.num_nodes = num_nodes
@@ -207,6 +210,7 @@ class Simulator:
         self.beacon_drift = beacon_drift
         self.clock_accuracy = clock_accuracy
         self.beacon_loss_prob = beacon_loss_prob
+        self.debug_rx = debug_rx
 
         # Gestion du duty cycle (activé par défaut à 1 %)
         self.duty_cycle_manager = DutyCycleManager(duty_cycle) if duty_cycle else None
@@ -610,6 +614,18 @@ class Simulator:
                     entry['result'] = 'Success' if delivered else ('CollisionLoss' if entry['heard'] else 'NoCoverage')
                     entry['gateway_id'] = self.network_server.event_gateway.get(event_id, None) if delivered else None
                     break
+
+            if self.debug_rx:
+                if delivered:
+                    gw_id = self.network_server.event_gateway.get(event_id, None)
+                    logger.debug(
+                        f"t={self.current_time:.2f} Packet {event_id} from node {node_id} reçu via GW {gw_id}"
+                    )
+                else:
+                    reason = 'Collision' if log_entry['heard'] else 'NoCoverage'
+                    logger.debug(
+                        f"t={self.current_time:.2f} Packet {event_id} from node {node_id} perdu ({reason})"
+                    )
 
             # Mettre à jour l'historique du nœud pour calculer les statistiques
             # récentes et éventuellement déclencher l'ADR.
