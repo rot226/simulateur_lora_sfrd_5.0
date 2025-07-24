@@ -63,7 +63,7 @@ class DownlinkScheduler:
         return t
 
     def schedule_class_c(self, node, time: float, frame, gateway, *, priority: int = 0):
-        """Schedule a frame for a Class C node at ``time`` with optional ``priority`` and return it."""
+        """Schedule a frame for a Class C node at ``time`` with optional ``priority`` and return the scheduled time."""
         duration = node.channel.airtime(node.sf, self._payload_length(frame))
         busy = self._gateway_busy.get(gateway.id, 0.0)
         if time < busy:
