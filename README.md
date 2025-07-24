@@ -439,6 +439,25 @@ Pour suivre les évolutions du projet, consultez le fichier `CHANGELOG.md`.
 
 Ce projet est distribué sous licence [MIT](../LICENSE).
 
+## Exemples complets
+
+Plusieurs scripts sont fournis dans le dossier `examples` pour illustrer
+l'utilisation du simulateur :
+
+```bash
+python examples/run_basic.py          # simulation rapide avec 20 nœuds
+python examples/run_flora_example.py  # reproduction d'un scénario FLoRa
+```
+
+Les utilitaires `analyse_resultats.py` et `analyse_runs.py` aident à traiter les
+fichiers CSV produits par `run.py` ou par le tableau de bord.
+
+## Guide d'extension du dashboard
+
+Le fichier [docs/extension_guide.md](docs/extension_guide.md) détaille comment
+ajouter des options au tableau de bord et intégrer vos propres modules. Ce guide
+vise à faciliter les contributions extérieures.
+
 ## Améliorations possibles
 
 Les points suivants ont été intégrés au simulateur :
