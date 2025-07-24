@@ -47,3 +47,20 @@ def test_simulate_periodic_float_interval():
 def test_simulate_invalid_parameters(nodes, gateways, mode, interval, steps):
     with pytest.raises(ValueError):
         simulate(nodes, gateways, mode, interval, steps)
+
+
+def test_simulate_collision():
+    """Packets lost in a collision should not be retried indefinitely."""
+    random.seed(0)
+    delivered, collisions, pdr, energy, avg_delay, throughput = simulate(
+        2,
+        1,
+        "Periodic",
+        1,
+        3,
+    )
+    assert delivered == 2
+    assert collisions == 2
+    assert energy == 4.0
+    assert avg_delay == 0
+    assert throughput == PAYLOAD_SIZE * 8 * delivered / 3

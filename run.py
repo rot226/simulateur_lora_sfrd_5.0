@@ -108,9 +108,10 @@ def simulate(nodes, gateways, mode, interval, steps, channels=1,
                                 logging.debug(
                                     f"t={t} Node {n} GW {gw} CH {ch} rejeté (bruit)"
                                 )
-                                diag_logger.info(
-                                    f"t={t} gw={gw} ch={ch} collision=[{n}] cause=noise"
-                                )
+                            diag_logger.info(
+                                f"t={t} gw={gw} ch={ch} collision=[{n}] cause=noise"
+                            )
+                            del pending[n]
                     else:
                         winner = random.choice(nodes_on_ch)
                         success = True
@@ -136,6 +137,9 @@ def simulate(nodes, gateways, mode, interval, steps, channels=1,
                             diag_logger.info(
                                 f"t={t} gw={gw} ch={ch} collision={nodes_on_ch} winner={winner}"
                             )
+                            for n in nodes_on_ch:
+                                if n != winner and n in pending:
+                                    del pending[n]
                         else:
                             collisions += nb_tx
                             if debug_rx:
@@ -146,6 +150,9 @@ def simulate(nodes, gateways, mode, interval, steps, channels=1,
                             diag_logger.info(
                                 f"t={t} gw={gw} ch={ch} collision={nodes_on_ch} none"
                             )
+                            for n in nodes_on_ch:
+                                if n in pending:
+                                    del pending[n]
 
     # Calcul des métriques finales
     pdr = (
