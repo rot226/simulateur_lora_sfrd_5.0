@@ -481,8 +481,6 @@ class Node:
             return
 
         self.fcnt_down = frame.fcnt + 1
-        if self.adr:
-            self.adr_ack_cnt = 0
         if frame.fctrl & 0x20:
             # ACK bit set -> the server acknowledged our last uplink
             self.awaiting_ack = False
