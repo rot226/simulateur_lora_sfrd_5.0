@@ -22,7 +22,7 @@ MARGIN_DB = 15.0
 class NetworkServer:
     """Représente le serveur de réseau LoRa (collecte des paquets reçus)."""
 
-    def __init__(self, join_server=None, *, simulator=None):
+    def __init__(self, join_server=None, *, simulator=None, process_delay: float = 0.0):
         """Initialise le serveur réseau.
 
         :param join_server: Instance facultative de serveur d'activation OTAA.
@@ -46,6 +46,8 @@ class NetworkServer:
         self.scheduler = DownlinkScheduler()
         self.join_server = join_server
         self.simulator = simulator
+        self.process_delay = process_delay
+        self.pending_process: dict[int, tuple[int, int, int, float | None, object]] = {}
         self.beacon_interval = 128.0
         self.beacon_drift = 0.0
         self.ping_slot_interval = 1.0
@@ -179,6 +181,44 @@ class NetworkServer:
         from .lorawan import derive_session_keys
 
         return derive_session_keys(appkey, devnonce, appnonce, self.net_id)
+
+    # ------------------------------------------------------------------
+    # Event scheduling helpers
+    # ------------------------------------------------------------------
+    def schedule_receive(
+        self,
+        event_id: int,
+        node_id: int,
+        gateway_id: int,
+        rssi: float | None = None,
+        frame=None,
+        at_time: float | None = None,
+    ) -> None:
+        """Planifie le traitement serveur d'une trame."""
+        if self.simulator is None:
+            self.receive(event_id, node_id, gateway_id, rssi, frame)
+            return
+        process_time = (
+            (at_time if at_time is not None else self.simulator.current_time)
+            + self.process_delay
+        )
+        from .simulator import Event, EventType
+
+        eid = self.simulator.event_id_counter
+        self.simulator.event_id_counter += 1
+        self.pending_process[eid] = (event_id, node_id, gateway_id, rssi, frame)
+        heapq.heappush(
+            self.simulator.event_queue,
+            Event(process_time, EventType.SERVER_PROCESS, eid, node_id),
+        )
+
+    def _process_scheduled(self, eid: int) -> None:
+        """Exécute le traitement différé d'un paquet."""
+        info = self.pending_process.pop(eid, None)
+        if not info:
+            return
+        event_id, node_id, gateway_id, rssi, frame = info
+        self.receive(event_id, node_id, gateway_id, rssi, frame)
 
     def deliver_scheduled(self, node_id: int, current_time: float) -> None:
         """Move ready scheduled frames to the gateway buffer."""
