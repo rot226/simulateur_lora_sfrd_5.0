@@ -231,17 +231,25 @@ class Simulator:
             if detection_threshold_dBm != -float("inf"):
                 for ch in self.multichannel.channels:
                     ch.detection_threshold_dBm = detection_threshold_dBm
+            if flora_mode or phy_model == "flora":
+                for ch in self.multichannel.channels:
+                    if getattr(ch, "environment", None) is None:
+                        ch.environment = "flora"
+                        ch.path_loss_exp, ch.shadowing_std = Channel.ENV_PRESETS["flora"]
         else:
             if channels is None:
-                env = "flora" if flora_mode else None
+                env = "flora" if (flora_mode or phy_model == "flora") else None
                 ch_list = [Channel(detection_threshold_dBm=detection_threshold_dBm,
-                                 phy_model=phy_model, environment=env)]
+                                  phy_model=phy_model, environment=env)]
             else:
                 ch_list = []
                 for ch in channels:
                     if isinstance(ch, Channel):
                         if detection_threshold_dBm != -float("inf"):
                             ch.detection_threshold_dBm = detection_threshold_dBm
+                        if (flora_mode or phy_model == "flora") and getattr(ch, "environment", None) is None:
+                            ch.environment = "flora"
+                            ch.path_loss_exp, ch.shadowing_std = Channel.ENV_PRESETS["flora"]
                         ch_list.append(ch)
                     else:
                         ch_list.append(
@@ -249,7 +257,7 @@ class Simulator:
                                 frequency_hz=float(ch),
                                 detection_threshold_dBm=detection_threshold_dBm,
                                 phy_model=phy_model,
-                                environment="flora" if flora_mode else None,
+                                environment="flora" if (flora_mode or phy_model == "flora") else None,
                             )
                         )
             self.multichannel = MultiChannel(ch_list, method=channel_distribution)
