@@ -173,6 +173,9 @@ class PathMobility:
             dx = dest_x - node.x
             dy = dest_y - node.y
             seg_len = math.hypot(dx, dy)
+            if seg_len == 0:
+                node.path_index += 1
+                continue
             if distance >= seg_len:
                 new_x, new_y = dest_x, dest_y
                 move_len = seg_len
