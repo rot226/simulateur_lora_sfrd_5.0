@@ -456,7 +456,7 @@ Vous pouvez aussi comparer les métriques générées avec les formules théoriq
 
 Pour suivre les évolutions du projet, consultez le fichier `CHANGELOG.md`.
 
-Ce projet est distribué sous licence [MIT](../LICENSE).
+Ce projet est distribué sous licence [MIT](LICENSE).
 
 ## Exemples complets
 
