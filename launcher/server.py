@@ -326,8 +326,8 @@ class NetworkServer:
             self._activate(node, gateway=gw)
 
         if node and node.last_adr_ack_req:
-            # Device requested an ADR acknowledgement
-            self.send_downlink(node)
+            # Device requested an ADR acknowledgement -> reply with current parameters
+            self.send_downlink(node, adr_command=(node.sf, node.tx_power))
             node.last_adr_ack_req = False
 
         # Appliquer ADR complet au niveau serveur
