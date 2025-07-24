@@ -41,6 +41,7 @@ class Gateway:
         bandwidth: float = 125e3,
         noise_floor: float | None = None,
         capture_mode: str = "basic",
+        flora_phy=None,
     ):
         """
         Tente de démarrer la réception d'une nouvelle transmission sur cette passerelle.
@@ -58,6 +59,8 @@ class Gateway:
         :param noise_floor: Niveau de bruit pour le calcul du SNR (mode avancé).
         :param capture_mode: "basic" pour l'ancien comportement, "advanced" pour
             un calcul basé sur le SNR.
+        :param flora_phy: Instance ``FloraPHY`` lorsque ``capture_mode`` vaut
+            "flora".
         """
         key = (sf, frequency)
         concurrent_transmissions = [
@@ -136,6 +139,18 @@ class Gateway:
                 metric = snrs[idx]
                 if second is None or metric > second:
                     second = metric
+        elif capture_mode == "flora" and flora_phy is not None:
+            colliders.sort(key=lambda t: t['rssi'], reverse=True)
+            sf_list = [t['sf'] for t in colliders]
+            rssi_list = [t['rssi'] for t in colliders]
+            winners = flora_phy.capture(rssi_list, sf_list)
+            capture = any(winners)
+            if capture:
+                win_idx = winners.index(True)
+                strongest = colliders[win_idx]
+            else:
+                strongest = colliders[0]
+            second = None
         else:
             colliders.sort(key=lambda t: t['rssi'], reverse=True)
             strongest = colliders[0]
@@ -145,13 +160,13 @@ class Gateway:
                 metric = t['rssi'] - _penalty(strongest, t)
                 if second is None or metric > second:
                     second = metric
-
-        capture = False
-        if second is not None:
-            if strongest_metric - second >= capture_threshold:
+        if capture_mode != "flora":
+            capture = False
+            if second is not None:
+                if strongest_metric - second >= capture_threshold:
+                    capture = True
+            else:
                 capture = True
-        else:
-            capture = True
 
         if capture:
             # Le signal le plus fort sera décodé, les autres sont perdus
