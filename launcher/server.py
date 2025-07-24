@@ -22,7 +22,14 @@ MARGIN_DB = 15.0
 class NetworkServer:
     """Représente le serveur de réseau LoRa (collecte des paquets reçus)."""
 
-    def __init__(self, join_server=None, *, simulator=None, process_delay: float = 0.0):
+    def __init__(
+        self,
+        join_server=None,
+        *,
+        simulator=None,
+        process_delay: float = 0.0,
+        network_delay: float = 0.0,
+    ):
         """Initialise le serveur réseau.
 
         :param join_server: Instance facultative de serveur d'activation OTAA.
@@ -45,10 +52,11 @@ class NetworkServer:
         self.channel = None
         self.net_id = 0
         self.next_devaddr = 1
-        self.scheduler = DownlinkScheduler()
+        self.scheduler = DownlinkScheduler(link_delay=network_delay)
         self.join_server = join_server
         self.simulator = simulator
         self.process_delay = process_delay
+        self.network_delay = network_delay
         self.pending_process: dict[int, tuple[int, int, int, float | None, object]] = {}
         self.beacon_interval = 128.0
         self.beacon_drift = 0.0
@@ -206,6 +214,7 @@ class NetworkServer:
             return
         process_time = (
             (at_time if at_time is not None else self.simulator.current_time)
+            + self.network_delay
             + self.process_delay
         )
         if process_time <= self.simulator.current_time:

@@ -378,9 +378,10 @@ Pour des résultats plus proches du terrain, activez `fast_fading_std` et
 `interference_dB` pour introduire un bruit extérieur constant ou variable.
 
 Pour reproduire un scénario FLoRa :
-1. Passez `flora_mode=True` lors de la création du `Simulator` (ou activez
-   **Mode FLoRa complet**). Cela applique un seuil de détection à -110 dBm et une
-   fenêtre d'interférence de 5 s.
+1. Passez `flora_mode=True` et `flora_timing=True` lors de la création du
+   `Simulator` (ou activez **Mode FLoRa complet**). Cela applique un seuil de
+   détection à -110 dBm, une fenêtre d'interférence de 5 s ainsi que les délais
+   réseau de FLoRa.
 2. Appliquez l'algorithme ADR1 via `from launcher.adr_standard_1 import apply as adr1` puis `adr1(sim)`.
    Cette fonction reprend la logique du serveur FLoRa original.
 3. Fournissez le chemin du fichier INI à `Simulator(config_file=...)` ou
