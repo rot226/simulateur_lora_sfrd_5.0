@@ -10,6 +10,7 @@ from .duty_cycle import DutyCycleManager
 from .smooth_mobility import SmoothMobility
 from .mobility import RandomWaypoint
 from .path_mobility import PathMobility
+from .terrain_mobility import TerrainMapMobility
 from .gauss_markov import GaussMarkov
 from .gps_mobility import GPSTraceMobility, MultiGPSTraceMobility
 from .map_loader import load_map
@@ -31,6 +32,7 @@ __all__ = [
     "SmoothMobility",
     "RandomWaypoint",
     "PathMobility",
+    "TerrainMapMobility",
     "GaussMarkov",
     "GPSTraceMobility",
     "MultiGPSTraceMobility",

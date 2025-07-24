@@ -113,6 +113,13 @@ des hauteurs de bâtiments. L'altitude du nœud est alors mise à jour à chaque
 déplacement pour un calcul radio plus réaliste.
 Deux champs « Vitesse min » et « Vitesse max » sont disponibles dans le
 `dashboard` pour définir cette plage avant de lancer la simulation.
+Plusieurs schémas supplémentaires peuvent être utilisés :
+- `RandomWaypoint` gère les déplacements aléatoires en s'appuyant sur une carte
+  de terrain et sur des obstacles dynamiques optionnels.
+- `TerrainMapMobility` permet désormais de suivre une carte rasterisée en
+  pondérant la vitesse par cellule et en tenant compte d'obstacles 3D.
+- `GaussMarkov` et les traces GPS restent disponibles pour modéliser des
+  mouvements plus spécifiques.
 
 ## Multi-canaux
 
