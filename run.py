@@ -144,7 +144,7 @@ def simulate(nodes, gateways, mode, interval, steps, channels=1,
                                         f"t={t} Node {n} GW {gw} CH {ch} perdu (collision/bruit)"
                                     )
                             diag_logger.info(
-                                f"t={t} gw={gw} ch={ch} collision={nodes_on_ch} none"
+                                f"t={t} gw={gw} ch={ch} collision={nodes_on_ch} cause=none"
                             )
 
     # Calcul des métriques finales
