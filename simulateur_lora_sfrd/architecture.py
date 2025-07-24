@@ -1,10 +1,10 @@
 from dataclasses import dataclass
 from typing import List
 
-from launcher.node import Node as _Node
-from launcher.gateway import Gateway as _Gateway
-from launcher.server import NetworkServer as _NetworkServer
-from launcher.config_loader import load_config
+from .launcher.node import Node as _Node
+from .launcher.gateway import Gateway as _Gateway
+from .launcher.server import NetworkServer as _NetworkServer
+from .launcher.config_loader import load_config
 
 
 @dataclass

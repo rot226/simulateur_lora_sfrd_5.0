@@ -1,5 +1,5 @@
 import pytest
-from run import simulate, PAYLOAD_SIZE
+from simulateur_lora_sfrd.run import simulate, PAYLOAD_SIZE
 import random
 
 

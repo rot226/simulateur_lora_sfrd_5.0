@@ -248,9 +248,9 @@ def main(argv=None):
         f"intervalle={args.interval}, steps={args.steps}"
     )
     if args.lorawan_demo:
-        from launcher.node import Node
-        from launcher.gateway import Gateway
-        from launcher.server import NetworkServer
+        from .launcher.node import Node
+        from .launcher.gateway import Gateway
+        from .launcher.server import NetworkServer
 
         gw = Gateway(0, 0, 0)
         ns = NetworkServer(process_delay=0.001)

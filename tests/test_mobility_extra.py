@@ -1,6 +1,6 @@
-from launcher.path_mobility import PathMobility
-from launcher.terrain_mobility import TerrainMapMobility
-from launcher.node import Node
+from simulateur_lora_sfrd.launcher.path_mobility import PathMobility
+from simulateur_lora_sfrd.launcher.terrain_mobility import TerrainMapMobility
+from simulateur_lora_sfrd.launcher.node import Node
 
 
 def test_path_mobility_altitude_update():

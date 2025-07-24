@@ -1,6 +1,6 @@
 import random
 import math
-from launcher.channel import Channel
+from simulateur_lora_sfrd.launcher.channel import Channel
 
 
 def test_multipath_fading_mean():
