@@ -19,11 +19,14 @@ class Gateway:
         """
         Initialise une passerelle LoRa.
 
+        ``rx_gain_dB`` correspond au gain d'antenne supplémentaire appliqué
+        au signal reçu.
+
         :param gateway_id: Identifiant de la passerelle.
         :param x: Position X (mètres).
         :param y: Position Y (mètres).
         :param altitude: Altitude de l'antenne (mètres).
-        :param rx_gain_dB: Gain/rayon de couverture additionnel (dB).
+        :param rx_gain_dB: Gain d’antenne additionnel (dB).
         """
         self.id = gateway_id
         self.x = x
