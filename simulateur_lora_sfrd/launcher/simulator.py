@@ -430,18 +430,13 @@ class Simulator:
         self.running = True
 
     def _sample_interval(self, min_interval: float = 0.0) -> float:
-        """Retourne un délai tiré de la loi exponentielle avec jitter.
+        """Retourne un délai tiré strictement d'une loi exponentielle.
 
         Les intervalles trop courts sont rééchantillonnés jusqu'à dépasser
         ``min_interval`` (durée du paquet précédent).
         """
         while True:
             interval = random.expovariate(1.0 / self.packet_interval)
-            if self.interval_variation > 0.0:
-                low = max(0.0, 1.0 - self.interval_variation)
-                high = 1.0 + self.interval_variation
-                factor = random.uniform(low, high)
-                interval *= factor
             if interval >= min_interval:
                 return interval
 
