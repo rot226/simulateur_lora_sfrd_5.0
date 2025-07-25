@@ -56,10 +56,10 @@ def simulate(nodes, gateways, mode, interval, steps, channels=1,
     node_channels = {node: node % channels for node in range(nodes)}
     node_gateways = {node: node % max(1, gateways) for node in range(nodes)}
     def _sample_interval(mean: float, min_interval: float = 0.0) -> float:
-        """Retourne un délai tiré d'une loi exponentielle limitée."""
+        """Retourne un délai tiré d'une loi exponentielle."""
         while True:
             val = random.expovariate(1.0 / mean)
-            if val <= 5 * mean and val >= min_interval:
+            if val >= min_interval:
                 return val
 
     for node in range(nodes):

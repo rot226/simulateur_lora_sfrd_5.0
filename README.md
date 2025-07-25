@@ -159,8 +159,8 @@ scénarios FLoRa. Voici la liste complète des options :
 - `packet_interval` : moyenne ou période fixe entre transmissions (s).
 - `interval_variation` : coefficient de jitter appliqué à l'intervalle
   exponentiel (0 par défaut pour coller au comportement FLoRa).
-- L'intervalle est tronqué à cinq fois `packet_interval` pour éviter des
-  écarts trop importants d'une exécution à l'autre.
+- Les instants de transmission suivent strictement une loi exponentielle de
+  moyenne `packet_interval` lorsque le mode `Random` est sélectionné.
 - `packets_to_send` : nombre de paquets émis **par nœud** avant arrêt (0 = infini).
 - `adr_node` / `adr_server` : active l'ADR côté nœud ou serveur.
 - `duty_cycle` : quota d'émission appliqué à chaque nœud (`None` pour désactiver).
