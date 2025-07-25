@@ -235,6 +235,9 @@ class Simulator:
             if detection_threshold_dBm != -float("inf"):
                 for ch in self.multichannel.channels:
                     ch.detection_threshold_dBm = detection_threshold_dBm
+            if flora_mode:
+                for ch in self.multichannel.channels:
+                    ch.phy_model = "flora"
             if flora_mode or phy_model == "flora":
                 for ch in self.multichannel.channels:
                     if getattr(ch, "environment", None) is None:
@@ -243,14 +246,17 @@ class Simulator:
         else:
             if channels is None:
                 env = "flora" if (flora_mode or phy_model == "flora") else None
+                ch_phy_model = "flora" if flora_mode else phy_model
                 ch_list = [Channel(detection_threshold_dBm=detection_threshold_dBm,
-                                  phy_model=phy_model, environment=env)]
+                                  phy_model=ch_phy_model, environment=env)]
             else:
                 ch_list = []
                 for ch in channels:
                     if isinstance(ch, Channel):
                         if detection_threshold_dBm != -float("inf"):
                             ch.detection_threshold_dBm = detection_threshold_dBm
+                        if flora_mode:
+                            ch.phy_model = "flora"
                         if (flora_mode or phy_model == "flora") and getattr(ch, "environment", None) is None:
                             ch.environment = "flora"
                             ch.path_loss_exp, ch.shadowing_std = Channel.ENV_PRESETS["flora"]
@@ -260,7 +266,7 @@ class Simulator:
                             Channel(
                                 frequency_hz=float(ch),
                                 detection_threshold_dBm=detection_threshold_dBm,
-                                phy_model=phy_model,
+                                phy_model="flora" if flora_mode else phy_model,
                                 environment="flora" if (flora_mode or phy_model == "flora") else None,
                             )
                         )
