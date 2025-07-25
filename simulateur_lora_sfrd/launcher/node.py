@@ -391,6 +391,9 @@ class Node:
         limit: int | None = None,
     ) -> None:
         """Generate Poisson arrival times up to ``up_to`` seconds."""
+        assert isinstance(mean_interval, float) and mean_interval > 0, (
+            "mean_interval must be positive float"
+        )
         last = self.arrival_queue[-1] if self.arrival_queue else self._last_arrival_time
         while (not self.arrival_queue or last <= up_to) and (
             limit is None or self.arrival_interval_count < limit

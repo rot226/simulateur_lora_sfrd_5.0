@@ -9,7 +9,7 @@ def test_simulate_single_node_periodic():
         1,
         1,
         "Periodic",
-        1,
+        1.0,
         10,
         rng_manager=rng_manager,
     )
@@ -39,11 +39,11 @@ def test_simulate_periodic_float_interval():
 @pytest.mark.parametrize(
     "nodes, gateways, mode, interval, steps",
     [
-        (0, 1, "random", 10, 10),
-        (1, 0, "random", 10, 10),
-        (1, 1, "random", 0, 10),
-        (1, 1, "random", 10, 0),
-        (1, 1, "bad", 10, 10),
+        (0, 1, "random", 10.0, 10),
+        (1, 0, "random", 10.0, 10),
+        (1, 1, "random", 0.0, 10),
+        (1, 1, "random", 10.0, 0),
+        (1, 1, "bad", 10.0, 10),
     ],
 )
 def test_simulate_invalid_parameters(nodes, gateways, mode, interval, steps):
