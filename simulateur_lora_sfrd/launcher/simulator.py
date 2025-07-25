@@ -465,7 +465,7 @@ class Simulator:
         for node in self.nodes:
             if self.transmission_mode.lower() == "random":
                 node.ensure_poisson_arrivals(
-                    0.0,
+                    node._last_arrival_time,
                     self.interval_rng,
                     self.packet_interval,
                     self.packets_to_send if self.packets_to_send else None,
@@ -821,7 +821,7 @@ class Simulator:
                 ):
                     if self.transmission_mode.lower() == "random":
                         node.ensure_poisson_arrivals(
-                            self.current_time,
+                            node._last_arrival_time,
                             self.interval_rng,
                             self.packet_interval,
                             self.packets_to_send if self.packets_to_send else None,
