@@ -398,11 +398,13 @@ Pour reproduire un scénario FLoRa :
    réseau de 10 ms et un traitement serveur de 1,2 s comme dans OMNeT++.
 2. Appliquez l'algorithme ADR1 via `from simulateur_lora_sfrd.launcher.adr_standard_1 import apply as adr1` puis `adr1(sim)`.
    Cette fonction reprend la logique du serveur FLoRa original.
-3. Fournissez le chemin du fichier INI à `Simulator(config_file=...)` ou
+3. Spécifiez `adr_method="avg"` lors de la création du `Simulator` (ou sur
+   `sim.network_server`) pour utiliser la moyenne des 20 derniers SNR.
+4. Fournissez le chemin du fichier INI à `Simulator(config_file=...)` ou
    saisissez les coordonnées manuellement via **Positions manuelles**.
-4. Renseignez **Graine** pour conserver exactement le même placement d'une
+5. Renseignez **Graine** pour conserver exactement le même placement d'une
    exécution à l'autre.
-5. Ou lancez `python examples/run_flora_example.py` qui combine ces réglages.
+6. Ou lancez `python examples/run_flora_example.py` qui combine ces réglages.
 ## Format du fichier CSV
 
 L'option `--output` de `run.py` permet d'enregistrer les métriques de la

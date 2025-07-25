@@ -21,7 +21,10 @@ def apply(sim: Simulator, *, degrade_channel: bool = False) -> None:
     server.MARGIN_DB = Simulator.MARGIN_DB
     sim.adr_node = False
     sim.adr_server = True
+    # Utilise la moyenne de SNR sur 20 paquets comme dans FLoRa
+    sim.adr_method = "avg"
     sim.network_server.adr_enabled = True
+    sim.network_server.adr_method = "avg"
     for node in sim.nodes:
         node.sf = 12
         node.initial_sf = 12
