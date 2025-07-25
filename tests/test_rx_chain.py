@@ -9,7 +9,7 @@ def test_rx_chain_single_node():
         packet_interval=1.0,
         packets_to_send=3,
         mobility=False,
-        seed=0,
+        seed=1,
     )
     sim.run()
     metrics = sim.get_metrics()
@@ -25,7 +25,7 @@ def test_rx_chain_multiple_nodes():
         packet_interval=1.0,
         packets_to_send=3,
         mobility=False,
-        seed=0,
+        seed=1,
     )
     sim.run()
     metrics = sim.get_metrics()

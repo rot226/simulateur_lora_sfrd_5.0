@@ -16,9 +16,10 @@ Bienvenue ! Ce projet est un **simulateur complet de réseau LoRa**, inspiré du
 panel serve launcher/dashboard.py --show
 ```
 Définissez la valeur du champ **Graine** pour réutiliser le même placement de
-nœuds d'une simulation à l'autre. Le champ **Nombre de runs** permet quant à lui
-d'enchaîner automatiquement plusieurs simulations identiques (la graine est
-incrémentée à chaque run).
+nœuds et la même suite d'intervalles pseudo‑aléatoires d'une simulation à
+l'autre. Le champ **Nombre de runs** permet quant à lui d'enchaîner
+automatiquement plusieurs simulations identiques (la graine est incrémentée à
+chaque run).
 Activez l'option **Positions manuelles** pour saisir les coordonnées exactes de
 certains nœuds ou passerelles ; chaque ligne suit par exemple `node,id=3,x=120,y=40`
 ou `gw,id=1,x=10,y=80`. Cela permet notamment de reprendre les positions
@@ -30,7 +31,7 @@ fournies dans l'INI de FLoRa.
    python run.py --nodes 5 --mode Periodic --interval 10
    ```
     Ajoutez l'option `--seed` pour reproduire exactement le placement des nœuds
-    et passerelles.
+    et l'ordre statistique des intervalles.
     Utilisez `--runs <n>` pour exécuter plusieurs simulations d'affilée et
     obtenir une moyenne des métriques.
 
@@ -182,7 +183,7 @@ scénarios FLoRa. Voici la liste complète des options :
   collision (s).
 - `config_file` : chemin d'un fichier INI ou JSON décrivant
   positions, SF et puissance.
-- `seed` : graine aléatoire utilisée uniquement pour reproduire le placement des nœuds et passerelles.
+- `seed` : graine aléatoire utilisée pour reproduire le placement des nœuds et le même ordre statistique des intervalles.
 - `class_c_rx_interval` : période de vérification des downlinks en classe C.
 - `beacon_interval` : durée séparant deux beacons pour la classe B (s).
 - `ping_slot_interval` : intervalle de base entre ping slots successifs (s).
@@ -442,8 +443,8 @@ Pour reproduire un scénario FLoRa :
    `sim.network_server`) pour utiliser la moyenne des 20 derniers SNR.
 4. Fournissez le chemin du fichier INI à `Simulator(config_file=...)` ou
    saisissez les coordonnées manuellement via **Positions manuelles**.
-5. Renseignez **Graine** pour conserver exactement le même placement d'une
-   exécution à l'autre.
+5. Renseignez **Graine** pour conserver exactement le même placement et la même
+   séquence d'intervalles d'une exécution à l'autre.
 6. Ou lancez `python examples/run_flora_example.py` qui combine ces réglages.
 ## Format du fichier CSV
 

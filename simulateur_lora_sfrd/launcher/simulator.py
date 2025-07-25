@@ -128,8 +128,8 @@ class Simulator:
             passerelles à charger. Lorsque défini, ``num_nodes`` et
             ``num_gateways`` sont ignorés.
         :param seed: Graine aléatoire pour reproduire le placement des nœuds et
-            passerelles. ``None`` pour un tirage aléatoire différent à chaque
-            exécution.
+            l'ordre statistique des intervalles. ``None`` pour un tirage
+            différent à chaque exécution.
         :param class_c_rx_interval: Période entre deux vérifications de
             downlink pour les nœuds de classe C (s).
         :param phy_model: "omnet" ou "flora" pour activer un modèle physique
@@ -293,9 +293,11 @@ class Simulator:
         self.network_server.ping_slot_interval = self.ping_slot_interval
         self.network_server.ping_slot_offset = self.ping_slot_offset
 
-        # Graine utilisée uniquement pour le placement initial des entités
+        # Graine commune pour reproduire FLoRa (placement et tirages aléatoires)
         self.seed = seed
         self.pos_rng = random.Random(self.seed)
+        if self.seed is not None:
+            random.seed(self.seed)
 
         # Générer les passerelles
         self.gateways = []
