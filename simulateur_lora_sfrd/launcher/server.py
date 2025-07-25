@@ -63,7 +63,8 @@ class NetworkServer:
         self.process_delay = process_delay
         self.network_delay = network_delay
         self.adr_method = adr_method
-        self.pending_process: dict[int, tuple[int, int, int, float | None, object]] = {}
+        self.pending_process: dict[int, int] = {}
+        self.waiting_packets: dict[int, tuple[int, int, float | None, object]] = {}
         self.beacon_interval = 128.0
         self.beacon_drift = 0.0
         self.ping_slot_interval = 1.0
@@ -224,14 +225,19 @@ class NetworkServer:
             + self.process_delay
         )
         if process_time <= self.simulator.current_time:
-            # Pas de délai de traitement -> traiter immédiatement
             self.receive(event_id, node_id, gateway_id, rssi, frame)
+            return
+        if event_id in self.waiting_packets:
+            cur_node, cur_gw, cur_rssi, cur_frame = self.waiting_packets[event_id]
+            if rssi is not None and (cur_rssi is None or rssi > cur_rssi):
+                self.waiting_packets[event_id] = (cur_node, gateway_id, rssi, cur_frame)
             return
         from .simulator import Event, EventType
 
         eid = self.simulator.event_id_counter
         self.simulator.event_id_counter += 1
-        self.pending_process[eid] = (event_id, node_id, gateway_id, rssi, frame)
+        self.pending_process[eid] = event_id
+        self.waiting_packets[event_id] = (node_id, gateway_id, rssi, frame)
         heapq.heappush(
             self.simulator.event_queue,
             Event(process_time, EventType.SERVER_PROCESS, eid, node_id),
@@ -239,10 +245,13 @@ class NetworkServer:
 
     def _process_scheduled(self, eid: int) -> None:
         """Exécute le traitement différé d'un paquet."""
-        info = self.pending_process.pop(eid, None)
-        if not info:
+        event_id = self.pending_process.pop(eid, None)
+        if event_id is None:
             return
-        event_id, node_id, gateway_id, rssi, frame = info
+        info = self.waiting_packets.pop(event_id, None)
+        if info is None:
+            return
+        node_id, gateway_id, rssi, frame = info
         self.receive(event_id, node_id, gateway_id, rssi, frame)
 
     def deliver_scheduled(self, node_id: int, current_time: float) -> None:

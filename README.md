@@ -370,7 +370,6 @@ mais simplifie volontairement certains aspects.
 - le canal radio est désormais plus complet (multipath, interférences
   cumulées et sensibilité par SF) mais certains paramètres restent
   approximés
-- certaines temporisations ou files d'attente du serveur diffèrent
 - la sensibilité et le bruit thermiques sont approchés de manière empirique
 
 Le simulateur gère désormais l'ensemble des commandes MAC de LoRaWAN : réglage
@@ -384,7 +383,8 @@ Pour reproduire un scénario FLoRa :
 1. Passez `flora_mode=True` et `flora_timing=True` lors de la création du
    `Simulator` (ou activez **Mode FLoRa complet**). Cela applique un seuil de
    détection à -110 dBm, une fenêtre d'interférence de 5 s ainsi que les délais
-   réseau de FLoRa.
+   réseau de FLoRa : 10 ms de propagation et 1,2 s de traitement serveur avec
+   agrégation des duplicats.
 2. Appliquez l'algorithme ADR1 via `from simulateur_lora_sfrd.launcher.adr_standard_1 import apply as adr1` puis `adr1(sim)`.
    Cette fonction reprend la logique du serveur FLoRa original.
 3. Fournissez le chemin du fichier INI à `Simulator(config_file=...)` ou
@@ -484,7 +484,7 @@ Les points suivants ont été intégrés au simulateur :
 - **PDR par nœud et par type de trafic.** Chaque nœud maintient l'historique de ses vingt dernières transmissions afin de calculer un taux de livraison global et récent. Ces valeurs sont visibles dans le tableau de bord et exportées dans un fichier `metrics_*.csv`.
 - **Historique glissant et indicateurs QoS.** Le simulateur calcule désormais le délai moyen de livraison ainsi que le nombre de retransmissions sur la période récente.
 - **Indicateurs supplémentaires.** La méthode `get_metrics()` retourne le PDR par SF, passerelle, classe et nœud. Le tableau de bord affiche un récapitulatif et l'export produit deux fichiers CSV : un pour les événements détaillés et un pour les métriques agrégées.
-- **Moteur d'événements précis.** La file de priorité gère désormais un délai de traitement serveur et la détection des collisions pendant la réception pour se rapprocher du modèle OMNeT++.
+- **Moteur d'événements précis.** La file de priorité gère désormais un délai de traitement serveur et la détection des collisions pendant la réception pour se rapprocher du modèle OMNeT++. Les paquets reçus par plusieurs passerelles sont regroupés pendant 1,2 s, puis la meilleure réception est choisie comme dans FLoRa.
 - **Suivi détaillé des ACK.** Chaque nœud mémorise les confirmations reçues pour appliquer fidèlement la logique ADR de FLoRa.
 - **Scheduler de downlinks prioritaire.** Le module `downlink_scheduler.py` organise les transmissions B/C en donnant la priorité aux commandes et accusés de réception.
 
