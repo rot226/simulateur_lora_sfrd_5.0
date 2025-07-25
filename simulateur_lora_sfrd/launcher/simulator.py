@@ -115,6 +115,7 @@ class Simulator:
         ping_slot_offset: float = 2.0,
         debug_rx: bool = False,
         dump_intervals: bool = False,
+        pure_poisson_mode: bool = False,
     ):
         """
         Initialise la simulation LoRa avec les entités et paramètres donnés.
@@ -215,8 +216,13 @@ class Simulator:
                 detection_threshold_dBm = -110.0
             if min_interference_time == 0.0:
                 min_interference_time = 5.0
+        if pure_poisson_mode:
+            duty_cycle = None
+            detection_threshold_dBm = -float("inf")
+            min_interference_time = float("inf")
         self.detection_threshold_dBm = detection_threshold_dBm
         self.min_interference_time = min_interference_time
+        self.pure_poisson_mode = pure_poisson_mode
         self.flora_mode = flora_mode
         self.flora_timing = flora_timing
         self.config_file = config_file
@@ -541,7 +547,7 @@ class Simulator:
         requested_time = time
         event_id = self.event_id_counter
         self.event_id_counter += 1
-        if self.duty_cycle_manager:
+        if self.duty_cycle_manager and not self.pure_poisson_mode:
             enforced = self.duty_cycle_manager.enforce(node.id, time)
             if enforced > time:
                 time = enforced
@@ -609,7 +615,7 @@ class Simulator:
             duration = node.channel.airtime(sf, payload_size=self.payload_size_bytes)
             node.last_airtime = duration
             end_time = time + duration
-            if self.duty_cycle_manager:
+            if self.duty_cycle_manager and not self.pure_poisson_mode:
                 self.duty_cycle_manager.update_after_tx(node_id, time, duration)
             # Mettre à jour les compteurs de paquets émis
             self.packets_sent += 1
@@ -653,14 +659,15 @@ class Simulator:
                 )
                 rssi += getattr(gw, "rx_gain_dB", 0.0)
                 snr += getattr(gw, "rx_gain_dB", 0.0)
-                if rssi < node.channel.detection_threshold_dBm:
-                    continue  # trop faible pour être détecté
-                snr_threshold = (
-                    node.channel.sensitivity_dBm.get(sf, -float("inf"))
-                    - node.channel.noise_floor_dBm()
-                )
-                if snr < snr_threshold:
-                    continue  # signal trop faible pour être reçu
+                if not self.pure_poisson_mode:
+                    if rssi < node.channel.detection_threshold_dBm:
+                        continue  # trop faible pour être détecté
+                    snr_threshold = (
+                        node.channel.sensitivity_dBm.get(sf, -float("inf"))
+                        - node.channel.noise_floor_dBm()
+                    )
+                    if snr < snr_threshold:
+                        continue  # signal trop faible pour être reçu
                 heard_by_any = True
                 if best_rssi is None or rssi > best_rssi:
                     best_rssi = rssi
@@ -943,17 +950,20 @@ class Simulator:
                     node.sf,
                     **kwargs,
                 )
-                if rssi < node.channel.detection_threshold_dBm:
-                    node.downlink_pending = max(0, node.downlink_pending - 1)
-                    continue
-                snr_threshold = (
-                    node.channel.sensitivity_dBm.get(node.sf, -float("inf"))
-                    - node.channel.noise_floor_dBm()
-                )
-                if snr >= snr_threshold:
-                    node.handle_downlink(frame)
+                if not self.pure_poisson_mode:
+                    if rssi < node.channel.detection_threshold_dBm:
+                        node.downlink_pending = max(0, node.downlink_pending - 1)
+                        continue
+                    snr_threshold = (
+                        node.channel.sensitivity_dBm.get(node.sf, -float("inf"))
+                        - node.channel.noise_floor_dBm()
+                    )
+                    if snr >= snr_threshold:
+                        node.handle_downlink(frame)
+                    else:
+                        node.downlink_pending = max(0, node.downlink_pending - 1)
                 else:
-                    node.downlink_pending = max(0, node.downlink_pending - 1)
+                    node.handle_downlink(frame)
                 break
             # Replanifier selon la classe du nœud
             if node.class_type.upper() == "C":
@@ -1041,17 +1051,20 @@ class Simulator:
                     sf,
                     **kwargs,
                 )
-                if rssi < node.channel.detection_threshold_dBm:
-                    node.downlink_pending = max(0, node.downlink_pending - 1)
-                    continue
-                snr_threshold = (
-                    node.channel.sensitivity_dBm.get(sf, -float("inf"))
-                    - node.channel.noise_floor_dBm()
-                )
-                if snr >= snr_threshold:
-                    node.handle_downlink(frame)
+                if not self.pure_poisson_mode:
+                    if rssi < node.channel.detection_threshold_dBm:
+                        node.downlink_pending = max(0, node.downlink_pending - 1)
+                        continue
+                    snr_threshold = (
+                        node.channel.sensitivity_dBm.get(sf, -float("inf"))
+                        - node.channel.noise_floor_dBm()
+                    )
+                    if snr >= snr_threshold:
+                        node.handle_downlink(frame)
+                    else:
+                        node.downlink_pending = max(0, node.downlink_pending - 1)
                 else:
-                    node.downlink_pending = max(0, node.downlink_pending - 1)
+                    node.handle_downlink(frame)
                 break
             return True
 

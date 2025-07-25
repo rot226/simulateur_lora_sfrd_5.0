@@ -13,6 +13,7 @@ def test_warmup_intervals():
         duty_cycle=0.01,
         mobility=False,
         seed=1,
+        pure_poisson_mode=True,
     )
     sim.run()
     node = sim.nodes[0]
