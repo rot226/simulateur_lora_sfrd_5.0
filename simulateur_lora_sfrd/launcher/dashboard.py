@@ -625,51 +625,65 @@ def setup_simulation(seed_offset: int = 0):
     if ini_file_input.value:
         import tempfile
 
-        tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".ini")
-        tmp.write(ini_file_input.value.encode())
-        tmp.flush()
-        config_path = tmp.name
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".ini") as tmp:
+            tmp.write(ini_file_input.value.encode())
+            tmp.flush()
+            config_path = tmp.name
 
     path_map = None
+    path_map_file = None
     if path_map_input.value:
         import tempfile
 
-        tmp_map = tempfile.NamedTemporaryFile(delete=False, suffix=".json")
-        tmp_map.write(path_map_input.value.encode())
-        tmp_map.flush()
-        path_map = tmp_map.name
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".json") as tmp_map:
+            tmp_map.write(path_map_input.value.encode())
+            tmp_map.flush()
+            path_map_file = tmp_map.name
+            path_map = path_map_file
 
     terrain_map = None
+    terrain_map_file = None
     if terrain_map_input.value:
         import tempfile
 
-        tmp_terrain = tempfile.NamedTemporaryFile(delete=False, suffix=".json")
-        tmp_terrain.write(terrain_map_input.value.encode())
-        tmp_terrain.flush()
-        terrain_map = tmp_terrain.name
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".json") as tmp_terrain:
+            tmp_terrain.write(terrain_map_input.value.encode())
+            tmp_terrain.flush()
+            terrain_map_file = tmp_terrain.name
+            terrain_map = terrain_map_file
 
     dyn_map = None
+    dyn_map_file = None
     if dyn_obs_input.value:
         import tempfile
 
-        tmp_dyn = tempfile.NamedTemporaryFile(delete=False, suffix=".json")
-        tmp_dyn.write(dyn_obs_input.value.encode())
-        tmp_dyn.flush()
-        dyn_map = tmp_dyn.name
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".json") as tmp_dyn:
+            tmp_dyn.write(dyn_obs_input.value.encode())
+            tmp_dyn.flush()
+            dyn_map_file = tmp_dyn.name
+            dyn_map = dyn_map_file
 
     global flora_metrics
     flora_metrics = None
+    flora_csv_file = None
     if flora_csv_input.value:
         import tempfile
 
         try:
-            tmp_csv = tempfile.NamedTemporaryFile(delete=False, suffix=".csv")
-            tmp_csv.write(flora_csv_input.value.encode())
-            tmp_csv.flush()
-            flora_metrics = load_flora_metrics(tmp_csv.name)
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".csv") as tmp_csv:
+                tmp_csv.write(flora_csv_input.value.encode())
+                tmp_csv.flush()
+                flora_csv_file = tmp_csv.name
+            flora_metrics = load_flora_metrics(flora_csv_file)
         except Exception as exc:
             flora_metrics = None
             export_message.object = f"⚠️ Erreur CSV FLoRa : {exc}"
+        finally:
+            if flora_csv_file:
+                try:
+                    os.unlink(flora_csv_file)
+                except OSError:
+                    pass
 
     # Choisir le modèle de mobilité
     mobility_instance = None
@@ -697,6 +711,22 @@ def setup_simulation(seed_offset: int = 0):
             float(mobility_speed_min_input.value),
             float(mobility_speed_max_input.value),
         )
+
+    if path_map_file:
+        try:
+            os.unlink(path_map_file)
+        except OSError:
+            pass
+    if terrain_map_file:
+        try:
+            os.unlink(terrain_map_file)
+        except OSError:
+            pass
+    if dyn_map_file:
+        try:
+            os.unlink(dyn_map_file)
+        except OSError:
+            pass
 
     sim = Simulator(
         num_nodes=int(num_nodes_input.value),
@@ -732,6 +762,12 @@ def setup_simulation(seed_offset: int = 0):
         seed=seed,
         phy_model="flora" if flora_mode_toggle.value else "omnet",
     )
+
+    if config_path:
+        try:
+            os.unlink(config_path)
+        except OSError:
+            pass
 
     if manual_pos_toggle.value:
         for line in position_textarea.value.splitlines():
