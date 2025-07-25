@@ -1,5 +1,5 @@
-import random
+from random import Random
 
-def sample_interval(mean: float) -> float:
+def sample_interval(mean: float, rng: Random) -> float:
     """Return a delay drawn from an exponential distribution."""
-    return random.expovariate(1.0 / mean)
+    return rng.expovariate(1.0 / mean)
