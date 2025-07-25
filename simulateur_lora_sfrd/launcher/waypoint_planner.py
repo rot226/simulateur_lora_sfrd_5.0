@@ -1,7 +1,7 @@
 # Path planner using A* over a terrain map with optional elevation and 3D obstacles.
 import math
 import random
-from typing import Iterable, List, Tuple
+from typing import List, Tuple
 
 
 class WaypointPlanner3D:

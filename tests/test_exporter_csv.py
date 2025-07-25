@@ -1,11 +1,10 @@
-import os
 import subprocess
 import pytest
 
 pn = pytest.importorskip("panel")
 pd = pytest.importorskip("pandas")
 
-from simulateur_lora_sfrd.launcher import dashboard
+from simulateur_lora_sfrd.launcher import dashboard  # noqa: E402
 
 
 def test_export_to_tmp_dir(tmp_path, monkeypatch):
