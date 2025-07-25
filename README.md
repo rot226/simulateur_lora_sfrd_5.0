@@ -144,7 +144,9 @@ Depuis la version 4.0.1, une fois toutes les transmissions envoyées, l'accélé
 ## Suivi de batterie
 
 Chaque nœud peut être doté d'une capacité d'énergie (en joules) grâce au paramètre `battery_capacity_j` du `Simulator`. La consommation est calculée selon le profil d'énergie FLoRa (courants typiques en veille, réception, etc.) puis retranchée de cette réserve. Le champ `battery_remaining_j` indique l'autonomie restante.
-Un champ **Capacité batterie (J)** est disponible dans le tableau de bord pour saisir facilement cette valeur (mettre `0` pour une capacité illimitée).
+Un champ **Capacité batterie (J)** est disponible dans le tableau de bord pour
+saisir facilement cette valeur. Indiquez `0` pour une capacité illimitée : ce
+nombre est automatiquement converti en `None`, valeur attendue par le simulateur.
 
 ## Paramètres du simulateur
 
@@ -171,7 +173,8 @@ scénarios FLoRa. Voici la liste complète des options :
 - `mobility_speed` : couple *(min, max)* définissant la vitesse des nœuds
   mobiles (m/s).
 - `fixed_sf` / `fixed_tx_power` : valeurs initiales communes de SF et puissance.
-- `battery_capacity_j` : énergie disponible par nœud (`None` pour illimité).
+- `battery_capacity_j` : énergie disponible par nœud (`None` pour illimité ;
+  la valeur `0` saisie dans le tableau de bord est convertie en `None`).
 - `payload_size_bytes` : taille du payload utilisée pour calculer l'airtime.
 - `node_class` : classe LoRaWAN de tous les nœuds (`A`, `B` ou `C`).
 - `detection_threshold_dBm` : RSSI minimal pour qu'une réception soit valide.

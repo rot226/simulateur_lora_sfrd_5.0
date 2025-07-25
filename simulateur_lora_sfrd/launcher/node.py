@@ -67,7 +67,8 @@ class Node:
         :param sf: Spreading Factor initial (entre 7 et 12).
         :param tx_power: Puissance d'émission initiale (dBm).
         :param battery_capacity_j: Capacité totale de la batterie en joules
-            (``None`` pour capacité illimitée).
+            (``None`` pour capacité illimitée). Le tableau de bord convertit la
+            valeur ``0`` en ``None`` pour faciliter la saisie.
         :param energy_profile: Instance ou nom de profil énergétique
             (``FLORA_PROFILE`` par défaut).
         :param join_eui: Identifiant de l'application pour OTAA.
