@@ -1,5 +1,4 @@
 import pytest
-import time
 
 
 dashboard = pytest.importorskip('simulateur_lora_sfrd.launcher.dashboard')

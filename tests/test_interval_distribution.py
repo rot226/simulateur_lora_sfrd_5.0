@@ -1,4 +1,3 @@
-import random
 from simulateur_lora_sfrd.launcher.simulator import Simulator
 
 
