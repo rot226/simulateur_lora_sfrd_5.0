@@ -398,17 +398,27 @@ class Node:
         up_to: float,
         rng: "np.random.Generator",
         mean_interval: float,
+        min_interval: float = 0.0,
         limit: int | None = None,
     ) -> None:
-        """Generate Poisson arrival times up to ``up_to`` seconds."""
+        """Generate Poisson arrival times up to ``up_to`` seconds.
+
+        ``min_interval`` enforces a minimal delay between samples by
+        discarding draws below this threshold.
+        """
         assert isinstance(mean_interval, float) and mean_interval > 0, (
             "mean_interval must be positive float"
+        )
+        assert isinstance(min_interval, float) and min_interval >= 0.0, (
+            "min_interval must be non-negative float"
         )
         last = self.arrival_queue[-1] if self.arrival_queue else self._last_arrival_time
         while (not self.arrival_queue or last <= up_to) and (
             limit is None or self.arrival_interval_count < limit
         ):
             delta = sample_interval(mean_interval, rng)
+            while delta < min_interval:
+                delta = sample_interval(mean_interval, rng)
             if self._warmup_remaining > 0:
                 self._warmup_remaining -= 1
             else:
@@ -445,7 +455,9 @@ class Node:
         self.arrival_interval_count = 0
         self._last_arrival_time = 0.0
         self._arrival_index = 0
-        self.ensure_poisson_arrivals(float("inf"), rng, mean_interval, limit=count)
+        self.ensure_poisson_arrivals(
+            float("inf"), rng, mean_interval, min_interval=0.0, limit=count
+        )
         self.precomputed_arrivals = list(self.arrival_queue)
 
     # ------------------------------------------------------------------

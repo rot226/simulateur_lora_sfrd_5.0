@@ -8,7 +8,9 @@ from simulateur_lora_sfrd.launcher.node import Node
 def _intervals_hash(seed: int, mean_interval: float = 1.0, count: int = 10000) -> str:
     rng = RngManager(seed).get_stream("traffic", 0)
     node = Node(0, 0, 0, 7, 14)
-    node.ensure_poisson_arrivals(1e9, rng, mean_interval, limit=count)
+    node.ensure_poisson_arrivals(
+        1e9, rng, mean_interval, min_interval=0.0, limit=count
+    )
     h = hashlib.sha256()
     last = 0.0
     for t in node.arrival_queue:

@@ -510,7 +510,10 @@ class Simulator:
                         node._last_arrival_time,
                         self.interval_rng,
                         self.packet_interval,
-                        self.packets_to_send if self.packets_to_send else None,
+                        min_interval=node.last_airtime,
+                        limit=(
+                            self.packets_to_send if self.packets_to_send else None
+                        ),
                     )
                 t0 = node.arrival_queue.pop(0)
             else:
@@ -884,7 +887,10 @@ class Simulator:
                                 node._last_arrival_time,
                                 self.interval_rng,
                                 self.packet_interval,
-                                self.packets_to_send if self.packets_to_send else None,
+                                min_interval=node.last_airtime,
+                                limit=(
+                                    self.packets_to_send if self.packets_to_send else None
+                                ),
                             )
                         next_time = node.arrival_queue.pop(0)
                     else:
