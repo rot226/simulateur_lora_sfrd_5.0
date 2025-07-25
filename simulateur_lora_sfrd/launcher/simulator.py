@@ -102,6 +102,7 @@ class Simulator:
         ping_slot_interval: float = 1.0,
         ping_slot_offset: float = 2.0,
         debug_rx: bool = False,
+        dump_intervals: bool = False,
     ):
         """
         Initialise la simulation LoRa avec les entités et paramètres donnés.
@@ -175,6 +176,7 @@ class Simulator:
         :param ping_slot_offset: Décalage initial entre le beacon et le premier
             ping slot (s).
         :param debug_rx: Active la journalisation détaillée des paquets reçus ou rejetés.
+        :param dump_intervals: Exporte la série complète des intervalles dans un fichier Parquet.
         """
         # Paramètres de simulation
         self.num_nodes = num_nodes
@@ -252,6 +254,7 @@ class Simulator:
         self.clock_accuracy = clock_accuracy
         self.beacon_loss_prob = beacon_loss_prob
         self.debug_rx = debug_rx
+        self.dump_intervals = dump_intervals
 
         # Gestion du duty cycle (activé par défaut à 1 %)
         self.duty_cycle_manager = DutyCycleManager(duty_cycle) if duty_cycle else None
@@ -486,7 +489,11 @@ class Simulator:
                 node.arrival_interval_sum += t0
                 node.arrival_interval_count += 1
                 node._last_arrival_time = t0
-            self.schedule_event(node, t0)
+            self.schedule_event(
+                node,
+                t0,
+                reason="poisson" if self.transmission_mode.lower() == "random" else "periodic",
+            )
             # Planifier le premier changement de position si la mobilité est activée
             if self.mobility_enabled:
                 self.schedule_mobility(node, self.mobility_model.step)
@@ -511,19 +518,31 @@ class Simulator:
         # Indicateur d'exécution de la simulation
         self.running = True
 
-    def schedule_event(self, node: Node, time: float):
-        """Planifie un événement de transmission pour un nœud à l'instant donné."""
+    def schedule_event(self, node: Node, time: float, *, reason: str = "poisson"):
+        """Planifie un événement de transmission pour un nœud."""
         if not node.alive:
             return
+        requested_time = time
         event_id = self.event_id_counter
         self.event_id_counter += 1
         if self.duty_cycle_manager:
-            time = self.duty_cycle_manager.enforce(node.id, time)
+            enforced = self.duty_cycle_manager.enforce(node.id, time)
+            if enforced > time:
+                time = enforced
+                reason = "duty_cycle"
         node.channel = self.multichannel.select_mask(getattr(node, "chmask", 0xFFFF))
         heapq.heappush(
             self.event_queue,
             Event(time, EventType.TX_START, event_id, node.id),
         )
+        if self.dump_intervals:
+            node.interval_log.append(
+                {
+                    "poisson_time": requested_time,
+                    "tx_time": time,
+                    "reason": reason,
+                }
+            )
         logger.debug(
             f"Scheduled transmission {event_id} for node {node.id} at t={time:.2f}s"
         )
@@ -822,7 +841,7 @@ class Simulator:
             # Planifier retransmissions restantes ou prochaine émission
             if node._nb_trans_left > 0:
                 self.retransmissions += 1
-                self.schedule_event(node, self.current_time + 1.0)
+                self.schedule_event(node, self.current_time + 1.0, reason="retransmission")
             else:
                 if (
                     self.packets_to_send == 0
@@ -841,7 +860,13 @@ class Simulator:
                         node.arrival_interval_sum += self.packet_interval
                         node.arrival_interval_count += 1
                         node._last_arrival_time = next_time
-                    self.schedule_event(node, next_time)
+                    self.schedule_event(
+                        node,
+                        next_time,
+                        reason="poisson"
+                        if self.transmission_mode.lower() == "random"
+                        else "periodic",
+                    )
                 else:
                     logger.debug(
                         "Packet limit reached for node %s – no more events for this node.",
@@ -1070,6 +1095,8 @@ class Simulator:
             step_count += 1
             if max_steps and step_count >= max_steps:
                 break
+        if self.dump_intervals:
+            self.dump_interval_logs()
 
     def stop(self):
         """Arrête la simulation en cours."""
@@ -1235,3 +1262,17 @@ class Simulator:
             if col not in df.columns:
                 df[col] = None
         return df[columns_order]
+
+    def dump_interval_logs(self, dest: str | Path = ".") -> None:
+        """Écrit les intervalles théoriques et réels de chaque nœud en Parquet."""
+        if not self.dump_intervals:
+            return
+        if pd is None:
+            raise RuntimeError("pandas is required for this feature")
+        dest_path = Path(dest)
+        dest_path.mkdir(parents=True, exist_ok=True)
+        for node in self.nodes:
+            if not node.interval_log:
+                continue
+            df = pd.DataFrame(node.interval_log)
+            df.to_parquet(dest_path / f"intervals_node_{node.id}.parquet", index=False)

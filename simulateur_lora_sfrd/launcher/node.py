@@ -231,6 +231,9 @@ class Node:
         self._log_after: int | None = None
         self._log_done: bool = False
 
+        # Historique complet des intervalles programmés/réels
+        self.interval_log: list[dict] = []
+
         # Energy accounting state
         self.last_state_time = 0.0
         self.state = "sleep"
