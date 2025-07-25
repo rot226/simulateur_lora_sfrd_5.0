@@ -323,6 +323,16 @@ Lorsque `phy_model="flora"` est utilisé (par exemple en mode FLoRa), le preset
 `environment="flora"` est désormais appliqué automatiquement afin de conserver
 un exposant de 2,7 et un shadowing de 3,57 dB identiques au modèle d'origine.
 
+### Aligner le modèle de propagation
+
+Pour n'utiliser que le modèle de propagation de FLoRa, créez le `Simulator`
+avec l'option `flora_mode=True`. Ce mode applique automatiquement :
+
+- un exposant de perte de parcours fixé à `2.7` ;
+- un shadowing de `σ = 3.57` dB ;
+- un seuil de détection d'environ `-110` dBm.
+
+
 ## SF et puissance initiaux
 
 Deux nouvelles cases à cocher du tableau de bord permettent de fixer le
