@@ -1036,31 +1036,13 @@ def on_stop(event):
 
 
 # --- Export CSV local : Méthode universelle ---
-def exporter_csv(event=None, dest_dir=None):
-    """Export simulation results as CSV files.
-
-    If ``dest_dir`` is not provided, a :class:`pn.widgets.FileSelector` widget is
-    displayed so the user can choose the destination folder. When a directory is
-    selected, the function is called again with ``dest_dir`` set.
-    """
-
+def exporter_csv(event=None):
+    """Export simulation results as CSV files in the current directory."""
+    dest_dir = os.getcwd()
     global runs_events, runs_metrics
 
     if not runs_events:
         export_message.object = "⚠️ Lance la simulation d'abord !"
-        return
-
-    # Ask for destination directory first
-    if dest_dir is None:
-        selector = pn.widgets.FileSelector(directory=os.getcwd(), only_dirs=True)
-        confirm = pn.widgets.Button(name="Exporter ici", button_type="primary")
-
-        def _confirm(event):
-            export_message.object = ""  # clear widget
-            exporter_csv(dest_dir=selector.value)
-
-        confirm.on_click(_confirm)
-        export_message.object = pn.Column(selector, confirm)
         return
 
     try:
