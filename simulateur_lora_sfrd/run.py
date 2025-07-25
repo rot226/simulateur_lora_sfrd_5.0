@@ -114,17 +114,18 @@ def simulate(
                     n = nodes_on_ch[0]
                     rng = rng_manager.get_stream("traffic", n)
                     success = True
-                    if fine_fading_std > 0.0 and rng.gauss(0.0, fine_fading_std) < -3.0:
+                    if (
+                        fine_fading_std > 0.0
+                        and rng.normal(0.0, fine_fading_std) < -3.0
+                    ):
                         success = False
-                    if noise_std > 0.0 and rng.gauss(0.0, noise_std) > 3.0:
+                    if noise_std > 0.0 and rng.normal(0.0, noise_std) > 3.0:
                         success = False
                     if success:
                         delivered += 1
                         delays.append(0)
                         if debug_rx:
-                            logging.debug(
-                                f"t={t:.3f} Node {n} GW {gw} CH {ch} reçu"
-                            )
+                            logging.debug(f"t={t:.3f} Node {n} GW {gw} CH {ch} reçu")
                     else:
                         collisions += 1
                         if debug_rx:
@@ -138,9 +139,12 @@ def simulate(
                     rng = rng_manager.get_stream("traffic", nodes_on_ch[0])
                     winner = rng.choice(nodes_on_ch)
                     success = True
-                    if fine_fading_std > 0.0 and rng.gauss(0.0, fine_fading_std) < -3.0:
+                    if (
+                        fine_fading_std > 0.0
+                        and rng.normal(0.0, fine_fading_std) < -3.0
+                    ):
                         success = False
-                    if noise_std > 0.0 and rng.gauss(0.0, noise_std) > 3.0:
+                    if noise_std > 0.0 and rng.normal(0.0, noise_std) > 3.0:
                         success = False
                     if success:
                         collisions += nb_tx - 1
@@ -171,11 +175,7 @@ def simulate(
                         )
 
     # Calcul des métriques finales
-    pdr = (
-        (delivered / total_transmissions) * 100
-        if total_transmissions > 0
-        else 0
-    )
+    pdr = (delivered / total_transmissions) * 100 if total_transmissions > 0 else 0
     avg_delay = (sum(delays) / len(delays)) if delays else 0
     throughput_bps = delivered * PAYLOAD_SIZE * 8 / steps if steps > 0 else 0.0
 
@@ -197,12 +197,8 @@ def main(argv=None):
         default="config.ini",
         help="Fichier INI de configuration des paramètres",
     )
-    parser.add_argument(
-        "--nodes", type=int, default=10, help="Nombre de nœuds"
-    )
-    parser.add_argument(
-        "--gateways", type=int, default=1, help="Nombre de gateways"
-    )
+    parser.add_argument("--nodes", type=int, default=10, help="Nombre de nœuds")
+    parser.add_argument("--gateways", type=int, default=1, help="Nombre de gateways")
     parser.add_argument(
         "--channels", type=int, default=1, help="Nombre de canaux radio"
     )
@@ -304,9 +300,7 @@ def main(argv=None):
         ns.send_downlink(node, b"ack")
         rx1, _ = node.schedule_receive_windows(0)
         gw.pop_downlink(node.id)  # illustration
-        logging.info(
-            f"Exemple LoRaWAN : trame uplink FCnt={frame.fcnt}, RX1={rx1}s"
-        )
+        logging.info(f"Exemple LoRaWAN : trame uplink FCnt={frame.fcnt}, RX1={rx1}s")
         sys.exit()
 
     results = []
@@ -327,9 +321,7 @@ def main(argv=None):
             phy_model=args.phy_model,
             rng_manager=rng_manager,
         )
-        results.append(
-            (delivered, collisions, pdr, energy, avg_delay, throughput)
-        )
+        results.append((delivered, collisions, pdr, energy, avg_delay, throughput))
         logging.info(
             f"Run {i + 1}/{args.runs} : PDR={pdr:.2f}% , Paquets livrés={delivered}, Collisions={collisions}, "
             f"Énergie consommée={energy:.1f} unités, Délai moyen={avg_delay:.2f} unités de temps, "
