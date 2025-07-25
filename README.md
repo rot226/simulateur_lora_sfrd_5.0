@@ -119,6 +119,9 @@ Deux champs « Vitesse min » et « Vitesse max » sont disponibles dans
 Plusieurs schémas supplémentaires peuvent être utilisés :
 - `RandomWaypoint` gère les déplacements aléatoires en s'appuyant sur une carte
   de terrain et sur des obstacles dynamiques optionnels.
+- `PlannedRandomWaypoint` applique la même logique mais choisit un point d'arrivée
+  aléatoire puis planifie un chemin en A* pour contourner un relief 3D ou des
+  obstacles fixes.
 - `TerrainMapMobility` permet désormais de suivre une carte rasterisée en
   pondérant la vitesse par cellule et en tenant compte d'obstacles 3D.
 - `GaussMarkov` et les traces GPS restent disponibles pour modéliser des
@@ -502,7 +505,7 @@ encore de maturité :
 
 - La couche physique est simplifiée et n'imite pas parfaitement les comportements
   réels des modems LoRa.
-- La mobilité par défaut s'appuie sur des trajets de Bézier. Un modèle RandomWaypoint peut exploiter une carte de terrain pour éviter les obstacles. Un module de navigation peut désormais planifier des chemins à partir d'une carte d'obstacles.
+- La mobilité par défaut s'appuie sur des trajets de Bézier. Un modèle RandomWaypoint et son planificateur A* permettent d'éviter relief et obstacles 3D.
 - La sécurité LoRaWAN s'appuie désormais sur un chiffrement AES-128 complet et la validation du MIC. Le serveur de jointure gère l'ensemble de la procédure OTAA.
 
 Les contributions sont les bienvenues pour lever ces limitations ou proposer de

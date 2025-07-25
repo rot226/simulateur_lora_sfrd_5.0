@@ -9,6 +9,7 @@ from .simulator import Simulator
 from .duty_cycle import DutyCycleManager
 from .smooth_mobility import SmoothMobility
 from .random_waypoint import RandomWaypoint
+from .planned_random_waypoint import PlannedRandomWaypoint
 from .path_mobility import PathMobility
 from .terrain_mobility import TerrainMapMobility
 from .gauss_markov import GaussMarkov
@@ -31,6 +32,7 @@ __all__ = [
     "DutyCycleManager",
     "SmoothMobility",
     "RandomWaypoint",
+    "PlannedRandomWaypoint",
     "PathMobility",
     "TerrainMapMobility",
     "GaussMarkov",
