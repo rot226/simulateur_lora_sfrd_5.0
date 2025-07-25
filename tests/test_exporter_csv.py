@@ -14,6 +14,7 @@ def test_export_to_tmp_dir(tmp_path, monkeypatch):
     dashboard.runs_metrics = [{"PDR": 100}]
     dashboard.export_message = pn.pane.Markdown()
     monkeypatch.setattr(subprocess, "Popen", lambda *a, **k: None)
-    dashboard.exporter_csv(dest_dir=str(tmp_path))
+    monkeypatch.chdir(tmp_path)
+    dashboard.exporter_csv()
     files = list(tmp_path.glob("*.csv"))
     assert len(files) == 2

@@ -1,6 +1,7 @@
 import pytest
 
 from simulateur_lora_sfrd.launcher.simulator import Simulator
+pn = pytest.importorskip("panel")
 import simulateur_lora_sfrd.launcher.dashboard as dashboard
 
 
