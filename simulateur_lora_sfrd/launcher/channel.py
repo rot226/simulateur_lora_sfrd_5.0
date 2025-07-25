@@ -261,15 +261,7 @@ class Channel:
         # Low Data Rate Optimization activée au-delà de ce SF
         self.low_data_rate_threshold = 11  # SF >= 11 -> Low Data Rate Optimization activée
 
-        # Sensibilité par SF (dBm) basée sur la table Semtech SX1272/73
-        self.sensitivity_dBm = {
-            7: -124,
-            8: -127,
-            9: -130,
-            10: -133,
-            11: -135,
-            12: -137,
-        }
+        self._update_sensitivity()
         # Seuil de capture (différence de RSSI en dB pour qu'un signal plus fort capture la réception)
         self.capture_threshold_dB = capture_threshold_dB
         self.orthogonal_sf = orthogonal_sf
@@ -463,3 +455,13 @@ class Channel:
             raise ValueError(f"Unknown region preset: {region}")
         return [cls(frequency_hz=f, region=reg, channel_index=i, **kwargs)
                 for i, f in enumerate(cls.REGION_CHANNELS[reg])]
+
+    # ------------------------------------------------------------------
+    # Sensitivity computation
+    # ------------------------------------------------------------------
+
+    SNR_THRESHOLDS = {7: -7.5, 8: -10.0, 9: -12.5, 10: -15.0, 11: -17.5, 12: -20.0}
+
+    def _update_sensitivity(self) -> None:
+        noise = -174 + 10 * math.log10(self.bandwidth) + self.noise_figure_dB
+        self.sensitivity_dBm = {sf: noise + snr for sf, snr in self.SNR_THRESHOLDS.items()}

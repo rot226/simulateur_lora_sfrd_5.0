@@ -20,4 +20,4 @@ def test_sensitivity_matches_theory():
     noise_floor = -174 + 10 * math.log10(bw) + nf
     for sf, req in snr_req.items():
         expected = noise_floor + req
-        assert math.isclose(ch.sensitivity_dBm[sf], expected, abs_tol=1.5)
+        assert math.isclose(ch.sensitivity_dBm[sf], expected, abs_tol=0.1)
