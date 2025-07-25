@@ -862,7 +862,10 @@ def on_stop(event):
     global current_run, total_runs, runs_events, auto_fast_forward
     # If called programmatically (e.g. after fast_forward), allow cleanup even
     # if the simulation has already stopped.
-    if sim is None or (event is not None and not sim.running):
+    if sim is None or (event is not None and not getattr(sim, "running", False)):
+        paused = False
+        pause_button.name = "⏸ Pause"
+        fast_forward_button.disabled = True
         return
 
     sim.running = False
