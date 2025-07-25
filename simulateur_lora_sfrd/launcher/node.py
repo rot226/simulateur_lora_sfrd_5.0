@@ -223,6 +223,8 @@ class Node:
 
         # Poisson arrival process tracking
         self.arrival_queue: list[float] = []
+        self.precomputed_arrivals: list[float] | None = None
+        self._arrival_index: int = 0
         self.arrival_interval_sum: float = 0.0
         self.arrival_interval_count: int = 0
         self._last_arrival_time: float = 0.0
@@ -428,6 +430,23 @@ class Node:
             last += delta
             self.arrival_queue.append(last)
         self._last_arrival_time = last
+
+    def precompute_poisson_arrivals(
+        self,
+        rng: "np.random.Generator",
+        mean_interval: float,
+        count: int,
+    ) -> None:
+        """Generate ``count`` Poisson arrival times once and keep a copy."""
+
+        self.arrival_queue = []
+        self.precomputed_arrivals = None
+        self.arrival_interval_sum = 0.0
+        self.arrival_interval_count = 0
+        self._last_arrival_time = 0.0
+        self._arrival_index = 0
+        self.ensure_poisson_arrivals(float("inf"), rng, mean_interval, limit=count)
+        self.precomputed_arrivals = list(self.arrival_queue)
 
     # ------------------------------------------------------------------
     # LoRaWAN helper methods

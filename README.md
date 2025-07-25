@@ -165,6 +165,7 @@ scénarios FLoRa. Voici la liste complète des options :
 - Les instants de transmission suivent strictement une loi exponentielle de
   moyenne `packet_interval` lorsque le mode `Random` est sélectionné.
 - `packets_to_send` : nombre de paquets émis **par nœud** avant arrêt (0 = infini).
+- `lock_step_poisson` : pré-génère une séquence Poisson réutilisée entre exécutions (nécessite `packets_to_send`).
 - `adr_node` / `adr_server` : active l'ADR côté nœud ou serveur.
 - `duty_cycle` : quota d'émission appliqué à chaque nœud (`None` pour désactiver).
 - `mobility` : active la mobilité aléatoire selon `mobility_speed`.
