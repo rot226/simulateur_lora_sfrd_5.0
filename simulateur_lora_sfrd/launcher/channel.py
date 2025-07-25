@@ -43,6 +43,16 @@ class Channel:
         "KR920": [920.9e6, 921.1e6, 921.3e6],
     }
 
+    FLORA_SENSITIVITY = {
+        6: {125000: -121, 250000: -118, 500000: -111},
+        7: {125000: -124, 250000: -122, 500000: -116},
+        8: {125000: -127, 250000: -125, 500000: -119},
+        9: {125000: -130, 250000: -128, 500000: -122},
+        10: {125000: -133, 250000: -130, 500000: -125},
+        11: {125000: -135, 250000: -132, 500000: -128},
+        12: {125000: -137, 250000: -135, 500000: -129},
+    }
+
     def __init__(
         self,
         frequency_hz: float = 868e6,
@@ -285,7 +295,7 @@ class Channel:
             )
             self.flora_phy = None
             self.advanced_capture = True
-        elif self.phy_model == "flora" or self.use_flora_curves:
+        elif self.phy_model in ("flora", "flora_full") or self.use_flora_curves:
             from .flora_phy import FloraPHY
             self.flora_phy = FloraPHY(self)
             self.omnet_phy = None
@@ -386,7 +396,11 @@ class Channel:
 
         rssi -= self._filter_attenuation_db(freq_offset_hz)
 
-        snr = rssi - self.noise_floor_dBm() + self.snr_offset_dB
+        if self.phy_model == "flora_full" and sf is not None:
+            noise = self._flora_noise_dBm(sf)
+        else:
+            noise = self.noise_floor_dBm()
+        snr = rssi - noise + self.snr_offset_dB
         penalty = self._alignment_penalty_db(freq_offset_hz, sync_offset_s, sf)
         snr -= penalty
         snr -= abs(self._phase_noise.sample())
@@ -474,6 +488,10 @@ class Channel:
     # ------------------------------------------------------------------
 
     SNR_THRESHOLDS = {7: -7.5, 8: -10.0, 9: -12.5, 10: -15.0, 11: -17.5, 12: -20.0}
+
+    def _flora_noise_dBm(self, sf: int) -> float:
+        return self.FLORA_SENSITIVITY.get(sf, {}).get(int(self.bandwidth), -126.5)
+
 
     def _update_sensitivity(self) -> None:
         noise = -174 + 10 * math.log10(self.bandwidth) + self.noise_figure_dB

@@ -533,7 +533,10 @@ class AdvancedChannel:
         model.temperature_K = temperature
         thermal = model.thermal_noise_dBm(self.base.bandwidth)
         model.temperature_K = original_temp
-        noise = thermal + self.base.noise_figure_dB + self.base.interference_dB
+        if self.base.phy_model == "flora_full" and sf is not None:
+            noise = self.base._flora_noise_dBm(sf)
+        else:
+            noise = thermal + self.base.noise_figure_dB + self.base.interference_dB
         noise += self.base.humidity_noise_coeff_dB * (self._humidity.sample() / 100.0)
         if self.base.noise_floor_std > 0:
             noise += random.gauss(0, self.base.noise_floor_std)

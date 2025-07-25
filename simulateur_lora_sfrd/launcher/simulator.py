@@ -286,7 +286,7 @@ class Simulator:
             if flora_mode:
                 for ch in self.multichannel.channels:
                     ch.phy_model = "flora"
-            if flora_mode or phy_model == "flora":
+            if flora_mode or phy_model.startswith("flora"):
                 for ch in self.multichannel.channels:
                     if getattr(ch, "environment", None) is None:
                         ch.environment = "flora"
@@ -295,7 +295,7 @@ class Simulator:
                         ]
         else:
             if channels is None:
-                env = "flora" if (flora_mode or phy_model == "flora") else None
+                env = "flora" if (flora_mode or phy_model.startswith("flora")) else None
                 ch_phy_model = "flora" if flora_mode else phy_model
                 ch_list = [
                     Channel(
@@ -312,7 +312,7 @@ class Simulator:
                             ch.detection_threshold_dBm = detection_threshold_dBm
                         if flora_mode:
                             ch.phy_model = "flora"
-                        if (flora_mode or phy_model == "flora") and getattr(
+                        if (flora_mode or phy_model.startswith("flora")) and getattr(
                             ch, "environment", None
                         ) is None:
                             ch.environment = "flora"
@@ -328,7 +328,7 @@ class Simulator:
                                 phy_model="flora" if flora_mode else phy_model,
                                 environment=(
                                     "flora"
-                                    if (flora_mode or phy_model == "flora")
+                                    if (flora_mode or phy_model.startswith("flora"))
                                     else None
                                 ),
                             )
@@ -700,7 +700,7 @@ class Simulator:
                         if node.channel.phy_model == "omnet"
                         else (
                             "flora"
-                            if node.channel.phy_model == "flora"
+                            if node.channel.phy_model.startswith("flora")
                             else (
                                 "advanced" if node.channel.advanced_capture else "basic"
                             )
@@ -708,7 +708,7 @@ class Simulator:
                     ),
                     flora_phy=(
                         node.channel.flora_phy
-                        if node.channel.phy_model == "flora"
+                        if node.channel.phy_model.startswith("flora")
                         else None
                     ),
                     orthogonal_sf=node.channel.orthogonal_sf,

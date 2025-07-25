@@ -104,3 +104,31 @@ def test_rssi_snr_match(tmp_path):
     stats = load_flora_rx_stats(sca)
     assert stats["rssi"] == pytest.approx(rssi)
     assert stats["snr"] == pytest.approx(snr)
+
+
+def test_flora_full_mode(tmp_path):
+    """PDR and SF distribution should match FLoRa within 1%."""
+    pytest.importorskip('pandas')
+    data_path = Path(__file__).parent / 'data' / 'flora_metrics.csv'
+    flora_copy = tmp_path / 'flora_metrics.csv'
+    flora_copy.write_bytes(data_path.read_bytes())
+
+    sim = Simulator(
+        num_nodes=1,
+        num_gateways=1,
+        transmission_mode='Periodic',
+        packet_interval=1.0,
+        packets_to_send=10,
+        mobility=False,
+        fixed_sf=7,
+        seed=0,
+        phy_model="flora_full",
+    )
+    sim.run()
+    metrics = sim.get_metrics()
+    flora = load_flora_metrics(flora_copy)
+    assert abs(metrics["PDR"] - flora["PDR"]) <= 0.01
+    total = sum(flora["sf_distribution"].values())
+    for sf, expected in flora["sf_distribution"].items():
+        got = metrics["sf_distribution"].get(sf, 0)
+        assert abs(got - expected) / total <= 0.01

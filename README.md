@@ -230,7 +230,7 @@ réception :
   `(freq, bw, dB)` appliqués au calcul du bruit.
 - `environment` : preset rapide pour le modèle de propagation
   (`urban`, `urban_dense`, `suburban`, `rural`, `indoor` ou `flora`).
-- `phy_model` : "omnet" ou "flora" pour utiliser un modèle physique avancé
+- `phy_model` : "omnet", "flora" ou "flora_full" pour utiliser un modèle physique avancé
   reprenant les formules de FLoRa.
 - `use_flora_curves` : applique directement les équations FLoRa pour la
   puissance reçue et le taux d'erreur.
@@ -330,7 +330,7 @@ variance de shadowing correspondants. Les champs restent modifiables si ce mode
 est désactivé. Pour reproduire fidèlement les scénarios FLoRa d'origine, pensez
 également à renseigner les positions des nœuds telles qu'indiquées dans l'INI.
 L'équivalent en script consiste à passer `flora_mode=True` au constructeur `Simulator`.
-Lorsque `phy_model="flora"` est utilisé (par exemple en mode FLoRa), le preset
+Lorsque `phy_model="flora" ou "flora_full"` est utilisé (par exemple en mode FLoRa), le preset
 `environment="flora"` est désormais appliqué automatiquement afin de conserver
 un exposant de 2,7 et un shadowing de 3,57 dB identiques au modèle d'origine.
 
@@ -342,7 +342,7 @@ avec l'option `flora_mode=True`. Ce mode applique automatiquement :
 - un exposant de perte de parcours fixé à `2.7` ;
 - un shadowing de `σ = 3.57` dB ;
 - un seuil de détection d'environ `-110` dBm.
-- l'utilisation automatique des formules FLoRa (`phy_model="flora"`).
+- l'utilisation automatique des formules FLoRa (`phy_model="flora" ou "flora_full"`).
 
 ### Équations FLoRa de perte de parcours et de PER
 
@@ -362,7 +362,7 @@ PER = 1 / (1 + exp(2 * (snr - (th + 2))))
 
 où `th` est le seuil SNR par Spreading Factor ({7: -7.5, 8: -10, 9: -12.5,
 10: -15, 11: -17.5, 12: -20} dB). Ces équations sont activées en passant
-`phy_model="flora"` ou `use_flora_curves=True` au constructeur du `Channel`.
+`phy_model="flora" ou "flora_full"` ou `use_flora_curves=True` au constructeur du `Channel`.
 
 
 ## SF et puissance initiaux
