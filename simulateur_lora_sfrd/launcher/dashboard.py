@@ -89,6 +89,20 @@ def _cleanup_callbacks() -> None:
             globals()[cb_name] = None
 
 
+def _validate_positive_inputs() -> bool:
+    """Return False and display a warning if key parameters are not positive."""
+    if int(num_nodes_input.value) <= 0:
+        export_message.object = "⚠️ Le nombre de nœuds doit être supérieur à 0 !"
+        return False
+    if float(area_input.value) <= 0:
+        export_message.object = "⚠️ La taille de l'aire doit être supérieure à 0 !"
+        return False
+    if float(interval_input.value) <= 0:
+        export_message.object = "⚠️ L'intervalle doit être supérieur à 0 !"
+        return False
+    return True
+
+
 # --- Widgets de configuration ---
 num_nodes_input = pn.widgets.IntInput(name="Nombre de nœuds", value=2, step=1, start=1)
 num_gateways_input = pn.widgets.IntInput(name="Nombre de passerelles", value=1, step=1, start=1)
@@ -606,6 +620,9 @@ def setup_simulation(seed_offset: int = 0):
         )
         return
 
+    if not _validate_positive_inputs():
+        return
+
     elapsed_time = 0
 
     if sim_callback:
@@ -849,6 +866,9 @@ def on_start(event):
         )
         return
 
+    if not _validate_positive_inputs():
+        return
+
     total_runs = int(num_runs_input.value)
     current_run = 1
     runs_events.clear()
@@ -901,6 +921,8 @@ def on_stop(event):
             # PDR détaillés disponibles dans le fichier exporté uniquement
         current_run += 1
         seed_offset = current_run - 1
+        if not _validate_positive_inputs():
+            return
         setup_simulation(seed_offset=seed_offset)
         if auto_fast_forward:
             fast_forward()
