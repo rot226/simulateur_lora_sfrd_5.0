@@ -519,6 +519,7 @@ l'utilisation du simulateur :
 
 ```bash
 python examples/run_basic.py          # simulation rapide avec 20 nœuds
+python examples/run_basic.py --dump-intervals  # exporte les intervalles
 python examples/run_flora_example.py  # reproduction d'un scénario FLoRa
 ```
 

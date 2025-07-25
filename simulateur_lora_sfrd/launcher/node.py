@@ -227,6 +227,9 @@ class Node:
         self.arrival_interval_count: int = 0
         self._last_arrival_time: float = 0.0
 
+        # Historique complet des intervalles programmés/réels
+        self.interval_log: list[dict] = []
+
         # Energy accounting state
         self.last_state_time = 0.0
         self.state = "sleep"
