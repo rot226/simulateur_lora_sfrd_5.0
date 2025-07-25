@@ -1,8 +1,10 @@
 import argparse
+import configparser
 import csv
 import random
 import logging
 import sys
+from pathlib import Path
 
 PAYLOAD_SIZE = 20  # octets simulés par paquet
 
@@ -80,93 +82,90 @@ def simulate(
             # Randomize the initial offset like the full Simulator
             t = random.random() * interval
             while t < steps:
-                send_times[node].append(int(round(t)))
+                send_times[node].append(t)
                 t += interval
             send_times[node] = sorted(set(send_times[node]))
         else:  # mode "Random"
             # Génère les instants d'envoi selon une loi exponentielle
             t = _sample_interval(interval)
             while t < steps:
-                send_times[node].append(int(round(t)))
+                send_times[node].append(t)
                 t += _sample_interval(interval)
 
     # Simulation pas à pas
-    pending = {}
+    events: dict[float, list[int]] = {}
+    for node, times in send_times.items():
+        for t in times:
+            events.setdefault(t, []).append(node)
 
-    for t in range(steps):
-        # Ajouter les nouvelles transmissions prêtes à l'instant t
-        for node, times in send_times.items():
-            if t in times and node not in pending:
-                pending[node] = t
-
-        # Traiter les transmissions en attente par passerelle puis par canal
+    for t in sorted(events.keys()):
+        nodes_ready = events[t]
         for gw in range(max(1, gateways)):
-            gw_nodes = [n for n in pending.keys() if node_gateways[n] == gw]
+            gw_nodes = [n for n in nodes_ready if node_gateways[n] == gw]
             for ch in range(channels):
                 nodes_on_ch = [n for n in gw_nodes if node_channels[n] == ch]
                 nb_tx = len(nodes_on_ch)
-                if nb_tx > 0:
-                    total_transmissions += nb_tx
-                    energy_consumed += nb_tx * 1.0
-                    if nb_tx == 1:
-                        n = nodes_on_ch[0]
-                        success = True
-                        if fine_fading_std > 0.0 and random.gauss(0.0, fine_fading_std) < -3.0:
-                            success = False
-                        if noise_std > 0.0 and random.gauss(0.0, noise_std) > 3.0:
-                            success = False
-                        if success:
-                            delivered += 1
-                            delays.append(t - pending[n])
-                            del pending[n]
-                            if debug_rx:
-                                logging.debug(
-                                    f"t={t} Node {n} GW {gw} CH {ch} reçu"
-                                )
-                        else:
-                            collisions += 1
-                            if debug_rx:
-                                logging.debug(
-                                    f"t={t} Node {n} GW {gw} CH {ch} rejeté (bruit)"
-                                )
-                                diag_logger.info(
-                                    f"t={t} gw={gw} ch={ch} collision=[{n}] cause=noise"
-                                )
+                if nb_tx == 0:
+                    continue
+                total_transmissions += nb_tx
+                energy_consumed += nb_tx * 1.0
+                if nb_tx == 1:
+                    n = nodes_on_ch[0]
+                    success = True
+                    if fine_fading_std > 0.0 and random.gauss(0.0, fine_fading_std) < -3.0:
+                        success = False
+                    if noise_std > 0.0 and random.gauss(0.0, noise_std) > 3.0:
+                        success = False
+                    if success:
+                        delivered += 1
+                        delays.append(0)
+                        if debug_rx:
+                            logging.debug(
+                                f"t={t:.3f} Node {n} GW {gw} CH {ch} reçu"
+                            )
                     else:
-                        winner = random.choice(nodes_on_ch)
-                        success = True
-                        if fine_fading_std > 0.0 and random.gauss(0.0, fine_fading_std) < -3.0:
-                            success = False
-                        if noise_std > 0.0 and random.gauss(0.0, noise_std) > 3.0:
-                            success = False
-                        if success:
-                            collisions += nb_tx - 1
-                            delivered += 1
-                            delays.append(t - pending[winner])
-                            del pending[winner]
-                            if debug_rx:
-                                for n in nodes_on_ch:
-                                    if n == winner:
-                                        logging.debug(
-                                            f"t={t} Node {n} GW {gw} CH {ch} reçu après collision"
-                                        )
-                                    else:
-                                        logging.debug(
-                                            f"t={t} Node {n} GW {gw} CH {ch} perdu (collision)"
-                                        )
-                            diag_logger.info(
-                                f"t={t} gw={gw} ch={ch} collision={nodes_on_ch} winner={winner}"
+                        collisions += 1
+                        if debug_rx:
+                            logging.debug(
+                                f"t={t:.3f} Node {n} GW {gw} CH {ch} rejeté (bruit)"
                             )
-                        else:
-                            collisions += nb_tx
-                            if debug_rx:
-                                for n in nodes_on_ch:
+                            diag_logger.info(
+                                f"t={t:.3f} gw={gw} ch={ch} collision=[{n}] cause=noise"
+                            )
+                else:
+                    winner = random.choice(nodes_on_ch)
+                    success = True
+                    if fine_fading_std > 0.0 and random.gauss(0.0, fine_fading_std) < -3.0:
+                        success = False
+                    if noise_std > 0.0 and random.gauss(0.0, noise_std) > 3.0:
+                        success = False
+                    if success:
+                        collisions += nb_tx - 1
+                        delivered += 1
+                        delays.append(0)
+                        if debug_rx:
+                            for n in nodes_on_ch:
+                                if n == winner:
                                     logging.debug(
-                                        f"t={t} Node {n} GW {gw} CH {ch} perdu (collision/bruit)"
+                                        f"t={t:.3f} Node {n} GW {gw} CH {ch} reçu après collision"
                                     )
-                            diag_logger.info(
-                                f"t={t} gw={gw} ch={ch} collision={nodes_on_ch} none"
-                            )
+                                else:
+                                    logging.debug(
+                                        f"t={t:.3f} Node {n} GW {gw} CH {ch} perdu (collision)"
+                                    )
+                        diag_logger.info(
+                            f"t={t:.3f} gw={gw} ch={ch} collision={nodes_on_ch} winner={winner}"
+                        )
+                    else:
+                        collisions += nb_tx
+                        if debug_rx:
+                            for n in nodes_on_ch:
+                                logging.debug(
+                                    f"t={t:.3f} Node {n} GW {gw} CH {ch} perdu (collision/bruit)"
+                                )
+                        diag_logger.info(
+                            f"t={t:.3f} gw={gw} ch={ch} collision={nodes_on_ch} none"
+                        )
 
     # Calcul des métriques finales
     pdr = (
@@ -190,6 +189,12 @@ def simulate(
 def main(argv=None):
     parser = argparse.ArgumentParser(description="Simulateur LoRa – Mode CLI")
     parser.add_argument(
+        "--config",
+        type=str,
+        default="config.ini",
+        help="Fichier INI de configuration des paramètres",
+    )
+    parser.add_argument(
         "--nodes", type=int, default=10, help="Nombre de nœuds"
     )
     parser.add_argument(
@@ -207,8 +212,8 @@ def main(argv=None):
     )
     parser.add_argument(
         "--interval",
-        type=int,
-        default=10,
+        type=float,
+        default=10.0,
         help="Intervalle moyen ou fixe entre transmissions",
     )
     parser.add_argument(
@@ -261,6 +266,15 @@ def main(argv=None):
         action="store_true",
         help="Trace chaque paquet reçu ou rejeté",
     )
+
+    # Preliminary parse to load configuration defaults
+    pre_args, _ = parser.parse_known_args(argv)
+    if pre_args.config and Path(pre_args.config).is_file():
+        cp = configparser.ConfigParser()
+        cp.read(pre_args.config)
+        if cp.has_section("simulation") and "mean_interval" in cp["simulation"]:
+            parser.set_defaults(interval=float(cp["simulation"]["mean_interval"]))
+
     args = parser.parse_args(argv)
 
     if args.debug_rx:
