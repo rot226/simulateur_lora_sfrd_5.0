@@ -22,14 +22,17 @@ class GPSTraceMobility:
                     search = ".//trkpt"
                 prefix = "ns:" if ns else ""
                 for i, pt in enumerate(root.findall(search, ns)):
-                    lat = float(pt.attrib.get("lat", 0.0))
-                    lon = float(pt.attrib.get("lon", 0.0))
+                    lat_attr = pt.attrib.get("lat")
+                    lon_attr = pt.attrib.get("lon")
+                    lat = float(lat_attr) if lat_attr is not None else 0.0
+                    lon = float(lon_attr) if lon_attr is not None else 0.0
                     ele = pt.find(f"{prefix}ele", ns)
-                    alt = float(ele.text) if ele is not None else 0.0
+                    alt = float(ele.text) if (ele is not None and ele.text is not None) else 0.0
                     time_el = pt.find(f"{prefix}time", ns)
-                    if time_el is not None:
+                    time_text = time_el.text if time_el is not None else None
+                    if time_text is not None:
                         try:
-                            t = datetime.fromisoformat(time_el.text.replace("Z", "+00:00")).timestamp()
+                            t = datetime.fromisoformat(time_text.replace("Z", "+00:00")).timestamp()
                         except Exception:
                             t = float(i)
                     else:
@@ -48,7 +51,15 @@ class GPSTraceMobility:
                             t, x, y, z = (values + [0.0])[:4]
                         rows.append((t, x, y, z))
         else:
-            rows = [tuple(map(float, r + (0.0,) * (4 - len(r)))) for r in trace]
+            rows = [
+                (
+                    float(r[0]),
+                    float(r[1]) if len(r) > 1 else 0.0,
+                    float(r[2]) if len(r) > 2 else 0.0,
+                    float(r[3]) if len(r) > 3 else 0.0,
+                )
+                for r in trace
+            ]
         rows.sort(key=lambda r: r[0])
         if rows and rows[0][0] > 1e6:
             base = rows[0][0]
