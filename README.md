@@ -232,14 +232,19 @@ canal = Channel(environment="urban")
 
 Ces valeurs influencent le calcul du RSSI et du SNR retournés par
 `Channel.compute_rssi`.
-Un module **`propagation_models.py`** regroupe des fonctions de perte de parcours log-distance, de shadowing et de fading multipath.
+Un module **`propagation_models.py`** regroupe désormais plusieurs modèles :
+`LogDistanceShadowing` pour la perte de parcours classique, `multipath_fading_db`
+pour générer un fading Rayleigh, et la nouvelle classe `CompletePropagation`
+qui combine ces effets avec un bruit thermique calibré.
 Il reprend les paramètres des fichiers INI de FLoRa, par exemple `sigma=3.57` pour le preset *flora*.
 
 ```python
-from simulateur_lora_sfrd.launcher.propagation_models import LogDistanceShadowing, multipath_fading_db
-model = LogDistanceShadowing(environment="flora")
+from simulateur_lora_sfrd.launcher.propagation_models import CompletePropagation
+
+model = CompletePropagation(environment="flora", multipath_taps=3, fast_fading_std=1.0)
 loss = model.path_loss(1000)
-fad = multipath_fading_db(taps=3)
+fad = model.rssi(14, 1000)  # RSSI avec fading multipath
+sense = model.sensitivity_table(125e3)
 ```
 
 
@@ -368,10 +373,12 @@ mais simplifie volontairement certains aspects.
 
 ### Écarts connus avec FLoRa
 - le canal radio est désormais plus complet (multipath, interférences
-  cumulées et sensibilité par SF) mais certains paramètres restent
-  approximés
+  cumulées et sensibilité par SF calculée automatiquement) mais certains
+  paramètres restent approximés
 - certaines temporisations ou files d'attente du serveur diffèrent
-- la sensibilité et le bruit thermiques sont approchés de manière empirique
+- la sensibilité et le bruit thermiques sont maintenant calculés à partir du
+  bruit de fond théorique et du facteur de bruit, ce qui se rapproche des
+  valeurs des modems Semtech
 
 Le simulateur gère désormais l'ensemble des commandes MAC de LoRaWAN : réglage
 des paramètres ADR, réinitialisation de clés, rejoins et changement de classe.

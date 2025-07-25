@@ -42,3 +42,53 @@ def multipath_fading_db(taps: int = 1) -> float:
     q = sum(random.gauss(0.0, 1.0) for _ in range(taps))
     amp = math.sqrt(i * i + q * q) / math.sqrt(taps)
     return 20 * math.log10(max(amp, 1e-12))
+
+
+class CompletePropagation(LogDistanceShadowing):
+    """More detailed propagation model including fast fading and calibrated noise."""
+
+    SNR_THRESHOLDS = {7: -7.5, 8: -10.0, 9: -12.5, 10: -15.0, 11: -17.5, 12: -20.0}
+
+    def __init__(
+        self,
+        frequency_hz: float = 868e6,
+        *,
+        path_loss_exp: float = 2.7,
+        shadowing_std: float = 6.0,
+        fast_fading_std: float = 0.0,
+        multipath_taps: int = 1,
+        noise_figure_dB: float = 6.0,
+        temperature_K: float = 290.0,
+        environment: str | None = None,
+    ) -> None:
+        super().__init__(
+            frequency_hz,
+            path_loss_exp=path_loss_exp,
+            shadowing_std=shadowing_std,
+            environment=environment,
+        )
+        self.fast_fading_std = fast_fading_std
+        self.multipath_taps = int(multipath_taps)
+        self.noise_figure_dB = noise_figure_dB
+        self.temperature_K = temperature_K
+
+    @staticmethod
+    def thermal_noise_dBm(bandwidth: float, temperature_K: float = 290.0) -> float:
+        k = 1.38064852e-23
+        return 10 * math.log10(k * temperature_K * bandwidth) + 30
+
+    def noise_floor_dBm(self, bandwidth: float) -> float:
+        base = self.thermal_noise_dBm(bandwidth, self.temperature_K)
+        return base + self.noise_figure_dB
+
+    def rssi(self, tx_power_dBm: float, distance: float) -> float:
+        rssi = tx_power_dBm - self.path_loss(distance)
+        if self.fast_fading_std > 0:
+            rssi += random.gauss(0.0, self.fast_fading_std)
+        if self.multipath_taps > 1:
+            rssi += multipath_fading_db(self.multipath_taps)
+        return rssi
+
+    def sensitivity_table(self, bandwidth: float) -> dict[int, float]:
+        floor = self.noise_floor_dBm(bandwidth)
+        return {sf: floor + snr for sf, snr in self.SNR_THRESHOLDS.items()}
