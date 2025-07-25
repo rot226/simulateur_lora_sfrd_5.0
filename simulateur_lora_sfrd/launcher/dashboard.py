@@ -1052,7 +1052,7 @@ def exporter_csv(event=None, dest_dir=None):
 
     # Ask for destination directory first
     if dest_dir is None:
-        selector = pn.widgets.FileSelector(path=os.getcwd(), only_dirs=True)
+        selector = pn.widgets.FileSelector(directory=os.getcwd(), only_dirs=True)
         confirm = pn.widgets.Button(name="Exporter ici", button_type="primary")
 
         def _confirm(event):
