@@ -1021,6 +1021,12 @@ def fast_forward(event=None):
         if paused:
             export_message.object = "⚠️ Impossible d'accélérer pendant la pause."
             return
+        # If no events remain, finalise immediately without spawning a thread
+        if not sim.event_queue:
+            fast_forward_progress.visible = True
+            fast_forward_progress.value = 100
+            on_stop(None)
+            return
         auto_fast_forward = True
         if sim.packets_to_send == 0:
             export_message.object = (
