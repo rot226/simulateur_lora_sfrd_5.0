@@ -209,7 +209,7 @@ stop_button = pn.widgets.Button(name="Arrêter la simulation", button_type="warn
 pause_button = pn.widgets.Button(name="⏸ Pause", button_type="primary", disabled=True)
 
 # --- Nouveau bouton d'export et message d'état ---
-export_button = pn.widgets.Button(name="Exporter résultats (dossier courant)", button_type="primary", disabled=True)
+export_button = pn.widgets.Button(name="Exporter résultats", button_type="primary", disabled=True)
 export_message = pn.pane.HTML("Cliquez sur Exporter pour générer le fichier CSV après la simulation.")
 
 # --- Indicateurs de métriques ---
@@ -1011,38 +1011,64 @@ def on_stop(event):
 
 
 # --- Export CSV local : Méthode universelle ---
-def exporter_csv(event=None):
+def exporter_csv(event=None, dest_dir=None):
+    """Export simulation results as CSV files.
+
+    If ``dest_dir`` is not provided, a :class:`pn.widgets.FileSelector` widget is
+    displayed so the user can choose the destination folder. When a directory is
+    selected, the function is called again with ``dest_dir`` set.
+    """
+
     global runs_events, runs_metrics
-    if runs_events:
-        try:
-            df = pd.concat(runs_events, ignore_index=True)
-            if df.empty:
-                export_message.object = "⚠️ Aucune donnée à exporter !"
-                return
-            timestamp = time.strftime("%Y-%m-%d_%H-%M-%S")
-            chemin = os.path.join(os.getcwd(), f"resultats_simulation_{timestamp}.csv")
-            df.to_csv(chemin, index=False, encoding="utf-8")
-            metrics_path = os.path.join(os.getcwd(), f"metrics_{timestamp}.csv")
-            if runs_metrics:
-                metrics_df = pd.json_normalize(runs_metrics)
-                metrics_df.to_csv(metrics_path, index=False, encoding="utf-8")
-            export_message.object = (
-                f"✅ Résultats exportés : <b>{chemin}</b><br>"
-                f"Métriques : <b>{metrics_path}</b><br>(Ouvre-les avec Excel ou pandas)"
-            )
-            try:
-                folder = os.getcwd()
-                if sys.platform.startswith("win"):
-                    os.startfile(folder)
-                else:
-                    opener = "open" if sys.platform == "darwin" else "xdg-open"
-                    subprocess.Popen([opener, folder])
-            except Exception:
-                pass
-        except Exception as e:
-            export_message.object = f"❌ Erreur lors de l'export : {e}"
-    else:
+
+    if not runs_events:
         export_message.object = "⚠️ Lance la simulation d'abord !"
+        return
+
+    # Ask for destination directory first
+    if dest_dir is None:
+        selector = pn.widgets.FileSelector(path=os.getcwd(), only_dirs=True)
+        confirm = pn.widgets.Button(name="Exporter ici", button_type="primary")
+
+        def _confirm(event):
+            export_message.object = ""  # clear widget
+            exporter_csv(dest_dir=selector.value)
+
+        confirm.on_click(_confirm)
+        export_message.object = pn.Column(selector, confirm)
+        return
+
+    try:
+        df = pd.concat(runs_events, ignore_index=True)
+        if df.empty:
+            export_message.object = "⚠️ Aucune donnée à exporter !"
+            return
+
+        timestamp = time.strftime("%Y-%m-%d_%H-%M-%S")
+        chemin = os.path.join(dest_dir, f"resultats_simulation_{timestamp}.csv")
+        df.to_csv(chemin, index=False, encoding="utf-8")
+
+        metrics_path = os.path.join(dest_dir, f"metrics_{timestamp}.csv")
+        if runs_metrics:
+            metrics_df = pd.json_normalize(runs_metrics)
+            metrics_df.to_csv(metrics_path, index=False, encoding="utf-8")
+
+        export_message.object = (
+            f"✅ Résultats exportés : <b>{chemin}</b><br>"
+            f"Métriques : <b>{metrics_path}</b><br>(Ouvre-les avec Excel ou pandas)"
+        )
+
+        try:
+            folder = dest_dir
+            if sys.platform.startswith("win"):
+                os.startfile(folder)
+            else:
+                opener = "open" if sys.platform == "darwin" else "xdg-open"
+                subprocess.Popen([opener, folder])
+        except Exception:
+            pass
+    except Exception as e:
+        export_message.object = f"❌ Erreur lors de l'export : {e}"
 
 
 export_button.on_click(exporter_csv)
