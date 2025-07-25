@@ -6,7 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [Unreleased]
 
 ### Changed
-- Increased channel degradation in `adr_standard_1` for simulator validation.
+- Significantly increased channel degradation in `adr_standard_1` for simulator validation.
 
 ## [5.0] - 2025-07-24
 ### Added
