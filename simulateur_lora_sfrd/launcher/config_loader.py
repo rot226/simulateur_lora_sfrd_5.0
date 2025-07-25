@@ -1,5 +1,6 @@
 import configparser
 import json
+import re
 from pathlib import Path
 
 def load_config(path: str | Path) -> tuple[list[dict], list[dict]]:
@@ -90,3 +91,18 @@ def write_flora_ini(
     }
     with open(path, "w") as f:
         cp.write(f)
+
+
+def parse_flora_interval(path: str | Path) -> float | None:
+    """Return the mean packet interval defined in a FLoRa INI file.
+
+    The function searches for a parameter ``timeToNextPacket`` expressed as
+    ``exponential(<value>s)`` and returns ``<value>`` as a float. ``None`` is
+    returned when the parameter cannot be found.
+    """
+
+    text = Path(path).read_text()
+    match = re.search(r"timeToNextPacket\s*=\s*exponential\((\d+(?:\.\d+)?)s\)", text)
+    if match:
+        return float(match.group(1))
+    return None
