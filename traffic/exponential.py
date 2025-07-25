@@ -22,6 +22,4 @@ def sample_interval(mean: float, rng: np.random.Generator) -> float:
         raise TypeError("rng must be numpy.random.Generator using MT19937")
     assert isinstance(mean, float) and mean > 0, "mean_interval must be positive float"
     u = rng.random()
-    while u <= 0.0:
-        u = rng.random()
-    return -mean * math.log(u)
+    return -mean * math.log(1.0 - u)
