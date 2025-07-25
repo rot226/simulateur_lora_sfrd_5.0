@@ -29,7 +29,8 @@ class EventType(IntEnum):
     RX_WINDOW = 3
     BEACON = 4
     PING_SLOT = 5
-    SERVER_PROCESS = 6
+    SERVER_RX = 6
+    SERVER_PROCESS = 7
 
 
 @dataclass(order=True, slots=True)
@@ -892,6 +893,10 @@ class Simulator:
                 else:
                     node.downlink_pending = max(0, node.downlink_pending - 1)
                 break
+            return True
+
+        elif priority == EventType.SERVER_RX:
+            self.network_server._handle_network_arrival(event_id)
             return True
 
         elif priority == EventType.SERVER_PROCESS:
