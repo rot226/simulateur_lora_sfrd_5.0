@@ -66,6 +66,8 @@ class Simulator:
         area_size: float = 1000.0,
         transmission_mode: str = "Random",
         packet_interval: float = 60.0,
+        warm_up_intervals: int = 0,
+        log_mean_after: int | None = None,
         interval_variation: float = 0.0,
         packets_to_send: int = 0,
         adr_node: bool = False,
@@ -108,6 +110,9 @@ class Simulator:
         :param area_size: Taille de l'aire carrée (mètres) dans laquelle sont déployés nœuds et passerelles.
         :param transmission_mode: 'Random' pour transmissions aléatoires (Poisson) ou 'Periodic' pour périodiques.
         :param packet_interval: Intervalle moyen entre transmissions (si Random, moyenne en s; si Periodic, période fixe en s).
+        :param warm_up_intervals: Nombre d'intervalles à ignorer dans les métriques (warm-up).
+        :param log_mean_after: Nombre d'intervalles comptabilisés après warm-up
+            avant journalisation de la moyenne empirique (``None`` pour désactiver).
         :param interval_variation: Jitter relatif appliqué à chaque intervalle
             exponentiel. La valeur par défaut ``0`` reproduit fidèlement le
             modèle aléatoire de FLoRa (aucune dispersion supplémentaire).
@@ -177,6 +182,8 @@ class Simulator:
         self.area_size = area_size
         self.transmission_mode = transmission_mode
         self.packet_interval = packet_interval
+        self.warm_up_intervals = warm_up_intervals
+        self.log_mean_after = log_mean_after
         if interval_variation < 0 or interval_variation > 3:
             raise ValueError("interval_variation must be between 0 and 3")
         self.interval_variation = interval_variation
@@ -410,6 +417,8 @@ class Simulator:
                     else 0.0
                 ),
             )
+            node._warmup_remaining = self.warm_up_intervals
+            node._log_after = self.log_mean_after
             # Enregistrer les états initiaux du nœud pour rapport ultérieur
             node.initial_x = x
             node.initial_y = y

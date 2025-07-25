@@ -226,6 +226,10 @@ class Node:
         self.arrival_interval_sum: float = 0.0
         self.arrival_interval_count: int = 0
         self._last_arrival_time: float = 0.0
+        # Warm-up handling for arrival intervals
+        self._warmup_remaining: int = 0
+        self._log_after: int | None = None
+        self._log_done: bool = False
 
         # Energy accounting state
         self.last_state_time = 0.0
@@ -400,8 +404,24 @@ class Node:
             limit is None or self.arrival_interval_count < limit
         ):
             delta = sample_interval(mean_interval, rng)
-            self.arrival_interval_sum += delta
-            self.arrival_interval_count += 1
+            if self._warmup_remaining > 0:
+                self._warmup_remaining -= 1
+            else:
+                self.arrival_interval_sum += delta
+                self.arrival_interval_count += 1
+                if (
+                    self._log_after is not None
+                    and not self._log_done
+                    and self.arrival_interval_count >= self._log_after
+                ):
+                    import logging
+
+                    logging.info(
+                        "Empirical mean interval after warm-up: %.3fs over %d samples",
+                        self.arrival_interval_sum / self.arrival_interval_count,
+                        self.arrival_interval_count,
+                    )
+                    self._log_done = True
             last += delta
             self.arrival_queue.append(last)
         self._last_arrival_time = last
