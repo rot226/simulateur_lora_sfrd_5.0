@@ -1,3 +1,5 @@
+"""Event-driven LoRa simulator."""
+
 import heapq
 import logging
 import random
@@ -7,17 +9,12 @@ from traffic.exponential import sample_interval
 from pathlib import Path
 from dataclasses import dataclass
 
-NS_PER_S = 1_000_000_000
 
-
-def _to_ns(t: float) -> int:
-    """Convert seconds to integer nanoseconds."""
-    return int(round(t * NS_PER_S))
-
-
-def _from_ns(ns: int) -> float:
-    """Convert integer nanoseconds to seconds."""
-    return ns / NS_PER_S
+# Earlier versions used integer nanoseconds for event timestamps to mimic
+# OMNeT++'s scheduler tick.  For validation scenarios we rely on continuous
+# double precision times, hence events directly store their timestamp in
+# seconds as ``float`` values.  This avoids any quantisation effects that could
+# slightly bias statistics when using sub-second intervals.
 from enum import IntEnum
 
 try:
@@ -50,7 +47,7 @@ class EventType(IntEnum):
 
 @dataclass(order=True, slots=True)
 class Event:
-    time_ns: int
+    time: float
     type: int
     id: int
     node_id: int
@@ -476,7 +473,6 @@ class Simulator:
         self.event_queue: list[Event] = []
         self.node_map = {node.id: node for node in self.nodes}
         self.current_time = 0.0
-        self.current_time_ns = 0
         self.event_id_counter = 0
 
         # Statistiques cumulatives
@@ -524,7 +520,7 @@ class Simulator:
                 self.event_id_counter += 1
                 heapq.heappush(
                     self.event_queue,
-                    Event(_to_ns(0.0), EventType.RX_WINDOW, eid, node.id),
+                    Event(0.0, EventType.RX_WINDOW, eid, node.id),
                 )
 
         # Première émission de beacon pour la synchronisation Class B
@@ -532,7 +528,7 @@ class Simulator:
         self.event_id_counter += 1
         heapq.heappush(
             self.event_queue,
-            Event(_to_ns(0.0), EventType.BEACON, eid, 0),
+            Event(0.0, EventType.BEACON, eid, 0),
         )
         self.last_beacon_time = 0.0
         self.network_server.last_beacon_time = 0.0
@@ -555,7 +551,7 @@ class Simulator:
         node.channel = self.multichannel.select_mask(getattr(node, "chmask", 0xFFFF))
         heapq.heappush(
             self.event_queue,
-            Event(_to_ns(time), EventType.TX_START, event_id, node.id),
+            Event(time, EventType.TX_START, event_id, node.id),
         )
         if self.dump_intervals:
             node.interval_log.append(
@@ -577,7 +573,7 @@ class Simulator:
         self.event_id_counter += 1
         heapq.heappush(
             self.event_queue,
-            Event(_to_ns(time), EventType.MOBILITY, event_id, node.id),
+            Event(time, EventType.MOBILITY, event_id, node.id),
         )
         logger.debug(
             f"Scheduled mobility {event_id} for node {node.id} at t={time:.2f}s"
@@ -589,8 +585,7 @@ class Simulator:
             return False
         # Extraire le prochain événement (le plus tôt dans le temps)
         event = heapq.heappop(self.event_queue)
-        time = _from_ns(event.time_ns)
-        self.current_time_ns = event.time_ns
+        time = event.time
         priority = event.type
         event_id = event.id
         node = self.node_map.get(event.node_id)
@@ -713,7 +708,7 @@ class Simulator:
             # Planifier l'événement de fin de transmission correspondant
             heapq.heappush(
                 self.event_queue,
-                Event(_to_ns(end_time), EventType.TX_END, event_id, node.id),
+                Event(end_time, EventType.TX_END, event_id, node.id),
             )
             # Planifier les fenêtres de réception LoRaWAN
             rx1, rx2 = node.schedule_receive_windows(end_time)
@@ -721,13 +716,13 @@ class Simulator:
             self.event_id_counter += 1
             heapq.heappush(
                 self.event_queue,
-                Event(_to_ns(rx1), EventType.RX_WINDOW, ev1, node.id),
+                Event(rx1, EventType.RX_WINDOW, ev1, node.id),
             )
             ev2 = self.event_id_counter
             self.event_id_counter += 1
             heapq.heappush(
                 self.event_queue,
-                Event(_to_ns(rx2), EventType.RX_WINDOW, ev2, node.id),
+                Event(rx2, EventType.RX_WINDOW, ev2, node.id),
             )
 
             # Journaliser l'événement de transmission (résultat inconnu à ce stade)
@@ -976,7 +971,7 @@ class Simulator:
                     self.event_id_counter += 1
                     heapq.heappush(
                         self.event_queue,
-                        Event(_to_ns(nxt), EventType.RX_WINDOW, eid, node.id),
+                        Event(nxt, EventType.RX_WINDOW, eid, node.id),
                     )
             return True
 
@@ -986,7 +981,7 @@ class Simulator:
             self.event_id_counter += 1
             heapq.heappush(
                 self.event_queue,
-                Event(_to_ns(nxt), EventType.BEACON, eid, 0),
+                Event(nxt, EventType.BEACON, eid, 0),
             )
             self.last_beacon_time = time
             self.network_server.notify_beacon(time)
@@ -1012,7 +1007,7 @@ class Simulator:
                         self.event_id_counter += 1
                         heapq.heappush(
                             self.event_queue,
-                            Event(_to_ns(slot), EventType.PING_SLOT, eid, n.id),
+                            Event(slot, EventType.PING_SLOT, eid, n.id),
                         )
                         slot += interval
             return True
