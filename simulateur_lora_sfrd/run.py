@@ -2,6 +2,8 @@ import argparse
 import configparser
 import csv
 import random
+
+from traffic.exponential import sample_interval
 import logging
 import sys
 from pathlib import Path
@@ -70,12 +72,6 @@ def simulate(
     node_gateways = {node: node % max(1, gateways) for node in range(nodes)}
     # Le paramètre phy_model est présent pour conserver une interface similaire
     # au tableau de bord mais n'influence pas ce modèle simplifié.
-    def _sample_interval(mean: float, min_interval: float = 0.0) -> float:
-        """Retourne un délai tiré d'une loi exponentielle."""
-        while True:
-            val = random.expovariate(1.0 / mean)
-            if val >= min_interval:
-                return val
 
     for node in range(nodes):
         if mode_lower == "periodic":
@@ -87,10 +83,10 @@ def simulate(
             send_times[node] = sorted(set(send_times[node]))
         else:  # mode "Random"
             # Génère les instants d'envoi selon une loi exponentielle
-            t = _sample_interval(interval)
+            t = sample_interval(interval)
             while t < steps:
                 send_times[node].append(t)
-                t += _sample_interval(interval)
+                t += sample_interval(interval)
 
     # Simulation pas à pas
     events: dict[float, list[int]] = {}
