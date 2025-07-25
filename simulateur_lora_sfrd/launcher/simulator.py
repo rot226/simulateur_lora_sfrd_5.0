@@ -1,6 +1,8 @@
 import heapq
 import logging
 import random
+
+from traffic.exponential import sample_interval
 from pathlib import Path
 from dataclasses import dataclass
 from enum import IntEnum
@@ -402,7 +404,7 @@ class Simulator:
         for node in self.nodes:
             if self.transmission_mode.lower() == 'random':
                 # Random: tirer un délai initial selon une distribution exponentielle
-                t0 = self._sample_interval()
+                t0 = sample_interval(self.packet_interval)
             else:
                 # Periodic: délai initial aléatoire uniforme dans [0, période]
                 t0 = random.random() * self.packet_interval
@@ -431,16 +433,7 @@ class Simulator:
         # Indicateur d'exécution de la simulation
         self.running = True
 
-    def _sample_interval(self, min_interval: float = 0.0) -> float:
-        """Retourne un délai tiré strictement d'une loi exponentielle.
 
-        Les intervalles trop courts sont rééchantillonnés jusqu'à dépasser
-        ``min_interval`` (durée du paquet précédent).
-        """
-        while True:
-            interval = random.expovariate(1.0 / self.packet_interval)
-            if interval >= min_interval:
-                return interval
 
     def schedule_event(self, node: Node, time: float):
         """Planifie un événement de transmission pour un nœud à l'instant donné."""
@@ -723,7 +716,7 @@ class Simulator:
             else:
                 if self.packets_to_send == 0 or node.packets_sent < self.packets_to_send:
                     if self.transmission_mode.lower() == 'random':
-                        next_interval = self._sample_interval(node.last_airtime)
+                        next_interval = sample_interval(self.packet_interval)
                     else:
                         next_interval = self.packet_interval
                     next_time = self.current_time + next_interval
