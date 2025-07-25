@@ -1,9 +1,9 @@
 import argparse
 import configparser
 import csv
-import random
 
 from traffic.exponential import sample_interval
+from traffic.rng_manager import RngManager
 import logging
 import sys
 from pathlib import Path
@@ -34,6 +34,7 @@ def simulate(
     noise_std=0.0,
     debug_rx=False,
     phy_model="omnet",
+    rng_manager: RngManager | None = None,
 ):
     """Exécute une simulation LoRa simplifiée et retourne les métriques.
 
@@ -57,6 +58,9 @@ def simulate(
     if mode_lower not in {"random", "periodic"}:
         raise ValueError("mode must be 'Random' or 'Periodic'")
 
+    if rng_manager is None:
+        rng_manager = RngManager(0)
+
     # Initialisation des compteurs
     total_transmissions = 0
     collisions = 0
@@ -74,19 +78,20 @@ def simulate(
     # au tableau de bord mais n'influence pas ce modèle simplifié.
 
     for node in range(nodes):
+        rng = rng_manager.get_stream("traffic", node)
         if mode_lower == "periodic":
             # Randomize the initial offset like the full Simulator
-            t = random.random() * interval
+            t = rng.random() * interval
             while t < steps:
                 send_times[node].append(t)
                 t += interval
             send_times[node] = sorted(set(send_times[node]))
         else:  # mode "Random"
             # Génère les instants d'envoi selon une loi exponentielle
-            t = sample_interval(interval)
+            t = sample_interval(interval, rng)
             while t < steps:
                 send_times[node].append(t)
-                t += sample_interval(interval)
+                t += sample_interval(interval, rng)
 
     # Simulation pas à pas
     events: dict[float, list[int]] = {}
@@ -107,10 +112,11 @@ def simulate(
                 energy_consumed += nb_tx * 1.0
                 if nb_tx == 1:
                     n = nodes_on_ch[0]
+                    rng = rng_manager.get_stream("traffic", n)
                     success = True
-                    if fine_fading_std > 0.0 and random.gauss(0.0, fine_fading_std) < -3.0:
+                    if fine_fading_std > 0.0 and rng.gauss(0.0, fine_fading_std) < -3.0:
                         success = False
-                    if noise_std > 0.0 and random.gauss(0.0, noise_std) > 3.0:
+                    if noise_std > 0.0 and rng.gauss(0.0, noise_std) > 3.0:
                         success = False
                     if success:
                         delivered += 1
@@ -129,11 +135,12 @@ def simulate(
                                 f"t={t:.3f} gw={gw} ch={ch} collision=[{n}] cause=noise"
                             )
                 else:
-                    winner = random.choice(nodes_on_ch)
+                    rng = rng_manager.get_stream("traffic", nodes_on_ch[0])
+                    winner = rng.choice(nodes_on_ch)
                     success = True
-                    if fine_fading_std > 0.0 and random.gauss(0.0, fine_fading_std) < -3.0:
+                    if fine_fading_std > 0.0 and rng.gauss(0.0, fine_fading_std) < -3.0:
                         success = False
-                    if noise_std > 0.0 and random.gauss(0.0, noise_std) > 3.0:
+                    if noise_std > 0.0 and rng.gauss(0.0, noise_std) > 3.0:
                         success = False
                     if success:
                         collisions += nb_tx - 1
@@ -304,8 +311,8 @@ def main(argv=None):
 
     results = []
     for i in range(args.runs):
-        if args.seed is not None:
-            random.seed(args.seed + i)
+        seed = args.seed + i if args.seed is not None else i
+        rng_manager = RngManager(seed)
 
         delivered, collisions, pdr, energy, avg_delay, throughput = simulate(
             args.nodes,
@@ -318,6 +325,7 @@ def main(argv=None):
             noise_std=args.noise_std,
             debug_rx=args.debug_rx,
             phy_model=args.phy_model,
+            rng_manager=rng_manager,
         )
         results.append(
             (delivered, collisions, pdr, energy, avg_delay, throughput)

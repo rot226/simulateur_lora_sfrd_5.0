@@ -404,7 +404,7 @@ class Simulator:
         for node in self.nodes:
             if self.transmission_mode.lower() == 'random':
                 # Random: tirer un délai initial selon une distribution exponentielle
-                t0 = sample_interval(self.packet_interval)
+                t0 = sample_interval(self.packet_interval, self.pos_rng)
             else:
                 # Periodic: délai initial aléatoire uniforme dans [0, période]
                 t0 = random.random() * self.packet_interval
@@ -716,7 +716,7 @@ class Simulator:
             else:
                 if self.packets_to_send == 0 or node.packets_sent < self.packets_to_send:
                     if self.transmission_mode.lower() == 'random':
-                        next_interval = sample_interval(self.packet_interval)
+                        next_interval = sample_interval(self.packet_interval, self.pos_rng)
                     else:
                         next_interval = self.packet_interval
                     next_time = self.current_time + next_interval
