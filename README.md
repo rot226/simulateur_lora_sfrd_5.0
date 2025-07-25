@@ -227,6 +227,8 @@ réception :
   (`urban`, `urban_dense`, `suburban`, `rural`, `indoor` ou `flora`).
 - `phy_model` : "omnet" ou "flora" pour utiliser un modèle physique avancé
   reprenant les formules de FLoRa.
+- `use_flora_curves` : applique directement les équations FLoRa pour la
+  puissance reçue et le taux d'erreur.
 
 ```python
 from simulateur_lora_sfrd.launcher.channel import Channel
@@ -304,6 +306,10 @@ constructeur de `Channel` classique et restent compatibles avec le
 tableau de bord. Les modèles ``rayleigh`` et ``rician`` utilisent
 désormais une corrélation temporelle pour reproduire le comportement de
 FLoRa et un bruit variable peut être ajouté via ``variable_noise_std``.
+Un paramètre ``clock_jitter_std_s`` modélise la gigue d'horloge sur le
+temps de réception. Les équations d'atténuation et de PER de FLoRa
+peuvent être activées via ``use_flora_curves`` pour un rendu encore plus
+fidèle.
 Une carte ``obstacle_height_map`` peut bloquer complètement un lien en
 fonction de l'altitude parcourue.
 Il est désormais possible de modéliser la sélectivité du filtre RF grâce aux
