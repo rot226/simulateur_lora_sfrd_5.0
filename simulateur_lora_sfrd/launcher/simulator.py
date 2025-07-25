@@ -116,6 +116,7 @@ class Simulator:
         debug_rx: bool = False,
         dump_intervals: bool = False,
         pure_poisson_mode: bool = False,
+        lock_step_poisson: bool = False,
     ):
         """
         Initialise la simulation LoRa avec les entités et paramètres donnés.
@@ -190,6 +191,7 @@ class Simulator:
             ping slot (s).
         :param debug_rx: Active la journalisation détaillée des paquets reçus ou rejetés.
         :param dump_intervals: Exporte la série complète des intervalles dans un fichier Parquet.
+        :param lock_step_poisson: Prégénère la séquence Poisson une seule fois et la réutilise.
         """
         # Paramètres de simulation
         self.num_nodes = num_nodes
@@ -223,6 +225,7 @@ class Simulator:
         self.detection_threshold_dBm = detection_threshold_dBm
         self.min_interference_time = min_interference_time
         self.pure_poisson_mode = pure_poisson_mode
+        self.lock_step_poisson = lock_step_poisson
         self.flora_mode = flora_mode
         self.flora_timing = flora_timing
         self.config_file = config_file
@@ -498,12 +501,21 @@ class Simulator:
         # Planifier le premier envoi de chaque nœud
         for node in self.nodes:
             if self.transmission_mode.lower() == "random":
-                node.ensure_poisson_arrivals(
-                    node._last_arrival_time,
-                    self.interval_rng,
-                    self.packet_interval,
-                    self.packets_to_send if self.packets_to_send else None,
-                )
+                if self.lock_step_poisson:
+                    if self.packets_to_send == 0:
+                        raise ValueError("lock_step_poisson requires packets_to_send > 0")
+                    node.precompute_poisson_arrivals(
+                        self.interval_rng,
+                        self.packet_interval,
+                        self.packets_to_send,
+                    )
+                else:
+                    node.ensure_poisson_arrivals(
+                        node._last_arrival_time,
+                        self.interval_rng,
+                        self.packet_interval,
+                        self.packets_to_send if self.packets_to_send else None,
+                    )
                 t0 = node.arrival_queue.pop(0)
             else:
                 t0 = random.random() * self.packet_interval
@@ -872,12 +884,13 @@ class Simulator:
                     or node.packets_sent < self.packets_to_send
                 ):
                     if self.transmission_mode.lower() == "random":
-                        node.ensure_poisson_arrivals(
-                            node._last_arrival_time,
-                            self.interval_rng,
-                            self.packet_interval,
-                            self.packets_to_send if self.packets_to_send else None,
-                        )
+                        if not self.lock_step_poisson:
+                            node.ensure_poisson_arrivals(
+                                node._last_arrival_time,
+                                self.interval_rng,
+                                self.packet_interval,
+                                self.packets_to_send if self.packets_to_send else None,
+                            )
                         next_time = node.arrival_queue.pop(0)
                     else:
                         next_time = node._last_arrival_time + self.packet_interval
