@@ -337,6 +337,7 @@ avec l'option `flora_mode=True`. Ce mode applique automatiquement :
 - un exposant de perte de parcours fixé à `2.7` ;
 - un shadowing de `σ = 3.57` dB ;
 - un seuil de détection d'environ `-110` dBm.
+- l'utilisation automatique des formules FLoRa (`phy_model="flora"`).
 
 
 ## SF et puissance initiaux
