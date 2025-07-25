@@ -20,6 +20,7 @@ class FloraPHY:
 
     REFERENCE_DISTANCE = 40.0
     PATH_LOSS_D0 = 127.41
+    SNR_THRESHOLDS = {7: -7.5, 8: -10.0, 9: -12.5, 10: -15.0, 11: -17.5, 12: -20.0}
 
     def __init__(self, channel) -> None:
         self.channel = channel
@@ -57,3 +58,8 @@ class FloraPHY:
         if captured:
             winners[idx0] = True
         return winners
+
+    def packet_error_rate(self, snr: float, sf: int, payload_bytes: int = 20) -> float:
+        """Return PER based on a logistic approximation of FLoRa curves."""
+        th = self.SNR_THRESHOLDS.get(sf, -10.0) + 2.0
+        return 1.0 / (1.0 + math.exp(2.0 * (snr - th)))

@@ -39,6 +39,7 @@ class OmnetPHY:
         pa_non_linearity_dB: float = 0.0,
         pa_non_linearity_std_dB: float = 0.0,
         phase_noise_std_dB: float = 0.0,
+        clock_jitter_std_s: float = 0.0,
         phase_offset_rad: float = 0.0,
         phase_offset_std_rad: float = 0.0,
         oscillator_leakage_dB: float = 0.0,
@@ -95,6 +96,7 @@ class OmnetPHY:
             corr,
         )
         self._rx_fault = _CorrelatedValue(0.0, rx_fault_std_dB, corr)
+        self.clock_jitter_std_s = clock_jitter_std_s
         self.receiver_noise_floor_dBm = channel.receiver_noise_floor_dBm
         self.tx_start_delay_s = float(tx_start_delay_s)
         self.rx_start_delay_s = float(rx_start_delay_s)
@@ -198,6 +200,8 @@ class OmnetPHY:
             sync_offset_s = self._sync_offset.sample()
         # Include short-term clock jitter
         sync_offset_s += self.model.clock_drift()
+        if self.clock_jitter_std_s > 0.0:
+            sync_offset_s += random.gauss(0.0, self.clock_jitter_std_s)
 
         phase = self._phase_offset.sample()
 

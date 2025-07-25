@@ -74,6 +74,7 @@ class Channel:
         dev_freq_offset_std_hz: float = 0.0,
         freq_drift_std_hz: float = 0.0,
         clock_drift_std_s: float = 0.0,
+        clock_jitter_std_s: float = 0.0,
         temperature_K: float = 290.0,
         temperature_std_K: float = 0.0,
         phase_noise_std_dB: float = 0.0,
@@ -84,6 +85,7 @@ class Channel:
         humidity_noise_coeff_dB: float = 0.0,
         frontend_filter_order: int = 0,
         frontend_filter_bw: float | None = None,
+        use_flora_curves: bool = False,
         *,
         bandwidth: float = 125e3,
         coding_rate: int = 1,
@@ -217,6 +219,7 @@ class Channel:
         self.dev_freq_offset_std_hz = dev_freq_offset_std_hz
         self.freq_drift_std_hz = freq_drift_std_hz
         self.clock_drift_std_s = clock_drift_std_s
+        self.clock_jitter_std_s = clock_jitter_std_s
         self.temperature_K = temperature_K
         self.temperature_std_K = temperature_std_K
         self.phase_noise_std_dB = phase_noise_std_dB
@@ -227,6 +230,7 @@ class Channel:
         self.humidity_noise_coeff_dB = humidity_noise_coeff_dB
         self.frontend_filter_order = int(frontend_filter_order)
         self.frontend_filter_bw = float(frontend_filter_bw) if frontend_filter_bw is not None else bandwidth
+        self.use_flora_curves = use_flora_curves
         self.omnet = OmnetModel(
             fine_fading_std,
             fading_correlation,
@@ -281,7 +285,7 @@ class Channel:
             )
             self.flora_phy = None
             self.advanced_capture = True
-        elif self.phy_model == "flora":
+        elif self.phy_model == "flora" or self.use_flora_curves:
             from .flora_phy import FloraPHY
             self.flora_phy = FloraPHY(self)
             self.omnet_phy = None
@@ -377,6 +381,8 @@ class Channel:
         if sync_offset_s is None:
             sync_offset_s = self.sync_offset_s
         sync_offset_s += self.omnet.clock_drift()
+        if self.clock_jitter_std_s > 0.0:
+            sync_offset_s += random.gauss(0.0, self.clock_jitter_std_s)
 
         rssi -= self._filter_attenuation_db(freq_offset_hz)
 
@@ -387,6 +393,13 @@ class Channel:
         if sf is not None:
             snr += 10 * math.log10(2 ** sf)
         return rssi, snr
+
+    def packet_error_rate(self, snr: float, sf: int, payload_bytes: int = 20) -> float:
+        """Return PER using FLoRa curves when available."""
+        if getattr(self, "flora_phy", None) and self.use_flora_curves:
+            return self.flora_phy.packet_error_rate(snr, sf, payload_bytes)
+        threshold = self.SNR_THRESHOLDS.get(sf, -10.0)
+        return 0.0 if snr >= threshold else 1.0
 
     def _multipath_fading_db(self) -> float:
         """Return a fading value in dB based on multiple Rayleigh paths."""
