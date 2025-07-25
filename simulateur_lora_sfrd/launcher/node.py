@@ -399,8 +399,13 @@ class Node:
         rng: "np.random.Generator",
         mean_interval: float,
         limit: int | None = None,
+        variation: float = 0.0,
     ) -> None:
-        """Generate Poisson arrival times up to ``up_to`` seconds."""
+        """Generate Poisson arrival times up to ``up_to`` seconds.
+
+        ``variation`` controls an optional multiplicative jitter applied to each
+        sampled interval. A value of ``0`` disables jitter (default).
+        """
         assert isinstance(mean_interval, float) and mean_interval > 0, (
             "mean_interval must be positive float"
         )
@@ -409,6 +414,10 @@ class Node:
             limit is None or self.arrival_interval_count < limit
         ):
             delta = sample_interval(mean_interval, rng)
+            if variation > 0.0:
+                low = max(0.0, 1.0 - variation)
+                high = 1.0 + variation
+                delta *= low + (high - low) * rng.random()
             if self._warmup_remaining > 0:
                 self._warmup_remaining -= 1
             else:
@@ -436,8 +445,12 @@ class Node:
         rng: "np.random.Generator",
         mean_interval: float,
         count: int,
+        variation: float = 0.0,
     ) -> None:
-        """Generate ``count`` Poisson arrival times once and keep a copy."""
+        """Generate ``count`` Poisson arrival times once and keep a copy.
+
+        ``variation`` has the same meaning as in ``ensure_poisson_arrivals``.
+        """
 
         self.arrival_queue = []
         self.precomputed_arrivals = None
@@ -445,7 +458,13 @@ class Node:
         self.arrival_interval_count = 0
         self._last_arrival_time = 0.0
         self._arrival_index = 0
-        self.ensure_poisson_arrivals(float("inf"), rng, mean_interval, limit=count)
+        self.ensure_poisson_arrivals(
+            float("inf"),
+            rng,
+            mean_interval,
+            limit=count,
+            variation=variation,
+        )
         self.precomputed_arrivals = list(self.arrival_queue)
 
     # ------------------------------------------------------------------

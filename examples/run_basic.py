@@ -18,12 +18,19 @@ if __name__ == "__main__":
         action="store_true",
         help="Exporte les intervalles dans des fichiers Parquet",
     )
+    parser.add_argument(
+        "--interval-variation",
+        type=float,
+        default=0.0,
+        help="Coefficient de jitter appliqu\u00e9 aux intervalles",
+    )
     args = parser.parse_args()
 
     sim = Simulator(
         num_nodes=args.nodes,
         packet_interval=10,
         transmission_mode="Random",
+        interval_variation=args.interval_variation,
         adr_method="avg",
         dump_intervals=args.dump_intervals,
     )
