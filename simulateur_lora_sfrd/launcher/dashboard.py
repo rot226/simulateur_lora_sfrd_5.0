@@ -12,12 +12,15 @@ import pandas as pd
 
 # Assurer la résolution correcte des imports quel que soit le répertoire
 # depuis lequel ce fichier est exécuté. On ajoute le dossier parent
-# (celui contenant le paquet ``launcher``) au ``sys.path`` s'il n'y est pas
-# déjà. Ainsi, ``from launcher.simulator`` fonctionnera aussi avec la
-# commande ``panel serve dashboard.py`` exécutée depuis ce dossier.
+# (celui contenant le paquet ``launcher``) ainsi que la racine du projet
+# au ``sys.path`` s'ils n'y sont pas déjà. Ainsi, ``from launcher.simulator``
+# fonctionnera aussi avec la commande ``panel serve dashboard.py`` exécutée
+# depuis ce dossier et les modules comme ``traffic`` seront importables.
 ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-if ROOT_DIR not in sys.path:
-    sys.path.insert(0, ROOT_DIR)
+REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
+for path in (ROOT_DIR, REPO_ROOT):
+    if path not in sys.path:
+        sys.path.insert(0, path)
 
 from launcher.simulator import Simulator  # noqa: E402
 from launcher.channel import Channel  # noqa: E402
