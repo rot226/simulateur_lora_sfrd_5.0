@@ -10,6 +10,7 @@ def test_avg_arrival_interval():
         packet_interval=5.0,
         packets_to_send=50,
         duty_cycle=0.01,
+        pure_poisson_mode=True,
         mobility=False,
         seed=0,
     )
