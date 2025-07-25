@@ -18,8 +18,19 @@ if not diag_logger.handlers:
 diag_logger.setLevel(logging.INFO)
 
 
-def simulate(nodes, gateways, mode, interval, steps, channels=1,
-             *, fine_fading_std=0.0, noise_std=0.0, debug_rx=False):
+def simulate(
+    nodes,
+    gateways,
+    mode,
+    interval,
+    steps,
+    channels=1,
+    *,
+    fine_fading_std=0.0,
+    noise_std=0.0,
+    debug_rx=False,
+    phy_model="omnet",
+):
     """Exécute une simulation LoRa simplifiée et retourne les métriques.
 
     Les transmissions peuvent se faire sur plusieurs canaux et plusieurs
@@ -55,6 +66,8 @@ def simulate(nodes, gateways, mode, interval, steps, channels=1,
     send_times = {node: [] for node in range(nodes)}
     node_channels = {node: node % channels for node in range(nodes)}
     node_gateways = {node: node % max(1, gateways) for node in range(nodes)}
+    # Le paramètre phy_model est présent pour conserver une interface similaire
+    # au tableau de bord mais n'influence pas ce modèle simplifié.
     def _sample_interval(mean: float, min_interval: float = 0.0) -> float:
         """Retourne un délai tiré d'une loi exponentielle."""
         while True:
@@ -238,6 +251,12 @@ def main(argv=None):
         help="Écart-type du bruit thermique variable (dB)",
     )
     parser.add_argument(
+        "--phy-model",
+        choices=["omnet", "flora"],
+        default="omnet",
+        help="Modèle physique à utiliser (omnet ou flora)",
+    )
+    parser.add_argument(
         "--debug-rx",
         action="store_true",
         help="Trace chaque paquet reçu ou rejeté",
@@ -288,6 +307,7 @@ def main(argv=None):
             fine_fading_std=args.fine_fading,
             noise_std=args.noise_std,
             debug_rx=args.debug_rx,
+            phy_model=args.phy_model,
         )
         results.append(
             (delivered, collisions, pdr, energy, avg_delay, throughput)
