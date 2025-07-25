@@ -49,11 +49,8 @@ def simulate(
         raise ValueError("gateways must be >= 1")
     if channels < 1:
         raise ValueError("channels must be >= 1")
-    assert isinstance(interval, float) and interval > 0, (
-        "mean_interval must be positive float"
-    )
-    if interval <= 0:
-        raise ValueError("interval must be > 0")
+    if not isinstance(interval, float) or interval <= 0:
+        raise ValueError("mean_interval must be positive float")
     if steps <= 0:
         raise ValueError("steps must be > 0")
 

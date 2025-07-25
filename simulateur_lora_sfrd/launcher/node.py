@@ -4,6 +4,7 @@ import numpy as np
 
 from .energy_profiles import EnergyProfile, FLORA_PROFILE
 from .channel import Channel
+from traffic.exponential import sample_interval
 
 # Default energy profile used by all nodes (based on the FLoRa model)
 DEFAULT_ENERGY_PROFILE = FLORA_PROFILE

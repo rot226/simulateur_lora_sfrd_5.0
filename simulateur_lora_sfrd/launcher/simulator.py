@@ -477,7 +477,6 @@ class Simulator:
                 node.arrival_interval_sum += t0
                 node.arrival_interval_count += 1
                 node._last_arrival_time = t0
-            t0 = node.arrival_queue.pop(0)
             self.schedule_event(node, t0)
             # Planifier le premier changement de position si la mobilité est activée
             if self.mobility_enabled:
