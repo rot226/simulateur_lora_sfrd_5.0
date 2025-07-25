@@ -55,6 +55,13 @@ def simulate(nodes, gateways, mode, interval, steps, channels=1,
     send_times = {node: [] for node in range(nodes)}
     node_channels = {node: node % channels for node in range(nodes)}
     node_gateways = {node: node % max(1, gateways) for node in range(nodes)}
+    def _sample_interval(mean: float, min_interval: float = 0.0) -> float:
+        """Retourne un délai tiré d'une loi exponentielle limitée."""
+        while True:
+            val = random.expovariate(1.0 / mean)
+            if val <= 5 * mean and val >= min_interval:
+                return val
+
     for node in range(nodes):
         if mode_lower == "periodic":
             # Randomize the initial offset like the full Simulator
@@ -64,10 +71,11 @@ def simulate(nodes, gateways, mode, interval, steps, channels=1,
                 t += interval
             send_times[node] = sorted(set(send_times[node]))
         else:  # mode "Random"
-            # Émission aléatoire avec probabilité 1/interval à chaque pas de temps
-            for t in range(steps):
-                if random.random() < 1.0 / interval:
-                    send_times[node].append(t)
+            # Génère les instants d'envoi selon une loi exponentielle
+            t = _sample_interval(interval)
+            while t < steps:
+                send_times[node].append(int(round(t)))
+                t += _sample_interval(interval)
 
     # Simulation pas à pas
     pending = {}
