@@ -37,18 +37,18 @@ def apply(sim: Simulator, *, degrade_channel: bool = False) -> None:
             adv = AdvancedChannel(
                 propagation_model="cost231",
                 fading="rayleigh",
-                variable_noise_std=200.0,
-                fine_fading_std=100.0,
-                freq_offset_std_hz=50000.0,
-                sync_offset_std_s=0.3,
+                variable_noise_std=400.0,
+                fine_fading_std=200.0,
+                freq_offset_std_hz=100000.0,
+                sync_offset_std_s=0.6,
                 advanced_capture=True,
                 frequency_hz=ch.frequency_hz,
-                path_loss_exp=ch.path_loss_exp + 3.0,
-                shadowing_std=ch.shadowing_std,
-                detection_threshold_dBm=ch.detection_threshold_dBm,
+                path_loss_exp=ch.path_loss_exp + 6.0,
+                shadowing_std=ch.shadowing_std * 1.5,
+                detection_threshold_dBm=-95.0,
                 bandwidth=ch.bandwidth,
                 coding_rate=ch.coding_rate,
-                capture_threshold_dB=ch.capture_threshold_dB,
+                capture_threshold_dB=ch.capture_threshold_dB + 3.0,
             )
             new_channels.append(adv)
 
