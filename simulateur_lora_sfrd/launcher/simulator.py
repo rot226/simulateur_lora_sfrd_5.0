@@ -363,13 +363,16 @@ class Simulator:
         cfg_nodes = None
         cfg_gateways = None
         if config_file:
-            from .config_loader import load_config
+            from .config_loader import load_config, parse_flora_interval
 
             cfg_nodes, cfg_gateways = load_config(config_file)
             if cfg_gateways:
                 self.num_gateways = len(cfg_gateways)
             if cfg_nodes:
                 self.num_nodes = len(cfg_nodes)
+            mean_interval = parse_flora_interval(config_file)
+            if mean_interval is not None:
+                self.packet_interval = mean_interval
 
         for idx in range(self.num_gateways):
             gw_id = next_gateway_id()
