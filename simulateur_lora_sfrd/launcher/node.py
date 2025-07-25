@@ -1,5 +1,6 @@
 # node.py
 import math
+import numpy as np
 
 from .energy_profiles import EnergyProfile, FLORA_PROFILE
 from .channel import Channel
@@ -219,6 +220,12 @@ class Node:
         self.last_adr_ack_req: bool = False
         self._nb_trans_left: int = 0
 
+        # Poisson arrival process tracking
+        self.arrival_queue: list[float] = []
+        self.arrival_interval_sum: float = 0.0
+        self.arrival_interval_count: int = 0
+        self._last_arrival_time: float = 0.0
+
         # Energy accounting state
         self.last_state_time = 0.0
         self.state = "sleep"
@@ -318,9 +325,7 @@ class Node:
     @property
     def pdr(self) -> float:
         """Retourne le PDR global de ce nœud."""
-        return (
-            self.rx_delivered / self.tx_attempted if self.tx_attempted > 0 else 0.0
-        )
+        return self.rx_delivered / self.tx_attempted if self.tx_attempted > 0 else 0.0
 
     @property
     def recent_pdr(self) -> float:
@@ -377,6 +382,25 @@ class Node:
                 "processing",
             )
         self.last_state_time = current_time
+
+    def ensure_poisson_arrivals(
+        self,
+        up_to: float,
+        rng: "np.random.Generator",
+        mean_interval: float,
+        limit: int | None = None,
+    ) -> None:
+        """Generate Poisson arrival times up to ``up_to`` seconds."""
+        last = self.arrival_queue[-1] if self.arrival_queue else self._last_arrival_time
+        while (not self.arrival_queue or last <= up_to) and (
+            limit is None or self.arrival_interval_count < limit
+        ):
+            delta = sample_interval(mean_interval, rng)
+            self.arrival_interval_sum += delta
+            self.arrival_interval_count += 1
+            last += delta
+            self.arrival_queue.append(last)
+        self._last_arrival_time = last
 
     # ------------------------------------------------------------------
     # LoRaWAN helper methods
@@ -770,7 +794,7 @@ class Node:
             )
             if last_beacon_time is None:
                 self.last_beacon_time = last_beacon - self.clock_offset
-        
+
         return next_ping_slot_time(
             last_beacon,
             current_time,

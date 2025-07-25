@@ -1,6 +1,7 @@
 import heapq
 import logging
 import random
+import numpy as np
 
 from traffic.exponential import sample_interval
 from pathlib import Path
@@ -42,51 +43,64 @@ class Event:
     id: int
     node_id: int
 
+
 logger = logging.getLogger(__name__)
 diag_logger = logging.getLogger("diagnostics")
 
+
 class Simulator:
     """Gère la simulation du réseau LoRa (nœuds, passerelles, événements)."""
+
     # Constantes ADR LoRaWAN standard
     REQUIRED_SNR = {7: -7.5, 8: -10.0, 9: -12.5, 10: -15.0, 11: -17.5, 12: -20.0}
-    MARGIN_DB = 15.0            # marge d'installation en dB (typiquement 15 dB)
+    MARGIN_DB = 15.0  # marge d'installation en dB (typiquement 15 dB)
     # Ajustement pour réagir plus vite aux liaisons dégradées
     # Une valeur plus basse améliore en général le PDR au prix de plus
     # de transmissions et de réglages ADR plus fréquents
-    PER_THRESHOLD = 0.1         # Seuil de Packet Error Rate pour déclencher ADR
+    PER_THRESHOLD = 0.1  # Seuil de Packet Error Rate pour déclencher ADR
 
-    def __init__(self, num_nodes: int = 10, num_gateways: int = 1, area_size: float = 1000.0,
-                 transmission_mode: str = 'Random', packet_interval: float = 60.0,
-                 interval_variation: float = 0.0,
-                 packets_to_send: int = 0, adr_node: bool = False, adr_server: bool = False,
-                 adr_method: str = "max",
-                 duty_cycle: float | None = 0.01, mobility: bool = True,
-                 channels=None, channel_distribution: str = "round-robin",
-                 mobility_speed: tuple[float, float] = (2.0, 10.0),
-                 fixed_sf: int | None = None,
-                 fixed_tx_power: float | None = None,
-                 battery_capacity_j: float | None = None,
-                 payload_size_bytes: int = 20,
-                 node_class: str = 'A',
-                 detection_threshold_dBm: float = -float("inf"),
-                 min_interference_time: float = 0.0,
-                 flora_mode: bool = False,
-                 flora_timing: bool = False,
-                 config_file: str | None = None,
-                 seed: int | None = None,
-                 class_c_rx_interval: float = 1.0,
-                 phy_model: str = "",
-                 terrain_map: str | list[list[float]] | None = None,
-                 path_map: str | list[list[float]] | None = None,
-                 dynamic_obstacles: str | list[dict] | None = None,
-                 mobility_model=None,
-                 beacon_drift: float = 0.0,
-                 *,
-                 clock_accuracy: float = 0.0,
-                 beacon_loss_prob: float = 0.0,
-                 ping_slot_interval: float = 1.0,
-                 ping_slot_offset: float = 2.0,
-                 debug_rx: bool = False):
+    def __init__(
+        self,
+        num_nodes: int = 10,
+        num_gateways: int = 1,
+        area_size: float = 1000.0,
+        transmission_mode: str = "Random",
+        packet_interval: float = 60.0,
+        interval_variation: float = 0.0,
+        packets_to_send: int = 0,
+        adr_node: bool = False,
+        adr_server: bool = False,
+        adr_method: str = "max",
+        duty_cycle: float | None = 0.01,
+        mobility: bool = True,
+        channels=None,
+        channel_distribution: str = "round-robin",
+        mobility_speed: tuple[float, float] = (2.0, 10.0),
+        fixed_sf: int | None = None,
+        fixed_tx_power: float | None = None,
+        battery_capacity_j: float | None = None,
+        payload_size_bytes: int = 20,
+        node_class: str = "A",
+        detection_threshold_dBm: float = -float("inf"),
+        min_interference_time: float = 0.0,
+        flora_mode: bool = False,
+        flora_timing: bool = False,
+        config_file: str | None = None,
+        seed: int | None = None,
+        class_c_rx_interval: float = 1.0,
+        phy_model: str = "",
+        terrain_map: str | list[list[float]] | None = None,
+        path_map: str | list[list[float]] | None = None,
+        dynamic_obstacles: str | list[dict] | None = None,
+        mobility_model=None,
+        beacon_drift: float = 0.0,
+        *,
+        clock_accuracy: float = 0.0,
+        beacon_loss_prob: float = 0.0,
+        ping_slot_interval: float = 1.0,
+        ping_slot_offset: float = 2.0,
+        debug_rx: bool = False,
+    ):
         """
         Initialise la simulation LoRa avec les entités et paramètres donnés.
         :param num_nodes: Nombre de nœuds à simuler.
@@ -193,8 +207,10 @@ class Simulator:
         elif path_map is not None:
             if isinstance(path_map, (str, Path)):
                 from .map_loader import load_map
+
                 path_map = load_map(path_map)
             from .path_mobility import PathMobility
+
             self.mobility_model = PathMobility(
                 area_size,
                 path_map,
@@ -205,8 +221,10 @@ class Simulator:
         elif terrain_map is not None:
             if isinstance(terrain_map, (str, Path)):
                 from .map_loader import load_map
+
                 terrain_map = load_map(terrain_map)
             from .random_waypoint import RandomWaypoint
+
             self.mobility_model = RandomWaypoint(
                 area_size,
                 min_speed=mobility_speed[0],
@@ -244,13 +262,20 @@ class Simulator:
                 for ch in self.multichannel.channels:
                     if getattr(ch, "environment", None) is None:
                         ch.environment = "flora"
-                        ch.path_loss_exp, ch.shadowing_std = Channel.ENV_PRESETS["flora"]
+                        ch.path_loss_exp, ch.shadowing_std = Channel.ENV_PRESETS[
+                            "flora"
+                        ]
         else:
             if channels is None:
                 env = "flora" if (flora_mode or phy_model == "flora") else None
                 ch_phy_model = "flora" if flora_mode else phy_model
-                ch_list = [Channel(detection_threshold_dBm=detection_threshold_dBm,
-                                  phy_model=ch_phy_model, environment=env)]
+                ch_list = [
+                    Channel(
+                        detection_threshold_dBm=detection_threshold_dBm,
+                        phy_model=ch_phy_model,
+                        environment=env,
+                    )
+                ]
             else:
                 ch_list = []
                 for ch in channels:
@@ -259,9 +284,13 @@ class Simulator:
                             ch.detection_threshold_dBm = detection_threshold_dBm
                         if flora_mode:
                             ch.phy_model = "flora"
-                        if (flora_mode or phy_model == "flora") and getattr(ch, "environment", None) is None:
+                        if (flora_mode or phy_model == "flora") and getattr(
+                            ch, "environment", None
+                        ) is None:
                             ch.environment = "flora"
-                            ch.path_loss_exp, ch.shadowing_std = Channel.ENV_PRESETS["flora"]
+                            ch.path_loss_exp, ch.shadowing_std = Channel.ENV_PRESETS[
+                                "flora"
+                            ]
                         ch_list.append(ch)
                     else:
                         ch_list.append(
@@ -269,7 +298,11 @@ class Simulator:
                                 frequency_hz=float(ch),
                                 detection_threshold_dBm=detection_threshold_dBm,
                                 phy_model="flora" if flora_mode else phy_model,
-                                environment="flora" if (flora_mode or phy_model == "flora") else None,
+                                environment=(
+                                    "flora"
+                                    if (flora_mode or phy_model == "flora")
+                                    else None
+                                ),
                             )
                         )
             self.multichannel = MultiChannel(ch_list, method=channel_distribution)
@@ -298,6 +331,7 @@ class Simulator:
         # Graine commune pour reproduire FLoRa (placement et tirages aléatoires)
         self.seed = seed
         self.pos_rng = random.Random(self.seed)
+        self.interval_rng = np.random.Generator(np.random.MT19937(self.seed or 0))
         if self.seed is not None:
             random.seed(self.seed)
 
@@ -308,6 +342,7 @@ class Simulator:
         cfg_gateways = None
         if config_file:
             from .config_loader import load_config
+
             cfg_nodes, cfg_gateways = load_config(config_file)
             if cfg_gateways:
                 self.num_gateways = len(cfg_gateways)
@@ -335,13 +370,29 @@ class Simulator:
                 ncfg = cfg_nodes[idx]
                 x = ncfg["x"]
                 y = ncfg["y"]
-                sf = ncfg.get("sf", self.fixed_sf if self.fixed_sf is not None else random.randint(7, 12))
-                tx_power = ncfg.get("tx_power", self.fixed_tx_power if self.fixed_tx_power is not None else 14.0)
+                sf = ncfg.get(
+                    "sf",
+                    (
+                        self.fixed_sf
+                        if self.fixed_sf is not None
+                        else random.randint(7, 12)
+                    ),
+                )
+                tx_power = ncfg.get(
+                    "tx_power",
+                    self.fixed_tx_power if self.fixed_tx_power is not None else 14.0,
+                )
             else:
                 x = self.pos_rng.random() * area_size
                 y = self.pos_rng.random() * area_size
-                sf = self.fixed_sf if self.fixed_sf is not None else random.randint(7, 12)
-                tx_power = self.fixed_tx_power if self.fixed_tx_power is not None else 14.0
+                sf = (
+                    self.fixed_sf
+                    if self.fixed_sf is not None
+                    else random.randint(7, 12)
+                )
+                tx_power = (
+                    self.fixed_tx_power if self.fixed_tx_power is not None else 14.0
+                )
             channel = self.multichannel.select_mask(0xFFFF)
             node = Node(
                 node_id,
@@ -353,9 +404,11 @@ class Simulator:
                 class_type=self.node_class,
                 battery_capacity_j=self.battery_capacity_j,
                 beacon_loss_prob=self.beacon_loss_prob,
-                beacon_drift=random.gauss(0.0, self.clock_accuracy)
-                if self.clock_accuracy > 0.0
-                else 0.0,
+                beacon_drift=(
+                    random.gauss(0.0, self.clock_accuracy)
+                    if self.clock_accuracy > 0.0
+                    else 0.0
+                ),
             )
             # Enregistrer les états initiaux du nœud pour rapport ultérieur
             node.initial_x = x
@@ -363,11 +416,19 @@ class Simulator:
             node.initial_sf = sf
             node.initial_tx_power = tx_power
             # Attributs supplémentaires pour mobilité et ADR
-            node.history = []            # Historique des 20 dernières transmissions (snr, delivered)
-            node.in_transmission = False # Indique si le nœud est actuellement en transmission
-            node.current_end_time = None # Instant de fin de la transmission en cours (si in_transmission True)
-            node.last_rssi = None       # Dernier meilleur RSSI mesuré pour la transmission en cours
-            node.last_snr = None        # Dernier meilleur SNR mesuré pour la transmission en cours
+            node.history = (
+                []
+            )  # Historique des 20 dernières transmissions (snr, delivered)
+            node.in_transmission = (
+                False  # Indique si le nœud est actuellement en transmission
+            )
+            node.current_end_time = None  # Instant de fin de la transmission en cours (si in_transmission True)
+            node.last_rssi = (
+                None  # Dernier meilleur RSSI mesuré pour la transmission en cours
+            )
+            node.last_snr = (
+                None  # Dernier meilleur SNR mesuré pour la transmission en cours
+            )
             if self.mobility_enabled:
                 self.mobility_model.assign(node)
             self.nodes.append(node)
@@ -402,12 +463,21 @@ class Simulator:
 
         # Planifier le premier envoi de chaque nœud
         for node in self.nodes:
-            if self.transmission_mode.lower() == 'random':
-                # Random: tirer un délai initial selon une distribution exponentielle
-                t0 = sample_interval(self.packet_interval, self.pos_rng)
+            if self.transmission_mode.lower() == "random":
+                node.ensure_poisson_arrivals(
+                    0.0,
+                    self.interval_rng,
+                    self.packet_interval,
+                    self.packets_to_send if self.packets_to_send else None,
+                )
+                t0 = node.arrival_queue.pop(0)
             else:
-                # Periodic: délai initial aléatoire uniforme dans [0, période]
                 t0 = random.random() * self.packet_interval
+                node.arrival_queue.append(t0)
+                node.arrival_interval_sum += t0
+                node.arrival_interval_count += 1
+                node._last_arrival_time = t0
+            t0 = node.arrival_queue.pop(0)
             self.schedule_event(node, t0)
             # Planifier le premier changement de position si la mobilité est activée
             if self.mobility_enabled:
@@ -432,8 +502,6 @@ class Simulator:
 
         # Indicateur d'exécution de la simulation
         self.running = True
-
-
 
     def schedule_event(self, node: Node, time: float):
         """Planifie un événement de transmission pour un nœud à l'instant donné."""
@@ -570,13 +638,21 @@ class Simulator:
                     bandwidth=node.channel.bandwidth,
                     noise_floor=node.channel.noise_floor_dBm(),
                     capture_mode=(
-                        "omnet" if node.channel.phy_model == "omnet" else (
-                            "flora" if node.channel.phy_model == "flora" else (
+                        "omnet"
+                        if node.channel.phy_model == "omnet"
+                        else (
+                            "flora"
+                            if node.channel.phy_model == "flora"
+                            else (
                                 "advanced" if node.channel.advanced_capture else "basic"
                             )
                         )
                     ),
-                    flora_phy=node.channel.flora_phy if node.channel.phy_model == "flora" else None,
+                    flora_phy=(
+                        node.channel.flora_phy
+                        if node.channel.phy_model == "flora"
+                        else None
+                    ),
                     orthogonal_sf=node.channel.orthogonal_sf,
                 )
 
@@ -604,19 +680,21 @@ class Simulator:
             )
 
             # Journaliser l'événement de transmission (résultat inconnu à ce stade)
-            self.events_log.append({
-                'event_id': event_id,
-                'node_id': node_id,
-                'sf': sf,
-                'start_time': time,
-                'end_time': end_time,
-                'energy_J': energy_J,
-                'heard': heard_by_any,
-                'rssi_dBm': best_rssi,
-                'snr_dB': best_snr,
-                'result': None,
-                'gateway_id': None
-            })
+            self.events_log.append(
+                {
+                    "event_id": event_id,
+                    "node_id": node_id,
+                    "sf": sf,
+                    "start_time": time,
+                    "end_time": end_time,
+                    "energy_J": energy_J,
+                    "heard": heard_by_any,
+                    "rssi_dBm": best_rssi,
+                    "snr_dB": best_snr,
+                    "result": None,
+                    "gateway_id": None,
+                }
+            )
             return True
 
         elif priority == EventType.TX_END:
@@ -636,14 +714,18 @@ class Simulator:
                 self.rx_delivered += 1
                 node.increment_success()
                 # Délai = temps de fin - temps de début de l'émission
-                start_time = next(item for item in self.events_log if item['event_id'] == event_id)['start_time']
+                start_time = next(
+                    item for item in self.events_log if item["event_id"] == event_id
+                )["start_time"]
                 delay = self.current_time - start_time
                 self.total_delay += delay
                 self.delivered_count += 1
             else:
                 # Identifier la cause de perte: collision ou absence de couverture
-                log_entry = next(item for item in self.events_log if item['event_id'] == event_id)
-                heard = log_entry['heard']
+                log_entry = next(
+                    item for item in self.events_log if item["event_id"] == event_id
+                )
+                heard = log_entry["heard"]
                 if heard:
                     self.packets_lost_collision += 1
                     node.increment_collision()
@@ -651,9 +733,17 @@ class Simulator:
                     self.packets_lost_no_signal += 1
             # Mettre à jour le résultat et la passerelle du log de l'événement
             for entry in self.events_log:
-                if entry['event_id'] == event_id:
-                    entry['result'] = 'Success' if delivered else ('CollisionLoss' if entry['heard'] else 'NoCoverage')
-                    entry['gateway_id'] = self.network_server.event_gateway.get(event_id, None) if delivered else None
+                if entry["event_id"] == event_id:
+                    entry["result"] = (
+                        "Success"
+                        if delivered
+                        else ("CollisionLoss" if entry["heard"] else "NoCoverage")
+                    )
+                    entry["gateway_id"] = (
+                        self.network_server.event_gateway.get(event_id, None)
+                        if delivered
+                        else None
+                    )
                     break
 
             if self.debug_rx:
@@ -663,7 +753,7 @@ class Simulator:
                         f"t={self.current_time:.2f} Packet {event_id} from node {node_id} reçu via GW {gw_id}"
                     )
                 else:
-                    reason = 'Collision' if log_entry['heard'] else 'NoCoverage'
+                    reason = "Collision" if log_entry["heard"] else "NoCoverage"
                     logger.debug(
                         f"t={self.current_time:.2f} Packet {event_id} from node {node_id} perdu ({reason})"
                     )
@@ -676,7 +766,9 @@ class Simulator:
                 snr_value = node.last_snr
             if delivered and node.last_rssi is not None:
                 rssi_value = node.last_rssi
-            node.history.append({'snr': snr_value, 'rssi': rssi_value, 'delivered': delivered})
+            node.history.append(
+                {"snr": snr_value, "rssi": rssi_value, "delivered": delivered}
+            )
             if len(node.history) > 20:
                 node.history.pop(0)
 
@@ -684,16 +776,26 @@ class Simulator:
             if self.adr_node:
                 # Calculer le PER récent et la marge ADR
                 total_count = len(node.history)
-                success_count = sum(1 for e in node.history if e['delivered'])
-                per = (total_count - success_count) / total_count if total_count > 0 else 0.0
-                snr_values = [e['snr'] for e in node.history if e['snr'] is not None]
+                success_count = sum(1 for e in node.history if e["delivered"])
+                per = (
+                    (total_count - success_count) / total_count
+                    if total_count > 0
+                    else 0.0
+                )
+                snr_values = [e["snr"] for e in node.history if e["snr"] is not None]
                 margin_val = None
                 if snr_values:
                     max_snr = max(snr_values)
                     # Marge = meilleur SNR - SNR minimal requis (pour SF actuel) - marge d'installation
-                    margin_val = max_snr - Simulator.REQUIRED_SNR.get(node.sf, 0.0) - Simulator.MARGIN_DB
+                    margin_val = (
+                        max_snr
+                        - Simulator.REQUIRED_SNR.get(node.sf, 0.0)
+                        - Simulator.MARGIN_DB
+                    )
                 # Vérifier déclenchement d'une requête ADR
-                if per > Simulator.PER_THRESHOLD or (margin_val is not None and margin_val < 0):
+                if per > Simulator.PER_THRESHOLD or (
+                    margin_val is not None and margin_val < 0
+                ):
                     if self.adr_server:
                         # Lien de mauvaise qualité – augmenter la portée uniquement
                         if node.sf < 12:
@@ -714,12 +816,23 @@ class Simulator:
                 self.retransmissions += 1
                 self.schedule_event(node, self.current_time + 1.0)
             else:
-                if self.packets_to_send == 0 or node.packets_sent < self.packets_to_send:
-                    if self.transmission_mode.lower() == 'random':
-                        next_interval = sample_interval(self.packet_interval, self.pos_rng)
+                if (
+                    self.packets_to_send == 0
+                    or node.packets_sent < self.packets_to_send
+                ):
+                    if self.transmission_mode.lower() == "random":
+                        node.ensure_poisson_arrivals(
+                            self.current_time,
+                            self.interval_rng,
+                            self.packet_interval,
+                            self.packets_to_send if self.packets_to_send else None,
+                        )
+                        next_time = node.arrival_queue.pop(0)
                     else:
-                        next_interval = self.packet_interval
-                    next_time = self.current_time + next_interval
+                        next_time = node._last_arrival_time + self.packet_interval
+                        node.arrival_interval_sum += self.packet_interval
+                        node.arrival_interval_count += 1
+                        node._last_arrival_time = next_time
                     self.schedule_event(node, next_time)
                 else:
                     logger.debug(
@@ -727,9 +840,8 @@ class Simulator:
                         node.id,
                     )
 
-                if (
-                    self.packets_to_send != 0
-                    and all(n.packets_sent >= self.packets_to_send for n in self.nodes)
+                if self.packets_to_send != 0 and all(
+                    n.packets_sent >= self.packets_to_send for n in self.nodes
                 ):
                     new_queue = []
                     for evt in self.event_queue:
@@ -759,7 +871,9 @@ class Simulator:
             if not node.alive:
                 return True
             node.last_state_time = time + (
-                node.profile.rx_window_duration if node.class_type.upper() != "C" else 0.0
+                node.profile.rx_window_duration
+                if node.class_type.upper() != "C"
+                else 0.0
             )
             if node.class_type.upper() != "C":
                 node.state = "sleep"
@@ -906,26 +1020,33 @@ class Simulator:
             node_id = node.id
             if node.in_transmission:
                 # Si le nœud est en cours de transmission, reporter le déplacement à la fin de celle-ci
-                next_move_time = node.current_end_time if node.current_end_time is not None else self.current_time
+                next_move_time = (
+                    node.current_end_time
+                    if node.current_end_time is not None
+                    else self.current_time
+                )
                 self.schedule_mobility(node, next_move_time)
             else:
                 # Déplacer le nœud de manière progressive
                 self.mobility_model.move(node, self.current_time)
-                self.events_log.append({
-                    'event_id': event_id,
-                    'node_id': node_id,
-                    'sf': node.sf,
-                    'start_time': time,
-                    'end_time': time,
-                    'heard': None,
-                    'result': 'Mobility',
-                    'energy_J': 0.0,
-                    'gateway_id': None,
-                    'rssi_dBm': None,
-                    'snr_dB': None
-                })
+                self.events_log.append(
+                    {
+                        "event_id": event_id,
+                        "node_id": node_id,
+                        "sf": node.sf,
+                        "start_time": time,
+                        "end_time": time,
+                        "heard": None,
+                        "result": "Mobility",
+                        "energy_J": 0.0,
+                        "gateway_id": None,
+                        "rssi_dBm": None,
+                        "snr_dB": None,
+                    }
+                )
                 if self.mobility_enabled and (
-                    self.packets_to_send == 0 or node.packets_sent < self.packets_to_send
+                    self.packets_to_send == 0
+                    or node.packets_sent < self.packets_to_send
                 ):
                     self.schedule_mobility(node, time + self.mobility_model.step)
             return True
@@ -951,7 +1072,9 @@ class Simulator:
         total_sent = self.tx_attempted
         delivered = self.rx_delivered
         pdr = delivered / total_sent if total_sent > 0 else 0.0
-        avg_delay = self.total_delay / self.delivered_count if self.delivered_count > 0 else 0.0
+        avg_delay = (
+            self.total_delay / self.delivered_count if self.delivered_count > 0 else 0.0
+        )
         sim_time = self.current_time
         throughput_bps = (
             self.packets_delivered * self.payload_size_bytes * 8 / sim_time
@@ -989,24 +1112,35 @@ class Simulator:
             for ct in class_types
         }
 
+        total_intervals = sum(n.arrival_interval_count for n in self.nodes)
+        avg_arrival_interval = (
+            sum(n.arrival_interval_sum for n in self.nodes) / total_intervals
+            if total_intervals > 0
+            else 0.0
+        )
+
         return {
-            'PDR': pdr,
-            'collisions': self.packets_lost_collision,
-            'duplicates': self.network_server.duplicate_packets,
-            'energy_J': self.total_energy_J,
-            'avg_delay_s': avg_delay,
-            'throughput_bps': throughput_bps,
-            'sf_distribution': {sf: sum(1 for node in self.nodes if node.sf == sf) for sf in range(7, 13)},
-            'pdr_by_node': pdr_by_node,
-            'recent_pdr_by_node': recent_pdr_by_node,
-            'pdr_by_sf': pdr_by_sf,
-            'pdr_by_gateway': pdr_by_gateway,
-            'pdr_by_class': pdr_by_class,
+            "PDR": pdr,
+            "collisions": self.packets_lost_collision,
+            "duplicates": self.network_server.duplicate_packets,
+            "energy_J": self.total_energy_J,
+            "avg_delay_s": avg_delay,
+            "avg_arrival_interval_s": avg_arrival_interval,
+            "throughput_bps": throughput_bps,
+            "sf_distribution": {
+                sf: sum(1 for node in self.nodes if node.sf == sf)
+                for sf in range(7, 13)
+            },
+            "pdr_by_node": pdr_by_node,
+            "recent_pdr_by_node": recent_pdr_by_node,
+            "pdr_by_sf": pdr_by_sf,
+            "pdr_by_gateway": pdr_by_gateway,
+            "pdr_by_class": pdr_by_class,
             **{f"energy_class_{ct}_J": energy_by_class[ct] for ct in energy_by_class},
-            'retransmissions': self.retransmissions,
+            "retransmissions": self.retransmissions,
         }
 
-    def get_events_dataframe(self) -> 'pd.DataFrame | None':
+    def get_events_dataframe(self) -> "pd.DataFrame | None":
         """
         Retourne un DataFrame pandas contenant le log de tous les événements de
         transmission enrichi des états initiaux et finaux des nœuds.
@@ -1019,34 +1153,75 @@ class Simulator:
         # Construire un dictionnaire id->nœud pour récupérer les états initiaux/finaux
         node_dict = {node.id: node for node in self.nodes}
         # Ajouter colonnes d'état initial et final du nœud pour chaque événement
-        df['initial_x'] = df['node_id'].apply(lambda nid: node_dict[nid].initial_x)
-        df['initial_y'] = df['node_id'].apply(lambda nid: node_dict[nid].initial_y)
-        df['final_x'] = df['node_id'].apply(lambda nid: node_dict[nid].x)
-        df['final_y'] = df['node_id'].apply(lambda nid: node_dict[nid].y)
-        df['initial_sf'] = df['node_id'].apply(lambda nid: node_dict[nid].initial_sf)
-        df['final_sf'] = df['node_id'].apply(lambda nid: node_dict[nid].sf)
-        df['initial_tx_power'] = df['node_id'].apply(lambda nid: node_dict[nid].initial_tx_power)
-        df['final_tx_power'] = df['node_id'].apply(lambda nid: node_dict[nid].tx_power)
-        df['packets_sent'] = df['node_id'].apply(lambda nid: node_dict[nid].packets_sent)
-        df['packets_success'] = df['node_id'].apply(lambda nid: node_dict[nid].packets_success)
-        df['packets_collision'] = df['node_id'].apply(lambda nid: node_dict[nid].packets_collision)
-        df['tx_attempted'] = df['node_id'].apply(lambda nid: node_dict[nid].tx_attempted)
-        df['rx_delivered'] = df['node_id'].apply(lambda nid: node_dict[nid].rx_delivered)
-        df['energy_consumed_J_node'] = df['node_id'].apply(lambda nid: node_dict[nid].energy_consumed)
-        df['battery_capacity_J'] = df['node_id'].apply(lambda nid: node_dict[nid].battery_capacity_j)
-        df['battery_remaining_J'] = df['node_id'].apply(lambda nid: node_dict[nid].battery_remaining_j)
-        df['downlink_pending'] = df['node_id'].apply(lambda nid: node_dict[nid].downlink_pending)
-        df['acks_received'] = df['node_id'].apply(lambda nid: node_dict[nid].acks_received)
+        df["initial_x"] = df["node_id"].apply(lambda nid: node_dict[nid].initial_x)
+        df["initial_y"] = df["node_id"].apply(lambda nid: node_dict[nid].initial_y)
+        df["final_x"] = df["node_id"].apply(lambda nid: node_dict[nid].x)
+        df["final_y"] = df["node_id"].apply(lambda nid: node_dict[nid].y)
+        df["initial_sf"] = df["node_id"].apply(lambda nid: node_dict[nid].initial_sf)
+        df["final_sf"] = df["node_id"].apply(lambda nid: node_dict[nid].sf)
+        df["initial_tx_power"] = df["node_id"].apply(
+            lambda nid: node_dict[nid].initial_tx_power
+        )
+        df["final_tx_power"] = df["node_id"].apply(lambda nid: node_dict[nid].tx_power)
+        df["packets_sent"] = df["node_id"].apply(
+            lambda nid: node_dict[nid].packets_sent
+        )
+        df["packets_success"] = df["node_id"].apply(
+            lambda nid: node_dict[nid].packets_success
+        )
+        df["packets_collision"] = df["node_id"].apply(
+            lambda nid: node_dict[nid].packets_collision
+        )
+        df["tx_attempted"] = df["node_id"].apply(
+            lambda nid: node_dict[nid].tx_attempted
+        )
+        df["rx_delivered"] = df["node_id"].apply(
+            lambda nid: node_dict[nid].rx_delivered
+        )
+        df["energy_consumed_J_node"] = df["node_id"].apply(
+            lambda nid: node_dict[nid].energy_consumed
+        )
+        df["battery_capacity_J"] = df["node_id"].apply(
+            lambda nid: node_dict[nid].battery_capacity_j
+        )
+        df["battery_remaining_J"] = df["node_id"].apply(
+            lambda nid: node_dict[nid].battery_remaining_j
+        )
+        df["downlink_pending"] = df["node_id"].apply(
+            lambda nid: node_dict[nid].downlink_pending
+        )
+        df["acks_received"] = df["node_id"].apply(
+            lambda nid: node_dict[nid].acks_received
+        )
         # Colonnes d'intérêt dans un ordre lisible
         columns_order = [
-            'event_id', 'node_id', 'initial_x', 'initial_y', 'final_x', 'final_y',
-            'initial_sf', 'final_sf', 'initial_tx_power', 'final_tx_power',
-            'packets_sent', 'packets_success', 'packets_collision',
-            'tx_attempted', 'rx_delivered',
-            'energy_consumed_J_node', 'battery_capacity_J', 'battery_remaining_J',
-            'downlink_pending', 'acks_received',
-            'start_time', 'end_time', 'energy_J', 'rssi_dBm', 'snr_dB',
-            'result', 'gateway_id'
+            "event_id",
+            "node_id",
+            "initial_x",
+            "initial_y",
+            "final_x",
+            "final_y",
+            "initial_sf",
+            "final_sf",
+            "initial_tx_power",
+            "final_tx_power",
+            "packets_sent",
+            "packets_success",
+            "packets_collision",
+            "tx_attempted",
+            "rx_delivered",
+            "energy_consumed_J_node",
+            "battery_capacity_J",
+            "battery_remaining_J",
+            "downlink_pending",
+            "acks_received",
+            "start_time",
+            "end_time",
+            "energy_J",
+            "rssi_dBm",
+            "snr_dB",
+            "result",
+            "gateway_id",
         ]
         for col in columns_order:
             if col not in df.columns:
