@@ -339,6 +339,26 @@ avec l'option `flora_mode=True`. Ce mode applique automatiquement :
 - un seuil de détection d'environ `-110` dBm.
 - l'utilisation automatique des formules FLoRa (`phy_model="flora"`).
 
+### Équations FLoRa de perte de parcours et de PER
+
+Le module `flora_phy.py` implémente la même perte de parcours que dans FLoRa :
+
+```
+loss = PATH_LOSS_D0 + 10 * n * log10(distance / REFERENCE_DISTANCE)
+```
+
+avec `PATH_LOSS_D0 = 127.41` dB et `REFERENCE_DISTANCE = 40` m. L'exposant
+`n` vaut `2.7` lorsque le profil `flora` est sélectionné. Le taux d'erreur
+(PER) est approché par une courbe logistique :
+
+```
+PER = 1 / (1 + exp(2 * (snr - (th + 2))))
+```
+
+où `th` est le seuil SNR par Spreading Factor ({7: -7.5, 8: -10, 9: -12.5,
+10: -15, 11: -17.5, 12: -20} dB). Ces équations sont activées en passant
+`phy_model="flora"` ou `use_flora_curves=True` au constructeur du `Channel`.
+
 
 ## SF et puissance initiaux
 
