@@ -218,23 +218,41 @@ class NetworkServer:
         if self.simulator is None:
             self.receive(event_id, node_id, gateway_id, rssi, frame)
             return
-        process_time = (
+
+        from .simulator import Event, EventType
+
+        arrival_time = (
             (at_time if at_time is not None else self.simulator.current_time)
             + self.network_delay
-            + self.process_delay
         )
-        if process_time <= self.simulator.current_time:
-            # Pas de délai de traitement -> traiter immédiatement
+
+        if arrival_time <= self.simulator.current_time and self.process_delay <= 0:
             self.receive(event_id, node_id, gateway_id, rssi, frame)
             return
-        from .simulator import Event, EventType
 
         eid = self.simulator.event_id_counter
         self.simulator.event_id_counter += 1
         self.pending_process[eid] = (event_id, node_id, gateway_id, rssi, frame)
         heapq.heappush(
             self.simulator.event_queue,
-            Event(process_time, EventType.SERVER_PROCESS, eid, node_id),
+            Event(arrival_time, EventType.SERVER_RX, eid, node_id),
+        )
+
+    def _handle_network_arrival(self, eid: int) -> None:
+        """Planifie le traitement d'un paquet arrivé au serveur."""
+        info = self.pending_process.pop(eid, None)
+        if not info:
+            return
+        from .simulator import Event, EventType
+
+        process_time = self.simulator.current_time + self.process_delay
+        new_id = self.simulator.event_id_counter
+        self.simulator.event_id_counter += 1
+        self.pending_process[new_id] = info
+        node_id = info[1]
+        heapq.heappush(
+            self.simulator.event_queue,
+            Event(process_time, EventType.SERVER_PROCESS, new_id, node_id),
         )
 
     def _process_scheduled(self, eid: int) -> None:
