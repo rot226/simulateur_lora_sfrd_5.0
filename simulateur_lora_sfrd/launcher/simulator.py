@@ -436,7 +436,7 @@ class Simulator:
                 high = 1.0 + self.interval_variation
                 factor = random.uniform(low, high)
                 interval *= factor
-            if interval >= min_interval:
+            if interval <= 5 * self.packet_interval and interval >= min_interval:
                 return interval
 
     def schedule_event(self, node: Node, time: float):
