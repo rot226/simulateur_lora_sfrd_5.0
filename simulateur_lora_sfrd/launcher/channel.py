@@ -27,7 +27,7 @@ class Channel:
         "rural": (2.0, 2.0),
         # Parameters matching the FLoRa log-normal shadowing model
         "flora": (2.7, 3.57),
-        "flora_oulu": (2.32, 7.8),
+        "flora_oulu": (2.32, 7.08),
         "flora_hata": (2.08, 3.57),
         # Additional presets for denser or indoor environments
         "urban_dense": (3.0, 8.0),

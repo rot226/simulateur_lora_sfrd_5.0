@@ -24,7 +24,7 @@ module LoRaPathLossOulu extends FreeSpacePathLoss
         double d0 = default(1000m) @unit(m);
         double n = default(2.32);
         double B = default(128.95);
-        double sigma = default(7.8);
+        double sigma = default(7.08);
         double antennaGain = default(2);
         @class(LoRaPathLossOulu);
 }
