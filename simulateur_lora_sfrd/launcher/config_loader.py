@@ -77,7 +77,12 @@ def load_config(
 
 
 def write_flora_ini(
-    nodes: list[dict], gateways: list[dict], path: str | Path
+    nodes: list[dict],
+    gateways: list[dict],
+    path: str | Path,
+    *,
+    next_interval: float | None = None,
+    first_interval: float | None = None,
 ) -> None:
     """Write ``nodes`` and ``gateways`` positions to a FLoRa compatible INI.
 
@@ -90,6 +95,12 @@ def write_flora_ini(
         Each dictionary must contain ``x`` and ``y`` coordinates.
     path : str or Path
         Destination file.
+    next_interval : float, optional
+        Mean delay between packets. When set, ``timeToNextPacket`` is appended to
+        the INI file.
+    first_interval : float, optional
+        Mean delay before the first packet. When set,
+        ``timeToFirstPacket`` is appended to the INI file.
     """
 
     cp = configparser.ConfigParser()
@@ -103,6 +114,10 @@ def write_flora_ini(
     }
     with open(path, "w") as f:
         cp.write(f)
+        if first_interval is not None:
+            f.write(f"timeToFirstPacket = exponential({first_interval}s)\n")
+        if next_interval is not None:
+            f.write(f"timeToNextPacket = exponential({next_interval}s)\n")
 
 
 def parse_flora_interval(path: str | Path) -> float | None:
