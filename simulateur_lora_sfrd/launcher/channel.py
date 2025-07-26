@@ -22,16 +22,16 @@ class Channel:
     """Représente le canal de propagation radio pour LoRa."""
 
     ENV_PRESETS = {
-        "urban": (2.7, 6.0),
-        "suburban": (2.3, 4.0),
-        "rural": (2.0, 2.0),
+        "urban": (2.08, 3.57, 127.41, 40.0),
+        "suburban": (2.32, 7.08, 128.95, 1000.0),
+        "rural": (2.0, 2.0, 113.0, 1.0),
         # Parameters matching the FLoRa log-normal shadowing model
-        "flora": (2.7, 3.57),
-        "flora_oulu": (2.32, 7.8),
-        "flora_hata": (2.08, 3.57),
+        "flora": (2.7, 3.57, 127.41, 40.0),
+        "flora_oulu": (2.32, 7.8, 128.95, 1000.0),
+        "flora_hata": (2.08, 3.57, 127.5, 40.0),
         # Additional presets for denser or indoor environments
-        "urban_dense": (3.0, 8.0),
-        "indoor": (3.5, 7.0),
+        "urban_dense": (3.0, 8.0, 127.41, 40.0),
+        "indoor": (3.5, 7.0, 127.41, 40.0),
     }
 
     # Preset frequency plans for common regions
@@ -60,6 +60,8 @@ class Channel:
         frequency_hz: float = 868e6,
         path_loss_exp: float = 2.7,
         shadowing_std: float = 6.0,
+        path_loss_d0: float | None = None,
+        reference_distance: float = 1.0,
         fast_fading_std: float = 0.0,
         multipath_taps: int = 1,
         cable_loss_dB: float = 0.0,
@@ -203,7 +205,12 @@ class Channel:
             env = environment.lower()
             if env not in self.ENV_PRESETS:
                 raise ValueError(f"Unknown environment preset: {environment}")
-            path_loss_exp, shadowing_std = self.ENV_PRESETS[env]
+            (
+                path_loss_exp,
+                shadowing_std,
+                path_loss_d0,
+                reference_distance,
+            ) = self.ENV_PRESETS[env]
             self.environment = env
         else:
             self.environment = None
@@ -225,6 +232,11 @@ class Channel:
         self.frequency_hz = frequency_hz
         self.path_loss_exp = path_loss_exp
         self.shadowing_std = shadowing_std  # σ en dB (ex: 6.0 pour environnement urbain/suburbain)
+        if path_loss_d0 is None:
+            freq_mhz = self.frequency_hz / 1e6
+            path_loss_d0 = 32.45 + 20 * math.log10(freq_mhz) - 60.0
+        self.path_loss_d0 = path_loss_d0
+        self.reference_distance = reference_distance
         self.fast_fading_std = fast_fading_std
         self.multipath_taps = int(multipath_taps)
         self.cable_loss_dB = cable_loss_dB
@@ -367,9 +379,10 @@ class Channel:
             return self.flora_phy.path_loss(distance)
         if distance <= 0:
             return 0.0
-        freq_mhz = self.frequency_hz / 1e6
-        pl_d0 = 32.45 + 20 * math.log10(freq_mhz) - 60.0
-        pl = pl_d0 + 10 * self.path_loss_exp * math.log10(max(distance, 1.0) / 1.0)
+        d = max(distance, 1.0)
+        pl = self.path_loss_d0 + 10 * self.path_loss_exp * math.log10(
+            d / self.reference_distance
+        )
         return pl + self.system_loss_dB
 
     def compute_rssi(

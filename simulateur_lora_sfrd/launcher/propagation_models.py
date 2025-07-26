@@ -5,29 +5,43 @@ class LogDistanceShadowing:
     """Simple log-distance model with log-normal shadowing."""
 
     ENV_PARAMS = {
-        "urban": (2.7, 6.0),
-        "suburban": (2.3, 4.0),
-        "rural": (2.0, 2.0),
-        "flora": (2.7, 3.57),
+        "urban": (2.08, 3.57, 127.41, 40.0),
+        "suburban": (2.32, 7.08, 128.95, 1000.0),
+        "rural": (2.0, 2.0, 113.0, 1.0),
+        "flora": (2.7, 3.57, 127.41, 40.0),
     }
 
-    def __init__(self, frequency_hz: float = 868e6, *, path_loss_exp: float = 2.7,
-                 shadowing_std: float = 6.0, environment: str | None = None) -> None:
+    def __init__(
+        self,
+        frequency_hz: float = 868e6,
+        *,
+        path_loss_exp: float = 2.7,
+        shadowing_std: float = 6.0,
+        path_loss_d0: float | None = None,
+        reference_distance: float = 1.0,
+        environment: str | None = None,
+    ) -> None:
         if environment is not None:
             env = environment.lower()
             if env not in self.ENV_PARAMS:
                 raise ValueError(f"Unknown environment: {environment}")
-            path_loss_exp, shadowing_std = self.ENV_PARAMS[env]
+            path_loss_exp, shadowing_std, path_loss_d0, reference_distance = self.ENV_PARAMS[env]
+        if path_loss_d0 is None:
+            freq_mhz = frequency_hz / 1e6
+            path_loss_d0 = 32.45 + 20 * math.log10(freq_mhz) - 60.0
         self.frequency_hz = frequency_hz
         self.path_loss_exp = path_loss_exp
         self.shadowing_std = shadowing_std
+        self.path_loss_d0 = path_loss_d0
+        self.reference_distance = reference_distance
 
     def path_loss(self, distance: float) -> float:
         if distance <= 0:
             return 0.0
-        freq_mhz = self.frequency_hz / 1e6
-        pl_d0 = 32.45 + 20 * math.log10(freq_mhz) - 60.0
-        loss = pl_d0 + 10 * self.path_loss_exp * math.log10(max(distance, 1.0))
+        d = max(distance, 1.0)
+        loss = self.path_loss_d0 + 10 * self.path_loss_exp * math.log10(
+            d / self.reference_distance
+        )
         if self.shadowing_std > 0:
             loss += random.gauss(0.0, self.shadowing_std)
         return loss
@@ -55,6 +69,8 @@ class CompletePropagation(LogDistanceShadowing):
         *,
         path_loss_exp: float = 2.7,
         shadowing_std: float = 6.0,
+        path_loss_d0: float | None = None,
+        reference_distance: float = 1.0,
         fast_fading_std: float = 0.0,
         multipath_taps: int = 1,
         noise_figure_dB: float = 6.0,
@@ -65,6 +81,8 @@ class CompletePropagation(LogDistanceShadowing):
             frequency_hz,
             path_loss_exp=path_loss_exp,
             shadowing_std=shadowing_std,
+            path_loss_d0=path_loss_d0,
+            reference_distance=reference_distance,
             environment=environment,
         )
         self.fast_fading_std = fast_fading_std
