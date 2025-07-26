@@ -102,6 +102,7 @@ class Simulator:
         seed: int | None = None,
         class_c_rx_interval: float = 1.0,
         phy_model: str = "",
+        flora_loss_model: str = "lognorm",
         terrain_map: str | list[list[float]] | None = None,
         path_map: str | list[list[float]] | None = None,
         dynamic_obstacles: str | list[dict] | None = None,
@@ -171,6 +172,8 @@ class Simulator:
             downlink pour les nœuds de classe C (s).
         :param phy_model: "omnet" ou "flora" pour activer un modèle physique
             inspiré de FLoRa.
+        :param flora_loss_model: Variante d'atténuation FLoRa ("lognorm",
+            "oulu" ou "hata").
         :param terrain_map: Carte de terrain utilisée pour la mobilité
             aléatoire (chemin JSON/texte ou matrice). Les valeurs négatives
             indiquent les obstacles et ralentissements éventuels.
@@ -242,6 +245,7 @@ class Simulator:
         self.flora_timing = flora_timing
         self.config_file = config_file
         self.phy_model = phy_model
+        self.flora_loss_model = flora_loss_model
         # Activation ou non de la mobilité des nœuds
         self.mobility_enabled = mobility
         if mobility_model is not None:
@@ -317,6 +321,7 @@ class Simulator:
                         detection_threshold_dBm=detection_threshold_dBm,
                         phy_model=ch_phy_model,
                         environment=env,
+                        flora_loss_model=flora_loss_model,
                     )
                 ]
             else:
@@ -346,6 +351,7 @@ class Simulator:
                                     if (flora_mode or phy_model.startswith("flora"))
                                     else None
                                 ),
+                                flora_loss_model=flora_loss_model,
                             )
                         )
             self.multichannel = MultiChannel(ch_list, method=channel_distribution)

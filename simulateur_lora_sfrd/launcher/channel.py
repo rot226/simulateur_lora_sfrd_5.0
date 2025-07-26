@@ -27,6 +27,8 @@ class Channel:
         "rural": (2.0, 2.0),
         # Parameters matching the FLoRa log-normal shadowing model
         "flora": (2.7, 3.57),
+        "flora_oulu": (2.32, 7.8),
+        "flora_hata": (2.08, 3.57),
         # Additional presets for denser or indoor environments
         "urban_dense": (3.0, 8.0),
         "indoor": (3.5, 7.0),
@@ -73,6 +75,7 @@ class Channel:
         variable_noise_std: float = 0.0,
         advanced_capture: bool = False,
         phy_model: str = "omnet",
+        flora_loss_model: str = "lognorm",
         system_loss_dB: float = 0.0,
         rssi_offset_dB: float = 0.0,
         snr_offset_dB: float = 0.0,
@@ -144,6 +147,8 @@ class Channel:
         :param variable_noise_std: Variation lente du bruit thermique en dB.
         :param advanced_capture: Active un mode de capture inspiré de FLoRa.
         :param phy_model: "omnet" (par défaut) pour utiliser le module OMNeT++.
+        :param flora_loss_model: Variante d'atténuation FLoRa à utiliser
+            ("lognorm", "oulu" ou "hata").
         :param system_loss_dB: Pertes fixes supplémentaires (par ex. pertes
             système) appliquées à la perte de parcours.
         :param rssi_offset_dB: Décalage appliqué au RSSI calculé (dB).
@@ -264,6 +269,7 @@ class Channel:
         self.variable_noise_std = variable_noise_std
         self.advanced_capture = advanced_capture
         self.phy_model = phy_model
+        self.flora_loss_model = flora_loss_model
         self.system_loss_dB = system_loss_dB
         self.rssi_offset_dB = rssi_offset_dB
         self.snr_offset_dB = snr_offset_dB
@@ -297,7 +303,7 @@ class Channel:
             self.advanced_capture = True
         elif self.phy_model in ("flora", "flora_full") or self.use_flora_curves:
             from .flora_phy import FloraPHY
-            self.flora_phy = FloraPHY(self)
+            self.flora_phy = FloraPHY(self, loss_model=self.flora_loss_model)
             self.omnet_phy = None
             self.advanced_capture = True
         else:

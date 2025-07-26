@@ -393,6 +393,11 @@ où `th` est le seuil SNR par Spreading Factor ({7: -7.5, 8: -10, 9: -12.5,
 10: -15, 11: -17.5, 12: -20} dB). Ces équations sont activées en passant
 `phy_model="flora" ou "flora_full"` ou `use_flora_curves=True` au constructeur du `Channel`.
 
+Le paramètre ``flora_loss_model`` permet de choisir parmi plusieurs modèles
+d'atténuation : ``"lognorm"`` (par défaut), ``"oulu"`` correspondant à
+``LoRaPathLossOulu`` (B = 128.95 dB, n = 2.32, d0 = 1000 m) ou ``"hata"`` pour
+``LoRaHataOkumura`` (K1 = 127.5, K2 = 35.2).
+
 
 ## SF et puissance initiaux
 
