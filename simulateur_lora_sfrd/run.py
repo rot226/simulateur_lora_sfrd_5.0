@@ -30,6 +30,7 @@ def simulate(
     steps,
     channels=1,
     *,
+    first_interval=None,
     fine_fading_std=0.0,
     noise_std=0.0,
     debug_rx=False,
@@ -51,6 +52,10 @@ def simulate(
         raise ValueError("channels must be >= 1")
     if not isinstance(interval, float) or interval <= 0:
         raise ValueError("mean_interval must be positive float")
+    if first_interval is not None and (
+        not isinstance(first_interval, float) or first_interval <= 0
+    ):
+        raise ValueError("first_interval must be positive float")
     if steps <= 0:
         raise ValueError("steps must be > 0")
 
@@ -81,19 +86,21 @@ def simulate(
         rng = rng_manager.get_stream("traffic", node)
         if mode_lower == "periodic":
             # Randomize the initial offset like the full Simulator
-            t = rng.random() * interval
+            base = first_interval if first_interval is not None else interval
+            t = rng.random() * base
             while t < steps:
                 send_times[node].append(t)
                 t += interval
             send_times[node] = sorted(set(send_times[node]))
         else:  # mode "Random"
             # Génère les instants d'envoi selon une loi exponentielle
-            t = sample_interval(interval, rng)
+            first = first_interval if first_interval is not None else interval
+            t = sample_interval(first, rng)
             while t < steps:
                 send_times[node].append(t)
                 t += sample_interval(interval, rng)
 
-    if mode_lower == "random":
+    if mode_lower == "random" and first_interval is None:
         total = 0.0
         count = 0
         for times in send_times.values():
@@ -233,6 +240,12 @@ def main(argv=None):
         help="Intervalle moyen ou fixe entre transmissions",
     )
     parser.add_argument(
+        "--first-interval",
+        type=float,
+        default=None,
+        help="Moyenne exponentielle pour la première transmission",
+    )
+    parser.add_argument(
         "--steps",
         type=int,
         default=100,
@@ -302,7 +315,8 @@ def main(argv=None):
     logging.info(
         f"Simulation d'un réseau LoRa : {args.nodes} nœuds, {args.gateways} gateways, "
         f"{args.channels} canaux, mode={args.mode}, "
-        f"intervalle={args.interval}, steps={args.steps}"
+        f"intervalle={args.interval}, steps={args.steps}, "
+        f"first_interval={args.first_interval}"
     )
     if args.lorawan_demo:
         from .launcher.node import Node
@@ -332,6 +346,7 @@ def main(argv=None):
             args.interval,
             args.steps,
             args.channels,
+            first_interval=args.first_interval,
             fine_fading_std=args.fine_fading,
             noise_std=args.noise_std,
             debug_rx=args.debug_rx,
