@@ -7,7 +7,15 @@ import random
 
 
 class FloraPHY:
-    """Replicate FLoRa path loss and capture formulas."""
+    """Replicate FLoRa path loss and capture formulas.
+
+    ``loss_model`` selects which path loss equations to use:
+
+    - ``"lognorm"`` (default): original FLoRa log-normal shadowing
+      ``PATH_LOSS_D0`` at ``REFERENCE_DISTANCE`` with exponent ``path_loss_exp``.
+    - ``"oulu"``: constants from ``LoRaPathLossOulu``.
+    - ``"hata"``: constants from ``LoRaHataOkumura``.
+    """
 
     NON_ORTH_DELTA = [
         [1, -8, -9, -9, -9, -9],
@@ -20,19 +28,37 @@ class FloraPHY:
 
     REFERENCE_DISTANCE = 40.0
     PATH_LOSS_D0 = 127.41
+    OULU_D0 = 1000.0
+    OULU_N = 2.32
+    OULU_B = 128.95
+    OULU_ANTENNA_GAIN = 2.0
+    HATA_K1 = 127.5
+    HATA_K2 = 35.2
     SNR_THRESHOLDS = {7: -7.5, 8: -10.0, 9: -12.5, 10: -15.0, 11: -17.5, 12: -20.0}
 
-    def __init__(self, channel) -> None:
+    def __init__(self, channel, loss_model: str = "lognorm") -> None:
         self.channel = channel
+        self.loss_model = loss_model
 
     def path_loss(self, distance: float) -> float:
         if distance <= 0:
             return 0.0
-        loss = (
-            self.PATH_LOSS_D0
-            + 10 * self.channel.path_loss_exp
-            * math.log10(max(distance, 1.0) / self.REFERENCE_DISTANCE)
-        )
+        d = max(distance, 1.0)
+        if self.loss_model == "oulu":
+            loss = (
+                self.OULU_B
+                + 10 * self.OULU_N * math.log10(d / self.OULU_D0)
+                - self.OULU_ANTENNA_GAIN
+            )
+        elif self.loss_model == "hata":
+            loss = self.HATA_K1 + self.HATA_K2 * math.log10(d / 1000.0)
+        else:
+            loss = (
+                self.PATH_LOSS_D0
+                + 10
+                * self.channel.path_loss_exp
+                * math.log10(d / self.REFERENCE_DISTANCE)
+            )
         if self.channel.shadowing_std > 0:
             loss += random.gauss(0.0, self.channel.shadowing_std)
         return loss + self.channel.system_loss_dB
