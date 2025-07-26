@@ -104,6 +104,9 @@ class AdvancedChannel:
         indoor_floor_loss_dB: float = 15.0,
         tx_start_delay_s: float = 0.0,
         rx_start_delay_s: float = 0.0,
+        cost231_correction_dB: float = 0.0,
+        okumura_hata_correction_dB: float = 0.0,
+        modem_snr_offsets: dict[str, float] | None = None,
         **kwargs,
     ) -> None:
         """Initialise the advanced channel with optional propagation models.
@@ -182,6 +185,12 @@ class AdvancedChannel:
             ``obstacle_height_map``.
         :param default_obstacle_dB: Pénalité par défaut en dB lorsqu'un obstacle
             est rencontré sans valeur explicite dans ``obstacle_map``.
+        :param cost231_correction_dB: Décalage appliqué au modèle COST‑231 pour
+            affiner la calibration.
+        :param okumura_hata_correction_dB: Décalage appliqué au modèle
+            Okumura‑Hata.
+        :param modem_snr_offsets: Dictionnaire ``{modem: offset}`` pour ajuster
+            le SNR retourné selon le modem utilisé.
         """
 
         from .channel import Channel
@@ -277,6 +286,9 @@ class AdvancedChannel:
             self._cols = len((obstacle_map or obstacle_height_map)[0]) if self._rows else 0
         else:
             self._rows = self._cols = 0
+        self.cost231_correction_dB = float(cost231_correction_dB)
+        self.okumura_hata_correction_dB = float(okumura_hata_correction_dB)
+        self.modem_snr_offsets = modem_snr_offsets or {}
 
     def __getattr__(self, name: str):
         """Delegate attribute access to the underlying :class:`Channel`."""
@@ -331,20 +343,22 @@ class AdvancedChannel:
     # ------------------------------------------------------------------
     def path_loss(self, distance: float, height_diff: float | None = None) -> float:
         """Return path loss in dB for the selected model."""
-        d = distance
+        if height_diff is not None:
+            d = math.sqrt(distance ** 2 + height_diff ** 2)
+        else:
+            d = distance
         if self.propagation_model == "3d":
             if height_diff is None:
                 height_diff = self.base_station_height - self.mobile_height
-            d = math.sqrt(distance ** 2 + height_diff ** 2)
             loss = self.base.path_loss(d)
         elif self.propagation_model == "cost231":
-            loss = self._cost231_loss(distance)
+            loss = self._cost231_loss(d) + self.cost231_correction_dB
         elif self.propagation_model == "okumura_hata":
-            loss = self._okumura_hata_loss(distance)
+            loss = self._okumura_hata_loss(d) + self.okumura_hata_correction_dB
         elif self.propagation_model == "itu_indoor":
-            loss = self._itu_indoor_loss(distance)
+            loss = self._itu_indoor_loss(d)
         else:
-            loss = self.base.path_loss(distance)
+            loss = self.base.path_loss(d)
 
         if self.weather_loss_dB_per_km or self._weather_loss.std > 0.0:
             loss_per_km = self._weather_loss.sample()
@@ -466,6 +480,7 @@ class AdvancedChannel:
         rx_pos: tuple[float, float] | tuple[float, float, float] | None = None,
         freq_offset_hz: float | None = None,
         sync_offset_s: float | None = None,
+        modem: str | None = None,
     ) -> tuple[float, float]:
         """Return RSSI and SNR for the advanced channel.
 
@@ -475,6 +490,7 @@ class AdvancedChannel:
         configured at construction.
         ``tx_pos`` and ``rx_pos`` may include an optional altitude as third
         coordinate to interact with ``obstacle_height_map``.
+        ``modem`` selects an optional SNR offset from ``modem_snr_offsets``.
         """
         if self.rx_state != "on":
             return -float("inf"), -float("inf")
@@ -491,9 +507,8 @@ class AdvancedChannel:
             sync_offset_s += random.gauss(0.0, self.clock_jitter_std_s)
 
         height_diff = None
-        if tx_pos is not None and rx_pos is not None and self.propagation_model == "3d":
-            if len(tx_pos) >= 3 and len(rx_pos) >= 3:
-                height_diff = tx_pos[2] - rx_pos[2]
+        if tx_pos is not None and rx_pos is not None and len(tx_pos) >= 3 and len(rx_pos) >= 3:
+            height_diff = tx_pos[2] - rx_pos[2]
         loss = self.path_loss(distance, height_diff)
         if tx_pos is not None and rx_pos is not None:
             extra = self._obstacle_loss(tx_pos, rx_pos)
@@ -553,6 +568,8 @@ class AdvancedChannel:
         snr = rssi - noise - abs(self._phase_noise.sample())
         if sf is not None:
             snr += 10 * math.log10(2 ** sf)
+        if modem and modem in self.modem_snr_offsets:
+            snr += self.modem_snr_offsets[modem]
         return rssi, snr
 
     # ------------------------------------------------------------------

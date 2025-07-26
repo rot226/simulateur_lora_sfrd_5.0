@@ -282,10 +282,14 @@ collision.
 Un module optionnel `advanced_channel.py` introduit des modèles de
 propagation supplémentaires inspirés de la couche physique OMNeT++. Le
 mode `cost231` applique la formule Hata COST‑231 avec les hauteurs de
-stations paramétrables. Un mode `okumura_hata` reprend la variante
-d'origine (urbain, suburbain ou zone ouverte). Un mode `itu_indoor` permet
-de simuler des environnements intérieurs. Le mode `3d` calcule la
-distance réelle en 3D entre l'émetteur et le récepteur. Il est également
+stations paramétrables et un coefficient d'ajustement via
+`cost231_correction_dB`. Un mode `okumura_hata` reprend la variante
+d'origine (urbain, suburbain ou zone ouverte) avec un terme correctif
+`okumura_hata_correction_dB`. Un mode `itu_indoor` permet de simuler des
+environnements intérieurs. Le mode `3d` calcule la distance réelle en 3D
+entre l'émetteur et le récepteur et les autres modèles peuvent également
+prendre en compte un dénivelé si `tx_pos` et `rx_pos` comportent une
+altitude. Il est également
 possible de simuler un fading `rayleigh` ou `rician` pour représenter des
 multi-trajets plus réalistes. Des gains d'antenne et pertes de câble
 peuvent être précisés, ainsi qu'une variation temporelle du bruit grâce
@@ -301,9 +305,11 @@ from simulateur_lora_sfrd.launcher.advanced_channel import AdvancedChannel
 ch = AdvancedChannel(
     propagation_model="okumura_hata",
     terrain="suburban",
+    okumura_hata_correction_dB=2.0,
     weather_loss_dB_per_km=1.0,
     weather_loss_std_dB_per_km=0.5,
     fading="rayleigh",  # modèle corrélé dans le temps
+    modem_snr_offsets={"lora": 0.0},
 )
 ```
 
@@ -311,7 +317,10 @@ L'objet `AdvancedChannel` peut également introduire des offsets de
 fréquence et de synchronisation variables au cours du temps pour se
 rapprocher du comportement observé avec OMNeT++. Les paramètres
 `freq_offset_std_hz` et `sync_offset_std_s` contrôlent l'amplitude de ces
-variations corrélées.
+variations corrélées. Une non‑linéarité d'amplificateur peut être
+spécifiée grâce aux paramètres `pa_non_linearity_dB`,
+`pa_non_linearity_std_dB` et `pa_non_linearity_curve`. Le SNR peut en
+outre être corrigé par modem à l'aide de `modem_snr_offsets`.
 
 Les autres paramètres (fréquence, bruit, etc.) sont transmis au
 constructeur de `Channel` classique et restent compatibles avec le
@@ -323,7 +332,9 @@ temps de réception. Les équations d'atténuation et de PER de FLoRa
 peuvent être activées via ``use_flora_curves`` pour un rendu encore plus
 fidèle.
 Une carte ``obstacle_height_map`` peut bloquer complètement un lien en
-fonction de l'altitude parcourue.
+fonction de l'altitude parcourue et les différences de hauteur sont
+prises en compte dans tous les modèles lorsque ``tx_pos`` et ``rx_pos``
+indiquent une altitude.
 Il est désormais possible de modéliser la sélectivité du filtre RF grâce aux
 paramètres ``frontend_filter_order`` et ``frontend_filter_bw``. Une valeur non
 nulle applique une atténuation dépendante du décalage fréquentiel, permettant de
