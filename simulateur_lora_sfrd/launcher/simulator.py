@@ -195,6 +195,9 @@ class Simulator:
         :param lock_step_poisson: Prégénère la séquence Poisson une seule fois et la réutilise.
         """
         # Paramètres de simulation
+        if flora_mode and packet_interval == 60.0 and first_packet_interval is None:
+            packet_interval = first_packet_interval = 1000.0
+
         self.num_nodes = num_nodes
         self.num_gateways = num_gateways
         self.area_size = area_size

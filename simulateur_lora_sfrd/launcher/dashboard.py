@@ -113,7 +113,7 @@ area_input = pn.widgets.FloatInput(name="Taille de l'aire (m)", value=1000.0, st
 mode_select = pn.widgets.RadioButtonGroup(
     name="Mode d'émission", options=["Aléatoire", "Périodique"], value="Aléatoire"
 )
-interval_input = pn.widgets.FloatInput(name="Intervalle moyen (s)", value=100.0, step=1.0, start=0.1)
+interval_input = pn.widgets.FloatInput(name="Intervalle moyen (s)", value=1000.0, step=1.0, start=0.1)
 first_packet_input = pn.widgets.FloatInput(
     name="Intervalle premier paquet (s)",
     value=interval_input.value,
