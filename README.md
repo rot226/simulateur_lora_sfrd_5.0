@@ -467,6 +467,15 @@ Pour des résultats plus proches du terrain, activez `fast_fading_std` et
 `multipath_taps` pour simuler un canal multipath. Utilisez également
 `interference_dB` pour introduire un bruit extérieur constant ou variable.
 
+### Effet de capture
+
+Le canal `Channel` applique par défaut un seuil de capture de **6 dB** pour
+considérer qu'un signal plus puissant peut être décodé malgré les
+interférences. Lorsque `phy_model` vaut `"flora"` ou `"flora_full"`, la
+décision reprend la matrice `nonOrthDelta` du simulateur FLoRa original : la
+différence de puissance requise dépend alors des Spreading Factors en
+présence, avec un seuil proche de 6 dB pour des paquets au même SF.
+
 Pour reproduire un scénario FLoRa :
 1. Passez `flora_mode=True` et `flora_timing=True` lors de la création du
    `Simulator` (ou activez **Mode FLoRa complet**). Cela applique un seuil de
