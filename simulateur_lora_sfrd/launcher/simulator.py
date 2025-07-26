@@ -75,6 +75,8 @@ class Simulator:
         area_size: float = 1000.0,
         transmission_mode: str = "Random",
         packet_interval: float = 60.0,
+        first_packet_interval: float | None = None,
+        first_packet_min_delay: float = 0.0,
         warm_up_intervals: int = 0,
         log_mean_after: int | None = None,
         interval_variation: float = 0.0,
@@ -122,6 +124,8 @@ class Simulator:
         :param area_size: Taille de l'aire carrée (mètres) dans laquelle sont déployés nœuds et passerelles.
         :param transmission_mode: 'Random' pour transmissions aléatoires (Poisson) ou 'Periodic' pour périodiques.
         :param packet_interval: Intervalle moyen entre transmissions (si Random, moyenne en s; si Periodic, période fixe en s).
+        :param first_packet_interval: Intervalle moyen appliqué uniquement au tout premier envoi (``None`` pour utiliser ``packet_interval``).
+        :param first_packet_min_delay: Délai minimal avant la première transmission (s).
         :param warm_up_intervals: Nombre d'intervalles à ignorer dans les métriques (warm-up).
         :param log_mean_after: Nombre d'intervalles comptabilisés après warm-up
             avant journalisation de la moyenne empirique (``None`` pour désactiver).
@@ -196,6 +200,10 @@ class Simulator:
         self.area_size = area_size
         self.transmission_mode = transmission_mode
         self.packet_interval = packet_interval
+        self.first_packet_interval = (
+            first_packet_interval if first_packet_interval is not None else packet_interval
+        )
+        self.first_packet_min_delay = first_packet_min_delay
         self.warm_up_intervals = warm_up_intervals
         self.log_mean_after = log_mean_after
         if interval_variation < 0 or interval_variation > 3:
@@ -215,6 +223,8 @@ class Simulator:
                 detection_threshold_dBm = -110.0
             if min_interference_time == 0.0:
                 min_interference_time = 5.0
+            if self.first_packet_min_delay == 0.0:
+                self.first_packet_min_delay = 5.0
         if pure_poisson_mode:
             duty_cycle = None
             detection_threshold_dBm = -float("inf")
@@ -369,7 +379,11 @@ class Simulator:
         cfg_nodes = None
         cfg_gateways = None
         if config_file:
-            from .config_loader import load_config, parse_flora_interval
+            from .config_loader import (
+                load_config,
+                parse_flora_interval,
+                parse_flora_first_interval,
+            )
 
             cfg_nodes, cfg_gateways = load_config(config_file)
             if cfg_gateways:
@@ -379,6 +393,9 @@ class Simulator:
             mean_interval = parse_flora_interval(config_file)
             if mean_interval is not None:
                 self.packet_interval = mean_interval
+            first_mean = parse_flora_first_interval(config_file)
+            if first_mean is not None:
+                self.first_packet_interval = first_mean
 
         for idx in range(self.num_gateways):
             gw_id = next_gateway_id()
@@ -510,8 +527,10 @@ class Simulator:
                     node.ensure_poisson_arrivals(
                         node._last_arrival_time,
                         self.interval_rng,
-                        self.packet_interval,
-                        min_interval=node.last_airtime,
+                        self.first_packet_interval,
+                        min_interval=max(
+                            node.last_airtime, self.first_packet_min_delay
+                        ),
                         variation=self.interval_variation,
                         limit=(
                             self.packets_to_send if self.packets_to_send else None
