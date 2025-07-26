@@ -1235,14 +1235,16 @@ class Simulator:
         interval_sum = 0.0
         interval_count = 0
         for n in self.nodes:
-            if not n.interval_log:
-                continue
             times = sorted(entry["tx_time"] for entry in n.interval_log)
             if self.warm_up_intervals:
                 times = times[self.warm_up_intervals :]
-            for t0, t1 in zip(times, times[1:]):
-                interval_sum += t1 - t0
-                interval_count += 1
+            if len(times) > 1:
+                for t0, t1 in zip(times, times[1:]):
+                    interval_sum += t1 - t0
+                    interval_count += 1
+            else:
+                interval_sum += n.arrival_interval_sum
+                interval_count += n.arrival_interval_count
 
         avg_arrival_interval = (
             interval_sum / interval_count if interval_count > 0 else 0.0
