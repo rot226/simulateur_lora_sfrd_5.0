@@ -379,21 +379,17 @@ class Simulator:
         cfg_nodes = None
         cfg_gateways = None
         if config_file:
-            from .config_loader import (
-                load_config,
-                parse_flora_interval,
-                parse_flora_first_interval,
-            )
+            from .config_loader import load_config
 
-            cfg_nodes, cfg_gateways = load_config(config_file)
+            cfg_nodes, cfg_gateways, mean_interval, first_mean = load_config(
+                config_file
+            )
             if cfg_gateways:
                 self.num_gateways = len(cfg_gateways)
             if cfg_nodes:
                 self.num_nodes = len(cfg_nodes)
-            mean_interval = parse_flora_interval(config_file)
             if mean_interval is not None:
                 self.packet_interval = mean_interval
-            first_mean = parse_flora_first_interval(config_file)
             if first_mean is not None:
                 self.first_packet_interval = first_mean
 
