@@ -96,7 +96,7 @@ class FloraPHY:
         end0 = end_list[idx0]
 
         symbol_time = (2 ** sf0) / self.channel.bandwidth
-        cs_begin = start0 + symbol_time * (self.channel.preamble_symbols - 6)
+        cs_begin = start0 + symbol_time * (self.channel.preamble_symbols - 5)
 
         captured = True
         for idx in order[1:]:

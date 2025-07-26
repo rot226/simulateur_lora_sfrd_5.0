@@ -140,6 +140,22 @@ class Gateway:
                 return float('inf')
             return 10 * math.log10(1.0 + freq_factor ** 2 + time_factor ** 2)
 
+        def _enough_preamble(winner, others) -> bool:
+            """Return ``True`` if ``winner`` may capture according to the
+            5-symbol preamble rule."""
+            sym_time = (2 ** winner.get('sf', sf)) / bandwidth
+            limit = 5 * sym_time
+            for other in others:
+                if other is winner:
+                    continue
+                dt = other['start_time'] - winner['start_time']
+                if dt < 0:
+                    # another transmission started before the winner
+                    return False
+                if dt < limit:
+                    return False
+            return True
+
         if capture_mode in {"advanced", "omnet"} and noise_floor is not None:
             def _snr(i: int) -> float:
                 rssi_i = colliders[i]['rssi']
@@ -189,7 +205,10 @@ class Gateway:
         if capture_mode != "flora":
             capture = False
             if second is not None:
-                if strongest_metric - second >= capture_threshold:
+                if (
+                    strongest_metric - second >= capture_threshold
+                    and _enough_preamble(strongest, colliders)
+                ):
                     capture = True
             else:
                 capture = True
