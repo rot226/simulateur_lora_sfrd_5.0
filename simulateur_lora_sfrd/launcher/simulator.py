@@ -516,9 +516,10 @@ class Simulator:
                     node.precompute_poisson_arrivals(
                         self.interval_rng,
                         self.packet_interval,
-                        self.packets_to_send,
+                        self.packets_to_send * 2,
                         variation=self.interval_variation,
                     )
+                    t0 = node.next_precomputed_time(max(node.last_airtime, self.first_packet_min_delay))
                 else:
                     node.ensure_poisson_arrivals(
                         node._last_arrival_time,
@@ -532,7 +533,7 @@ class Simulator:
                             self.packets_to_send if self.packets_to_send else None
                         ),
                     )
-                t0 = node.arrival_queue.pop(0)
+                    t0 = node.arrival_queue.pop(0)
             else:
                 t0 = random.random() * self.packet_interval
                 node.arrival_queue.append(t0)
@@ -901,17 +902,20 @@ class Simulator:
                     or node.packets_sent < self.packets_to_send
                 ):
                     if self.transmission_mode.lower() == "random":
-                        if not self.lock_step_poisson:
+                        if self.lock_step_poisson:
+                            next_time = node.next_precomputed_time(node.last_airtime)
+                        else:
                             node.ensure_poisson_arrivals(
                                 node._last_arrival_time,
                                 self.interval_rng,
                                 self.packet_interval,
+                                min_interval=node.last_airtime,
                                 variation=self.interval_variation,
                                 limit=(
                                     self.packets_to_send if self.packets_to_send else None
                                 ),
                             )
-                        next_time = node.arrival_queue.pop(0)
+                            next_time = node.arrival_queue.pop(0)
                     else:
                         next_time = node._last_arrival_time + self.packet_interval
                         node.arrival_interval_sum += self.packet_interval

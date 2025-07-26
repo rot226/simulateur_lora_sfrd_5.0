@@ -16,4 +16,6 @@ def test_avg_arrival_interval():
     )
     sim.run()
     metrics = sim.get_metrics()
-    assert abs(metrics["avg_arrival_interval_s"] - 5.0) / 5.0 < 0.1
+    airtime = sim.nodes[0].channel.airtime(sim.nodes[0].sf, payload_size=sim.payload_size_bytes)
+    expected = 5.0 + airtime
+    assert abs(metrics["avg_arrival_interval_s"] - expected) / expected < 0.1

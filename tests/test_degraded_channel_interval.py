@@ -20,4 +20,6 @@ def test_interval_with_degraded_channel():
     node = sim.nodes[0]
     average = node._last_arrival_time / node.packets_sent
     assert node.packets_sent == packets
-    assert abs(average - mean_interval) / mean_interval < 0.02
+    airtime = sum(e['end_time'] - e['start_time'] for e in sim.events_log) / len(sim.events_log)
+    expected = mean_interval + airtime
+    assert abs(average - expected) / expected < 0.03

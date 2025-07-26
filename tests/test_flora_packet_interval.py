@@ -18,4 +18,6 @@ def test_flora_packet_interval():
     )
     sim.run()
     metrics = sim.get_metrics()
-    assert abs(metrics["avg_arrival_interval_s"] - mean_interval) / mean_interval < 0.01
+    airtime = sim.nodes[0].channel.airtime(sim.nodes[0].sf, payload_size=sim.payload_size_bytes)
+    expected = mean_interval + airtime
+    assert abs(metrics["avg_arrival_interval_s"] - expected) / expected < 0.01

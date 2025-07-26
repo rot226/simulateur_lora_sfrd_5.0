@@ -228,6 +228,9 @@ class Node:
         self.arrival_interval_sum: float = 0.0
         self.arrival_interval_count: int = 0
         self._last_arrival_time: float = 0.0
+        self._pre_rng: "np.random.Generator | None" = None
+        self._pre_mean: float | None = None
+        self._pre_var: float = 0.0
         # Warm-up handling for arrival intervals
         self._warmup_remaining: int = 0
         self._log_after: int | None = None
@@ -462,23 +465,63 @@ class Node:
         *,
         variation: float = 0.0,
     ) -> None:
-        """Generate ``count`` Poisson arrival times once and keep a copy."""
+        """Generate ``count`` Poisson interarrival samples and keep a copy."""
 
         self.arrival_queue = []
-        self.precomputed_arrivals = None
+        self.precomputed_arrivals = []
         self.arrival_interval_sum = 0.0
         self.arrival_interval_count = 0
         self._last_arrival_time = 0.0
         self._arrival_index = 0
-        self.ensure_poisson_arrivals(
-            float("inf"),
-            rng,
-            mean_interval,
-            min_interval=0.0,
-            variation=variation,
-            limit=count,
-        )
-        self.precomputed_arrivals = list(self.arrival_queue)
+        self._pre_rng = rng
+        self._pre_mean = float(mean_interval)
+        self._pre_var = float(variation)
+        for _ in range(count):
+            delta = sample_interval(mean_interval, rng)
+            if variation > 0.0:
+                factor = 1.0 + (2.0 * rng.random() - 1.0) * variation
+                if factor < 0.0:
+                    factor = 0.0
+                delta *= factor
+            self.precomputed_arrivals.append(delta)
+
+    def next_precomputed_time(self, min_interval: float = 0.0) -> float:
+        """Return the next arrival time using the precomputed sequence."""
+
+        assert self.precomputed_arrivals is not None
+        while True:
+            if self._arrival_index >= len(self.precomputed_arrivals):
+                delta = sample_interval(self._pre_mean, self._pre_rng)
+                if self._pre_var > 0.0:
+                    factor = 1.0 + (2.0 * self._pre_rng.random() - 1.0) * self._pre_var
+                    if factor < 0.0:
+                        factor = 0.0
+                    delta *= factor
+                self.precomputed_arrivals.append(delta)
+            delta = self.precomputed_arrivals[self._arrival_index]
+            self._arrival_index += 1
+            if delta >= min_interval:
+                break
+        if self._warmup_remaining > 0:
+            self._warmup_remaining -= 1
+        else:
+            self.arrival_interval_sum += delta
+            self.arrival_interval_count += 1
+            if (
+                self._log_after is not None
+                and not self._log_done
+                and self.arrival_interval_count >= self._log_after
+            ):
+                import logging
+
+                logging.info(
+                    "Empirical mean interval after warm-up: %.3fs over %d samples",
+                    self.arrival_interval_sum / self.arrival_interval_count,
+                    self.arrival_interval_count,
+                )
+                self._log_done = True
+        self._last_arrival_time += delta
+        return self._last_arrival_time
 
     # ------------------------------------------------------------------
     # LoRaWAN helper methods
