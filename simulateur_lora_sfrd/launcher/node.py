@@ -216,6 +216,8 @@ class Node:
         self.downlink_pending: int = 0
         self.acks_received: int = 0
         self.ack_history: list[bool] = []
+        # Last uplink end time to schedule Class A downlinks
+        self.last_uplink_end_time: float | None = None
 
         # ADR helper flags
         self.last_adr_ack_req: bool = False

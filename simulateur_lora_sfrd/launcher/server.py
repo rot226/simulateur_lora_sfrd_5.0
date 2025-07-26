@@ -163,7 +163,24 @@ class NetworkServer:
                 after = self.simulator.current_time if self.simulator else 0.0
                 self.scheduler.schedule_class_c(node, after, frame, gw, priority=priority)
             else:
-                gw.buffer_downlink(node.id, frame)
+                end = getattr(node, "last_uplink_end_time", None)
+                if end is not None:
+                    from .lorawan import compute_rx1, compute_rx2
+
+                    after = self.simulator.current_time if self.simulator else 0.0
+                    rx1 = compute_rx1(end, node.rx_delay)
+                    rx2 = compute_rx2(end, node.rx_delay)
+                    self.scheduler.schedule_class_a(
+                        node,
+                        after,
+                        rx1,
+                        rx2,
+                        frame,
+                        gw,
+                        priority=priority,
+                    )
+                else:
+                    gw.buffer_downlink(node.id, frame)
         else:
             if node.class_type.upper() == "B":
                 self.scheduler.schedule_class_b(
@@ -216,7 +233,7 @@ class NetworkServer:
     ) -> None:
         """Planifie le traitement serveur d'une trame."""
         if self.simulator is None:
-            self.receive(event_id, node_id, gateway_id, rssi, frame)
+            self.receive(event_id, node_id, gateway_id, rssi, frame, end_time=at_time)
             return
 
         from .simulator import Event, EventType
@@ -232,7 +249,14 @@ class NetworkServer:
 
         eid = self.simulator.event_id_counter
         self.simulator.event_id_counter += 1
-        self.pending_process[eid] = (event_id, node_id, gateway_id, rssi, frame)
+        self.pending_process[eid] = (
+            event_id,
+            node_id,
+            gateway_id,
+            rssi,
+            frame,
+            at_time,
+        )
         heapq.heappush(
             self.simulator.event_queue,
             Event(arrival_time, EventType.SERVER_RX, eid, node_id),
@@ -260,8 +284,8 @@ class NetworkServer:
         info = self.pending_process.pop(eid, None)
         if not info:
             return
-        event_id, node_id, gateway_id, rssi, frame = info
-        self.receive(event_id, node_id, gateway_id, rssi, frame)
+        event_id, node_id, gateway_id, rssi, frame, end_time = info
+        self.receive(event_id, node_id, gateway_id, rssi, frame, end_time=end_time)
 
     def deliver_scheduled(self, node_id: int, current_time: float) -> None:
         """Move ready scheduled frames to the gateway buffer."""
@@ -301,6 +325,7 @@ class NetworkServer:
         gateway_id: int,
         rssi: float | None = None,
         frame=None,
+        end_time: float | None = None,
     ):
         """
         Traite la réception d'un paquet par le serveur.
@@ -329,6 +354,8 @@ class NetworkServer:
 
         node = next((n for n in self.nodes if n.id == node_id), None)
         gw = next((g for g in self.gateways if g.id == gateway_id), None)
+        if node is not None:
+            node.last_uplink_end_time = end_time
         from .lorawan import JoinRequest
 
         if node and isinstance(frame, JoinRequest) and self.join_server:

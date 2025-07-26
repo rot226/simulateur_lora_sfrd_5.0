@@ -75,6 +75,32 @@ class DownlinkScheduler:
         self._gateway_busy[gateway.id] = time + duration
         return time
 
+    def schedule_class_a(
+        self,
+        node,
+        after_time: float,
+        rx1: float,
+        rx2: float,
+        frame,
+        gateway,
+        *,
+        priority: int = 0,
+    ) -> float:
+        """Schedule ``frame`` for a Class A node in the next available window."""
+        duration = node.channel.airtime(node.sf, self._payload_length(frame))
+        busy = self._gateway_busy.get(gateway.id, 0.0)
+        candidate = max(after_time, busy)
+        if candidate <= rx1:
+            t = rx1
+        elif candidate <= rx2:
+            t = rx2
+        else:
+            t = candidate
+        t += self.link_delay
+        self.schedule(node.id, t, frame, gateway, priority=priority)
+        self._gateway_busy[gateway.id] = t + duration
+        return t
+
     def schedule_beacon(self, after_time: float, frame, gateway, beacon_interval: float, *, priority: int = 0) -> float:
         """Schedule a beacon frame at the next beacon time after ``after_time``."""
         from .lorawan import next_beacon_time
