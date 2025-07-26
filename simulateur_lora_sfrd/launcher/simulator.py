@@ -1250,6 +1250,11 @@ class Simulator:
             interval_sum / interval_count if interval_count > 0 else 0.0
         )
 
+        tx_power_distribution: dict[float, int] = {}
+        for node in self.nodes:
+            p = node.tx_power
+            tx_power_distribution[p] = tx_power_distribution.get(p, 0) + 1
+
         return {
             "PDR": pdr,
             "collisions": self.packets_lost_collision,
@@ -1262,6 +1267,7 @@ class Simulator:
                 sf: sum(1 for node in self.nodes if node.sf == sf)
                 for sf in range(7, 13)
             },
+            "tx_power_distribution": tx_power_distribution,
             "pdr_by_node": pdr_by_node,
             "recent_pdr_by_node": recent_pdr_by_node,
             "pdr_by_sf": pdr_by_sf,
