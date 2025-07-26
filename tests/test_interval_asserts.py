@@ -20,3 +20,5 @@ def test_node_poisson_assert():
         node.ensure_poisson_arrivals(10.0, rng, -5.0)
     with pytest.raises(AssertionError):
         node.ensure_poisson_arrivals(10.0, rng, 5)
+    with pytest.raises(AssertionError):
+        node.ensure_poisson_arrivals(10.0, rng, 5.0, variation=-1.0)

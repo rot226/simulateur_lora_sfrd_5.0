@@ -399,12 +399,14 @@ class Node:
         rng: "np.random.Generator",
         mean_interval: float,
         min_interval: float = 0.0,
+        variation: float = 0.0,
         limit: int | None = None,
     ) -> None:
         """Generate Poisson arrival times up to ``up_to`` seconds.
 
         ``min_interval`` enforces a minimal delay between samples by
-        discarding draws below this threshold.
+        discarding draws below this threshold. ``variation`` applies a
+        multiplicative jitter factor to each sampled interval.
         """
         assert isinstance(mean_interval, float) and mean_interval > 0, (
             "mean_interval must be positive float"
@@ -412,13 +414,26 @@ class Node:
         assert isinstance(min_interval, float) and min_interval >= 0.0, (
             "min_interval must be non-negative float"
         )
+        assert isinstance(variation, float) and variation >= 0.0, (
+            "variation must be non-negative float"
+        )
         last = self.arrival_queue[-1] if self.arrival_queue else self._last_arrival_time
         while (not self.arrival_queue or last <= up_to) and (
             limit is None or self.arrival_interval_count < limit
         ):
             delta = sample_interval(mean_interval, rng)
+            if variation > 0.0:
+                factor = 1.0 + (2.0 * rng.random() - 1.0) * variation
+                if factor < 0.0:
+                    factor = 0.0
+                delta *= factor
             while delta < min_interval:
                 delta = sample_interval(mean_interval, rng)
+                if variation > 0.0:
+                    factor = 1.0 + (2.0 * rng.random() - 1.0) * variation
+                    if factor < 0.0:
+                        factor = 0.0
+                    delta *= factor
             if self._warmup_remaining > 0:
                 self._warmup_remaining -= 1
             else:
@@ -446,6 +461,8 @@ class Node:
         rng: "np.random.Generator",
         mean_interval: float,
         count: int,
+        *,
+        variation: float = 0.0,
     ) -> None:
         """Generate ``count`` Poisson arrival times once and keep a copy."""
 
@@ -456,7 +473,12 @@ class Node:
         self._last_arrival_time = 0.0
         self._arrival_index = 0
         self.ensure_poisson_arrivals(
-            float("inf"), rng, mean_interval, min_interval=0.0, limit=count
+            float("inf"),
+            rng,
+            mean_interval,
+            min_interval=0.0,
+            variation=variation,
+            limit=count,
         )
         self.precomputed_arrivals = list(self.arrival_queue)
 
