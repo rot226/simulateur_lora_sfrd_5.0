@@ -674,7 +674,7 @@ class Simulator:
             if not node.alive:
                 return True
             node.state = "tx"
-            node.last_state_time = time
+            node.last_state_time = end_time
             # Marquer le nœud comme en cours de transmission
             node.in_transmission = True
             node.current_end_time = end_time
