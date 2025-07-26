@@ -160,7 +160,10 @@ scénarios FLoRa. Voici la liste complète des options :
   passerelles.
 - `transmission_mode` : `Random` (émissions Poisson) ou `Periodic`.
 - `packet_interval` : moyenne ou période fixe entre transmissions (s).
-- `interval_variation`: coefficient de jitter appliqué multiplicativement 
+- `first_packet_interval` : moyenne exponentielle appliquée uniquement au
+  premier envoi (`None` pour reprendre `packet_interval`).
+- `first_packet_min_delay` : délai minimal avant la première transmission (s).
+- `interval_variation`: coefficient de jitter appliqué multiplicativement
   à l'intervalle exponentiel (0 par défaut pour coller au comportement FLoRa). L'intervalle est multiplié par `1 ± U` avec `U` échantillonné dans `[-interval_variation, interval_variation]`.
 - Les instants de transmission suivent strictement une loi exponentielle de
   moyenne `packet_interval` lorsque le mode `Random` est sélectionné.
