@@ -25,7 +25,6 @@ for path in (ROOT_DIR, REPO_ROOT):
 from launcher.simulator import Simulator  # noqa: E402
 from launcher.channel import Channel  # noqa: E402
 from launcher import adr_standard_1, adr_2, adr_3  # noqa: E402
-from launcher.compare_flora import load_flora_metrics  # noqa: E402
 
 # --- Initialisation Panel ---
 pn.extension("plotly", raw_css=[
@@ -113,10 +112,10 @@ area_input = pn.widgets.FloatInput(name="Taille de l'aire (m)", value=1000.0, st
 mode_select = pn.widgets.RadioButtonGroup(
     name="Mode d'émission", options=["Aléatoire", "Périodique"], value="Aléatoire"
 )
-interval_input = pn.widgets.FloatInput(name="Intervalle moyen (s)", value=1000.0, step=1.0, start=0.1)
+interval_input = pn.widgets.FloatInput(name="Intervalle moyen (s)", value=100.0, step=1.0, start=0.1)
 first_packet_input = pn.widgets.FloatInput(
     name="Intervalle premier paquet (s)",
-    value=interval_input.value,
+    value=100.0,
     step=1.0,
     start=0.1,
 )
@@ -173,7 +172,7 @@ mobility_model_select = pn.widgets.Select(
 )
 
 # --- Durée réelle de simulation et bouton d'accélération ---
-real_time_duration_input = pn.widgets.FloatInput(name="Durée réelle max (s)", value=0.0, step=1.0, start=0.0)
+real_time_duration_input = pn.widgets.FloatInput(name="Durée réelle max (s)", value=86400.0, step=1.0, start=0.0)
 fast_forward_button = pn.widgets.Button(
     name="Accélérer jusqu'à la fin", button_type="primary", disabled=True
 )
@@ -217,19 +216,6 @@ position_textarea = pn.widgets.TextAreaInput(
     css_classes=["coord-textarea"],
 )
 
-# Chargement d'un fichier .ini issu de FLoRa
-ini_file_input = pn.widgets.FileInput(name="Fichier INI FLoRa", accept=".ini")
-ini_file_label = pn.pane.Str("", width=200)
-
-# Map for path-based mobility
-path_map_input = pn.widgets.FileInput(name="Carte de parcours", accept=".json")
-path_map_label = pn.pane.Str("", width=200)
-terrain_map_input = pn.widgets.FileInput(name="Carte de terrain", accept=".json")
-terrain_map_label = pn.pane.Str("", width=200)
-dyn_obs_input = pn.widgets.FileInput(name="Carte d'obstacles dynamiques", accept=".json")
-dyn_obs_label = pn.pane.Str("", width=200)
-flora_csv_input = pn.widgets.FileInput(name="CSV FLoRa", accept=".csv")
-flora_csv_label = pn.pane.Str("", width=200)
 
 # --- Boutons de contrôle ---
 start_button = pn.widgets.Button(name="Lancer la simulation", button_type="success")
@@ -677,68 +663,11 @@ def setup_simulation(seed_offset: int = 0):
     seed = seed_val + seed_offset if seed_val != 0 else None
 
     config_path = None
-    if ini_file_input.value:
-        import tempfile
-
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".ini") as tmp:
-            tmp.write(ini_file_input.value.encode())
-            tmp.flush()
-            config_path = tmp.name
-
     path_map = None
-    path_map_file = None
-    if path_map_input.value:
-        import tempfile
-
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".json") as tmp_map:
-            tmp_map.write(path_map_input.value.encode())
-            tmp_map.flush()
-            path_map_file = tmp_map.name
-            path_map = path_map_file
-
     terrain_map = None
-    terrain_map_file = None
-    if terrain_map_input.value:
-        import tempfile
-
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".json") as tmp_terrain:
-            tmp_terrain.write(terrain_map_input.value.encode())
-            tmp_terrain.flush()
-            terrain_map_file = tmp_terrain.name
-            terrain_map = terrain_map_file
-
     dyn_map = None
-    dyn_map_file = None
-    if dyn_obs_input.value:
-        import tempfile
-
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".json") as tmp_dyn:
-            tmp_dyn.write(dyn_obs_input.value.encode())
-            tmp_dyn.flush()
-            dyn_map_file = tmp_dyn.name
-            dyn_map = dyn_map_file
-
     global flora_metrics
     flora_metrics = None
-    flora_csv_file = None
-    if flora_csv_input.value:
-        import tempfile
-
-        try:
-            with tempfile.NamedTemporaryFile(delete=False, suffix=".csv") as tmp_csv:
-                tmp_csv.write(flora_csv_input.value.encode())
-                tmp_csv.flush()
-                flora_csv_file = tmp_csv.name
-            flora_metrics = load_flora_metrics(flora_csv_file)
-        except Exception as exc:
-            flora_metrics = None
-            export_message.object = f"⚠️ Erreur CSV FLoRa : {exc}"
-        finally:
-            if flora_csv_file:
-                try:
-                    os.unlink(flora_csv_file)
-                except OSError:
-                    pass
 
     # Choisir le modèle de mobilité
     mobility_instance = None
@@ -767,21 +696,6 @@ def setup_simulation(seed_offset: int = 0):
             float(mobility_speed_max_input.value),
         )
 
-    if path_map_file:
-        try:
-            os.unlink(path_map_file)
-        except OSError:
-            pass
-    if terrain_map_file:
-        try:
-            os.unlink(terrain_map_file)
-        except OSError:
-            pass
-    if dyn_map_file:
-        try:
-            os.unlink(dyn_map_file)
-        except OSError:
-            pass
 
     sim = Simulator(
         num_nodes=int(num_nodes_input.value),
@@ -1340,33 +1254,6 @@ heatmap_res_slider.param.watch(update_heatmap, "value")
 hist_metric_select.param.watch(lambda event: update_histogram(), "value")
 show_paths_checkbox.param.watch(lambda event: update_map(), "value")
 
-# --- Affichage des noms de fichiers chargés ---
-def on_ini_filename(event):
-    ini_file_label.object = event.new or ""
-
-
-def on_map_filename(event):
-    path_map_label.object = event.new or ""
-
-
-def on_terrain_filename(event):
-    terrain_map_label.object = event.new or ""
-
-
-def on_dyn_filename(event):
-    dyn_obs_label.object = event.new or ""
-
-
-def on_csv_filename(event):
-    flora_csv_label.object = event.new or ""
-
-
-ini_file_input.param.watch(on_ini_filename, "filename")
-path_map_input.param.watch(on_map_filename, "filename")
-terrain_map_input.param.watch(on_terrain_filename, "filename")
-dyn_obs_input.param.watch(on_dyn_filename, "filename")
-flora_csv_input.param.watch(on_csv_filename, "filename")
-
 # --- Boutons ADR ---
 adr1_button.on_click(lambda event: select_adr(adr_standard_1, "ADR 1"))
 adr2_button.on_click(lambda event: select_adr(adr_2, "ADR 2"))
@@ -1388,11 +1275,6 @@ controls = pn.WidgetBox(
     packets_input,
     seed_input,
     num_runs_input,
-    pn.Row(ini_file_input, ini_file_label),
-    pn.Row(path_map_input, path_map_label),
-    pn.Row(terrain_map_input, terrain_map_label),
-    pn.Row(dyn_obs_input, dyn_obs_label),
-    pn.Row(flora_csv_input, flora_csv_label),
     adr_node_checkbox,
     adr_server_checkbox,
     pn.Row(adr1_button, adr2_button, adr3_button, adr_active_badge),
