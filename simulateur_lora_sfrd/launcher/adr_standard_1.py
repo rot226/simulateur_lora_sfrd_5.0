@@ -4,6 +4,26 @@ from .simulator import Simulator
 from . import server
 from .advanced_channel import AdvancedChannel
 
+# ---------------------------------------------------------------------------
+# Default parameters used when degrading channels to a more realistic model.
+# These values are applied uniformly to all channels and may be tweaked from a
+# single location.
+# ---------------------------------------------------------------------------
+
+DEGRADE_PARAMS = {
+    "propagation_model": "cost231",
+    "fading": "rayleigh",
+    "path_loss_exp": 8.7,  # harsh propagation environment
+    "shadowing_std": 9.0,
+    "variable_noise_std": 400.0,
+    "fine_fading_std": 200.0,
+    "freq_offset_std_hz": 100000.0,
+    "sync_offset_std_s": 0.6,
+    "advanced_capture": True,
+    "detection_threshold_dBm": -95.0,
+    "capture_threshold_dB": 9.0,
+}
+
 
 def apply(sim: Simulator, *, degrade_channel: bool = False) -> None:
     """Configure ADR variant ``adr_standard_1`` (LoRaWAN defaults).
@@ -37,22 +57,13 @@ def apply(sim: Simulator, *, degrade_channel: bool = False) -> None:
     if degrade_channel:
         new_channels = []
         for ch in sim.multichannel.channels:
-            adv = AdvancedChannel(
-                propagation_model="cost231",
-                fading="rayleigh",
-                variable_noise_std=400.0,
-                fine_fading_std=200.0,
-                freq_offset_std_hz=100000.0,
-                sync_offset_std_s=0.6,
-                advanced_capture=True,
-                frequency_hz=ch.frequency_hz,
-                path_loss_exp=ch.path_loss_exp + 6.0,
-                shadowing_std=ch.shadowing_std * 1.5,
-                detection_threshold_dBm=-95.0,
-                bandwidth=ch.bandwidth,
-                coding_rate=ch.coding_rate,
-                capture_threshold_dB=ch.capture_threshold_dB + 3.0,
-            )
+            params = dict(DEGRADE_PARAMS)
+            params["frequency_hz"] = ch.frequency_hz
+            if hasattr(ch, "bandwidth"):
+                params["bandwidth"] = ch.bandwidth
+            if hasattr(ch, "coding_rate"):
+                params["coding_rate"] = ch.coding_rate
+            adv = AdvancedChannel(**params)
             new_channels.append(adv)
 
         sim.multichannel.channels = new_channels
