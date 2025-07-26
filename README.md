@@ -566,6 +566,29 @@ run :
 python examples/analyse_runs.py résultats.csv
 ```
 
+## Calcul de l'airtime
+
+La durée d'un paquet LoRa est obtenue à partir de la formule théorique :
+
+```
+T_sym = 2**SF / BW
+T_preamble = (preamble_symbols + 4.25) * T_sym
+N_payload = 8 + max(ceil((8*payload_size - 4*SF + 28 + 16) / (4*(SF - 2*DE))), 0)
+           * (coding_rate + 4)
+T_payload = N_payload * T_sym
+airtime = T_preamble + T_payload
+```
+
+Chaque entrée de `events_log` comporte `start_time` et `end_time` ; leur
+différence représente l'airtime réel du paquet.
+
+```python
+from simulateur_lora_sfrd.launcher.channel import Channel
+ch = Channel()
+temps = ch.airtime(sf=7, payload_size=20)
+```
+
+
 ## Nettoyage des résultats
 
 Le script `launcher/clean_results.py` supprime les doublons et les valeurs
