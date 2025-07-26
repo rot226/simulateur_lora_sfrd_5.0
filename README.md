@@ -361,6 +361,7 @@ avec l'option `flora_mode=True`. Ce mode applique automatiquement :
 - un shadowing de `σ = 3.57` dB ;
 - un seuil de détection d'environ `-110` dBm.
 - l'utilisation automatique des formules FLoRa (`phy_model="flora" ou "flora_full"`).
+- un intervalle moyen de `1000` s appliqué si aucun intervalle n'est spécifié.
 
 ### Équations FLoRa de perte de parcours et de PER
 
