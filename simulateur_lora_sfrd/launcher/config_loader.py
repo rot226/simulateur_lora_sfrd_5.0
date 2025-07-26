@@ -3,7 +3,9 @@ import json
 import re
 from pathlib import Path
 
-def load_config(path: str | Path) -> tuple[list[dict], list[dict]]:
+def load_config(
+    path: str | Path,
+) -> tuple[list[dict], list[dict], float | None, float | None]:
     """Load node and gateway positions from an INI or JSON configuration file.
 
     ``path`` may point to a classic FLoRa-style INI file or a JSON document
@@ -13,11 +15,18 @@ def load_config(path: str | Path) -> tuple[list[dict], list[dict]]:
     defaults to 7 and TX power to 14 dBm when omitted.
 
     Returns two lists of dictionaries for nodes and gateways respectively.
+    When ``path`` points to a FLoRa compatible INI file, the mean values for
+    ``timeToNextPacket`` and ``timeToFirstPacket`` (when present) are also
+    returned.  ``None`` is returned for each value if the parameter cannot be
+    found or when loading a JSON file.
     """
 
     path = Path(path)
     nodes: list[dict] = []
     gateways: list[dict] = []
+
+    next_interval = None
+    first_interval = None
 
     if path.suffix.lower() == ".json":
         data = json.loads(path.read_text())
@@ -33,7 +42,7 @@ def load_config(path: str | Path) -> tuple[list[dict], list[dict]]:
                 "sf": int(nd.get("sf", 7)),
                 "tx_power": float(nd.get("tx_power", 14.0)),
             })
-        return nodes, gateways
+        return nodes, gateways, next_interval, first_interval
 
     cp = configparser.ConfigParser()
     cp.read(path)
@@ -61,7 +70,10 @@ def load_config(path: str | Path) -> tuple[list[dict], list[dict]]:
             }
             nodes.append(node)
 
-    return nodes, gateways
+    next_interval = parse_flora_interval(path)
+    first_interval = parse_flora_first_interval(path)
+
+    return nodes, gateways, next_interval, first_interval
 
 
 def write_flora_ini(

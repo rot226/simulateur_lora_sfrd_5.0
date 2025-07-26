@@ -37,7 +37,7 @@ class SimulationConfig:
     @classmethod
     def from_ini(cls, path: str) -> "SimulationConfig":
         """Charge une configuration INI ou JSON compatible FLoRa."""
-        ndata, gdata = load_config(path)
+        ndata, gdata, _, _ = load_config(path)
         nodes = [NodeConfig(**nd) for nd in ndata]
         gws = [GatewayConfig(**gw) for gw in gdata]
         return cls(nodes, gws)
