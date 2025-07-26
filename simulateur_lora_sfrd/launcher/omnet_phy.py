@@ -178,9 +178,11 @@ class OmnetPHY:
         """Return path loss in dB using the log distance model."""
         if distance <= 0:
             return 0.0
-        freq_mhz = self.channel.frequency_hz / 1e6
-        pl_d0 = 32.45 + 20 * math.log10(freq_mhz) - 60.0
-        loss = pl_d0 + 10 * self.channel.path_loss_exp * math.log10(max(distance, 1.0))
+        d = max(distance, 1.0)
+        ch = self.channel
+        loss = ch.path_loss_d0 + 10 * ch.path_loss_exp * math.log10(
+            d / ch.reference_distance
+        )
         return loss + self.channel.system_loss_dB
 
     def noise_floor(self) -> float:
