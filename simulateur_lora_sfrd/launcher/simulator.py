@@ -204,7 +204,9 @@ class Simulator:
         self.transmission_mode = transmission_mode
         self.packet_interval = packet_interval
         self.first_packet_interval = (
-            first_packet_interval if first_packet_interval is not None else packet_interval
+            first_packet_interval
+            if first_packet_interval is not None
+            else packet_interval
         )
         self.first_packet_min_delay = first_packet_min_delay
         self.warm_up_intervals = warm_up_intervals
@@ -515,7 +517,9 @@ class Simulator:
             if self.transmission_mode.lower() == "random":
                 if self.lock_step_poisson:
                     if self.packets_to_send == 0:
-                        raise ValueError("lock_step_poisson requires packets_to_send > 0")
+                        raise ValueError(
+                            "lock_step_poisson requires packets_to_send > 0"
+                        )
                     node.precompute_poisson_arrivals(
                         self.interval_rng,
                         self.packet_interval,
@@ -531,9 +535,7 @@ class Simulator:
                             node.last_airtime, self.first_packet_min_delay
                         ),
                         variation=self.interval_variation,
-                        limit=(
-                            self.packets_to_send if self.packets_to_send else None
-                        ),
+                        limit=(self.packets_to_send if self.packets_to_send else None),
                     )
                 t0 = node.arrival_queue.pop(0)
             else:
@@ -545,7 +547,11 @@ class Simulator:
             self.schedule_event(
                 node,
                 t0,
-                reason="poisson" if self.transmission_mode.lower() == "random" else "periodic",
+                reason=(
+                    "poisson"
+                    if self.transmission_mode.lower() == "random"
+                    else "periodic"
+                ),
             )
             # Planifier le premier changement de position si la mobilité est activée
             if self.mobility_enabled:
@@ -897,7 +903,9 @@ class Simulator:
             # Planifier retransmissions restantes ou prochaine émission
             if node._nb_trans_left > 0:
                 self.retransmissions += 1
-                self.schedule_event(node, self.current_time + 1.0, reason="retransmission")
+                self.schedule_event(
+                    node, self.current_time + 1.0, reason="retransmission"
+                )
             else:
                 if (
                     self.packets_to_send == 0
@@ -911,7 +919,9 @@ class Simulator:
                                 self.packet_interval,
                                 variation=self.interval_variation,
                                 limit=(
-                                    self.packets_to_send if self.packets_to_send else None
+                                    self.packets_to_send
+                                    if self.packets_to_send
+                                    else None
                                 ),
                             )
                         next_time = node.arrival_queue.pop(0)
@@ -923,9 +933,11 @@ class Simulator:
                     self.schedule_event(
                         node,
                         max(next_time, self.current_time),
-                        reason="poisson"
-                        if self.transmission_mode.lower() == "random"
-                        else "periodic",
+                        reason=(
+                            "poisson"
+                            if self.transmission_mode.lower() == "random"
+                            else "periodic"
+                        ),
                     )
                 else:
                     logger.debug(
@@ -1215,17 +1227,15 @@ class Simulator:
 
         interval_sum = 0.0
         interval_count = 0
-        if any(n.interval_log for n in self.nodes):
-            for n in self.nodes:
-                if not n.interval_log:
-                    continue
-                times = sorted(entry["tx_time"] for entry in n.interval_log)
-                for t0, t1 in zip(times, times[1:]):
-                    interval_sum += t1 - t0
-                    interval_count += 1
-        else:
-            interval_count = sum(n.arrival_interval_count for n in self.nodes)
-            interval_sum = sum(n.arrival_interval_sum for n in self.nodes)
+        for n in self.nodes:
+            if not n.interval_log:
+                continue
+            times = sorted(entry["tx_time"] for entry in n.interval_log)
+            if self.warm_up_intervals:
+                times = times[self.warm_up_intervals :]
+            for t0, t1 in zip(times, times[1:]):
+                interval_sum += t1 - t0
+                interval_count += 1
 
         avg_arrival_interval = (
             interval_sum / interval_count if interval_count > 0 else 0.0
