@@ -191,7 +191,9 @@ scénarios FLoRa. Voici la liste complète des options :
 - `node_class` : classe LoRaWAN de tous les nœuds (`A`, `B` ou `C`).
 - `detection_threshold_dBm` : RSSI minimal pour qu'une réception soit valide.
 - `min_interference_time` : durée de chevauchement minimale pour déclarer une
-  collision (s).
+  collision (s). Deux transmissions sont en collision lorsqu'elles partagent la
+  même fréquence et le même Spreading Factor tout en se superposant plus
+  longtemps que cette valeur.
 - `config_file` : chemin d'un fichier INI ou JSON décrivant
   positions, SF et puissance.
 - `seed` : graine aléatoire utilisée pour reproduire le placement des nœuds et le même ordre statistique des intervalles.
@@ -238,6 +240,10 @@ réception :
 - `oscillator_leakage_dB` / `oscillator_leakage_std_dB` : fuite
   d'oscillateur ajoutée au bruit.
 - `rx_fault_std_dB` : défauts de réception aléatoires pénalisant le SNR.
+- `capture_threshold_dB` : différence de puissance requise pour que le paquet
+  le plus fort soit décodé malgré les interférences (≥ 6 dB par défaut).
+- `orthogonal_sf` : lorsqu'il vaut `False`, les transmissions de SF différents
+  peuvent entrer en collision comme celles du même SF.
 - `freq_offset_std_hz` et `sync_offset_std_s` : variations du décalage
   fréquentiel et temporel prises en compte par le modèle OMNeT++.
 - `dev_frequency_offset_hz` / `dev_freq_offset_std_hz` : dérive propre à
@@ -475,12 +481,12 @@ Pour des résultats plus proches du terrain, activez `fast_fading_std` et
 
 ### Effet de capture
 
-Le canal `Channel` applique par défaut un seuil de capture de **6 dB** pour
-considérer qu'un signal plus puissant peut être décodé malgré les
-interférences. Lorsque `phy_model` vaut `"flora"` ou `"flora_full"`, la
-décision reprend la matrice `nonOrthDelta` du simulateur FLoRa original : la
-différence de puissance requise dépend alors des Spreading Factors en
-présence, avec un seuil proche de 6 dB pour des paquets au même SF.
+Le canal `Channel` applique par défaut un seuil de capture de **6 dB** : un
+signal plus fort peut être décodé en présence d'interférences s'il dépasse le
+plus faible d'au moins 6 dB et si ce signal domine pendant **cinq symboles de
+preambule** au minimum. Lorsque `phy_model` vaut `"flora"` ou `"flora_full"`, la
+décision reprend la matrice `nonOrthDelta` du simulateur FLoRa original ; la
+différence de puissance exigée dépend alors des Spreading Factors en présence.
 
 Pour reproduire un scénario FLoRa :
 1. Passez `flora_mode=True` et `flora_timing=True` lors de la création du
