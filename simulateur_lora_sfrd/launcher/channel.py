@@ -409,11 +409,23 @@ class Channel:
         return rssi, snr
 
     def packet_error_rate(self, snr: float, sf: int, payload_bytes: int = 20) -> float:
-        """Return PER using FLoRa curves when available."""
+        """Return PER based on the OMNeT++ BER model."""
         if getattr(self, "flora_phy", None) and self.use_flora_curves:
             return self.flora_phy.packet_error_rate(snr, sf, payload_bytes)
-        threshold = self.SNR_THRESHOLDS.get(sf, -10.0)
-        return 0.0 if snr >= threshold else 1.0
+
+        from .omnet_modulation import calculate_ber
+
+        bitrate = (
+            sf
+            * self.bandwidth
+            * 4.0
+            / ((1 << sf) * (self.coding_rate + 4))
+        )
+        snir = 10 ** (snr / 10.0)
+        ber = calculate_ber(snir, self.bandwidth, bitrate)
+        n_bits = payload_bytes * 8
+        per = 1.0 - (1.0 - ber) ** n_bits
+        return min(max(per, 0.0), 1.0)
 
     def _multipath_fading_db(self) -> float:
         """Return a fading value in dB based on multiple Rayleigh paths."""
