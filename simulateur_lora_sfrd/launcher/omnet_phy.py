@@ -47,6 +47,8 @@ class OmnetPHY:
         rx_fault_std_dB: float = 0.0,
         tx_start_delay_s: float = 0.0,
         rx_start_delay_s: float = 0.0,
+        pa_ramp_up_s: float = 0.0,
+        pa_ramp_down_s: float = 0.0,
     ) -> None:
         """Initialise helper with optional hardware impairments."""
         self.channel = channel
@@ -100,10 +102,13 @@ class OmnetPHY:
         self.receiver_noise_floor_dBm = channel.receiver_noise_floor_dBm
         self.tx_start_delay_s = float(tx_start_delay_s)
         self.rx_start_delay_s = float(rx_start_delay_s)
+        self.pa_ramp_up_s = float(pa_ramp_up_s)
+        self.pa_ramp_down_s = float(pa_ramp_down_s)
         self.tx_state = "on" if self.tx_start_delay_s == 0.0 else "off"
         self.rx_state = "on" if self.rx_start_delay_s == 0.0 else "off"
         self._tx_timer = 0.0
         self._rx_timer = 0.0
+        self._tx_level = 1.0 if self.tx_state == "on" else 0.0
 
     # ------------------------------------------------------------------
     # Transceiver state helpers
@@ -112,8 +117,14 @@ class OmnetPHY:
         if self.tx_start_delay_s > 0.0:
             self.tx_state = "starting"
             self._tx_timer = self.tx_start_delay_s
+            self._tx_level = 0.0
+        elif self.pa_ramp_up_s > 0.0:
+            self.tx_state = "ramping_up"
+            self._tx_timer = self.pa_ramp_up_s
+            self._tx_level = 0.0
         else:
             self.tx_state = "on"
+            self._tx_level = 1.0
 
     def start_rx(self) -> None:
         if self.rx_start_delay_s > 0.0:
@@ -123,7 +134,13 @@ class OmnetPHY:
             self.rx_state = "on"
 
     def stop_tx(self) -> None:
-        self.tx_state = "off"
+        if self.pa_ramp_down_s > 0.0 and self.tx_state == "on":
+            self.tx_state = "ramping_down"
+            self._tx_timer = self.pa_ramp_down_s
+            self._tx_level = 1.0
+        else:
+            self.tx_state = "off"
+            self._tx_level = 0.0
 
     def stop_rx(self) -> None:
         self.rx_state = "off"
@@ -132,7 +149,25 @@ class OmnetPHY:
         if self.tx_state == "starting":
             self._tx_timer -= dt
             if self._tx_timer <= 0.0:
+                if self.pa_ramp_up_s > 0.0:
+                    self.tx_state = "ramping_up"
+                    self._tx_timer = self.pa_ramp_up_s
+                    self._tx_level = 0.0
+                else:
+                    self.tx_state = "on"
+                    self._tx_level = 1.0
+        elif self.tx_state == "ramping_up":
+            self._tx_timer -= dt
+            self._tx_level = 1.0 - max(self._tx_timer, 0.0) / self.pa_ramp_up_s
+            if self._tx_timer <= 0.0:
                 self.tx_state = "on"
+                self._tx_level = 1.0
+        elif self.tx_state == "ramping_down":
+            self._tx_timer -= dt
+            self._tx_level = max(self._tx_timer, 0.0) / self.pa_ramp_down_s
+            if self._tx_timer <= 0.0:
+                self.tx_state = "off"
+                self._tx_level = 0.0
         if self.rx_state == "starting":
             self._rx_timer -= dt
             if self._rx_timer <= 0.0:
@@ -167,10 +202,15 @@ class OmnetPHY:
             noise += ch.humidity_noise_coeff_dB * (ch._humidity.sample() / 100.0)
         for f, bw, power in ch.band_interference:
             half = (bw + ch.bandwidth) / 2.0
-            if abs(ch.frequency_hz - f) <= half:
+            diff = abs(ch.frequency_hz - f)
+            if diff <= half:
                 noise += power
+            elif ch.adjacent_interference_dB > 0 and diff <= half + ch.bandwidth:
+                noise += max(power - ch.adjacent_interference_dB, 0.0)
         if ch.noise_floor_std > 0:
             noise += random.gauss(0.0, ch.noise_floor_std)
+        if ch.impulsive_noise_prob > 0.0 and random.random() < ch.impulsive_noise_prob:
+            noise += ch.impulsive_noise_dB
         noise += self.model.noise_variation()
         noise += self._osc_leak.sample()
         return noise
@@ -206,6 +246,8 @@ class OmnetPHY:
         phase = self._phase_offset.sample()
 
         tx_power_dBm += self._pa_nl.sample()
+        if self._tx_level < 1.0:
+            tx_power_dBm += 20.0 * math.log10(max(self._tx_level, 1e-3))
         rssi = (
             tx_power_dBm
             + ch.tx_antenna_gain_dB
