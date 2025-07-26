@@ -361,7 +361,14 @@ avec l'option `flora_mode=True`. Ce mode applique automatiquement :
 - un shadowing de `σ = 3.57` dB ;
 - un seuil de détection d'environ `-110` dBm.
 - l'utilisation automatique des formules FLoRa (`phy_model="flora" ou "flora_full"`).
-- un intervalle moyen de `1000` s appliqué si aucun intervalle n'est spécifié.
+- un intervalle moyen de `100` s appliqué si aucun intervalle n'est spécifié.
+
+`Simulator` interprète `packet_interval` et `first_packet_interval` comme les
+moyennes d'intervalles exponentiels lorsque le mode **Aléatoire** est actif.
+Si ces deux paramètres restent à leurs valeurs par défaut en mode FLoRa, ils
+sont automatiquement ramenés à `100` s afin de reproduire le comportement des
+scénarios d'origine. Vous pouvez saisir d'autres valeurs dans le tableau de bord
+pour personnaliser la fréquence d'émission.
 
 ### Équations FLoRa de perte de parcours et de PER
 
