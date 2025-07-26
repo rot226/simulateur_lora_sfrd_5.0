@@ -167,10 +167,13 @@ scénarios FLoRa. Voici la liste complète des options :
   à l'intervalle exponentiel (0 par défaut pour coller au comportement FLoRa). L'intervalle est multiplié par `1 ± U` avec `U` échantillonné dans `[-interval_variation, interval_variation]`.
  - Les instants de transmission suivent strictement une loi exponentielle de
    moyenne `packet_interval` lorsque le mode `Random` est sélectionné.
- - Tous les échantillons sont conservés ; si une transmission est encore en
-   cours, la date tirée est simplement repoussée après son terme. Cette logique
-   est implémentée par `ensure_poisson_arrivals` et `schedule_event` à partir de
-   la valeur extraite via `parse_flora_interval`.
+- Tous les échantillons sont conservés ; si une transmission est encore en
+  cours, la date tirée est simplement repoussée après son terme. Cette logique
+  est implémentée par `ensure_poisson_arrivals` et `schedule_event` à partir de
+  la valeur extraite via `parse_flora_interval`.
+- Les intervalles restent indépendants des collisions et du duty cycle : le
+  prochain tirage Poisson est basé sur le début réel de la dernière émission
+  (`last_tx_time`).
 - `packets_to_send` : nombre de paquets émis **par nœud** avant arrêt (0 = infini).
 - `lock_step_poisson` : pré-génère une séquence Poisson réutilisée entre exécutions (nécessite `packets_to_send`).
 - `adr_node` / `adr_server` : active l'ADR côté nœud ou serveur.

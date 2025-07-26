@@ -228,6 +228,7 @@ class Node:
         self.arrival_interval_sum: float = 0.0
         self.arrival_interval_count: int = 0
         self._last_arrival_time: float = 0.0
+        self.last_tx_time: float = 0.0
         # Warm-up handling for arrival intervals
         self._warmup_remaining: int = 0
         self._log_after: int | None = None

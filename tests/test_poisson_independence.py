@@ -15,7 +15,7 @@ def test_duty_cycle_keeps_mean_interval():
     )
     sim.run()
     metrics = sim.get_metrics()
-    assert abs(metrics["avg_arrival_interval_s"] - 5.0) / 5.0 < 0.2
+    assert abs(metrics["avg_arrival_interval_s"] - 5.0) / 5.0 < 0.15
 
 
 def test_collisions_keep_mean_interval():
@@ -32,4 +32,4 @@ def test_collisions_keep_mean_interval():
     )
     sim.run()
     metrics = sim.get_metrics()
-    assert abs(metrics["avg_arrival_interval_s"] - 5.0) / 5.0 < 0.2
+    assert abs(metrics["avg_arrival_interval_s"] - 5.0) / 5.0 < 0.15

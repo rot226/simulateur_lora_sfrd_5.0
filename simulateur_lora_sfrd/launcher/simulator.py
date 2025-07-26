@@ -528,7 +528,7 @@ class Simulator:
                     )
                 else:
                     node.ensure_poisson_arrivals(
-                        node._last_arrival_time,
+                        node.last_tx_time,
                         self.interval_rng,
                         self.first_packet_interval,
                         min_interval=max(
@@ -644,6 +644,7 @@ class Simulator:
         if priority == EventType.TX_START:
             # Début d'une transmission émise par 'node'
             node_id = node.id
+            node.last_tx_time = time
             if node._nb_trans_left <= 0:
                 node._nb_trans_left = max(1, node.nb_trans)
             node._nb_trans_left -= 1
@@ -914,7 +915,7 @@ class Simulator:
                     if self.transmission_mode.lower() == "random":
                         if not self.lock_step_poisson:
                             node.ensure_poisson_arrivals(
-                                node._last_arrival_time,
+                                node.last_tx_time,
                                 self.interval_rng,
                                 self.packet_interval,
                                 variation=self.interval_variation,
