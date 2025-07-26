@@ -588,14 +588,13 @@ class Simulator:
             self.event_queue,
             Event(time, EventType.TX_START, event_id, node.id),
         )
-        if self.dump_intervals:
-            node.interval_log.append(
-                {
-                    "poisson_time": requested_time,
-                    "tx_time": time,
-                    "reason": reason,
-                }
-            )
+        node.interval_log.append(
+            {
+                "poisson_time": requested_time,
+                "tx_time": time,
+                "reason": reason,
+            }
+        )
         logger.debug(
             f"Scheduled transmission {event_id} for node {node.id} at t={time:.2f}s"
         )
@@ -1211,11 +1210,22 @@ class Simulator:
             for ct in class_types
         }
 
-        total_intervals = sum(n.arrival_interval_count for n in self.nodes)
+        interval_sum = 0.0
+        interval_count = 0
+        if any(n.interval_log for n in self.nodes):
+            for n in self.nodes:
+                if not n.interval_log:
+                    continue
+                times = sorted(entry["tx_time"] for entry in n.interval_log)
+                for t0, t1 in zip(times, times[1:]):
+                    interval_sum += t1 - t0
+                    interval_count += 1
+        else:
+            interval_count = sum(n.arrival_interval_count for n in self.nodes)
+            interval_sum = sum(n.arrival_interval_sum for n in self.nodes)
+
         avg_arrival_interval = (
-            sum(n.arrival_interval_sum for n in self.nodes) / total_intervals
-            if total_intervals > 0
-            else 0.0
+            interval_sum / interval_count if interval_count > 0 else 0.0
         )
 
         return {

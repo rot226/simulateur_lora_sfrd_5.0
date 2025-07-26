@@ -10,6 +10,7 @@ def test_duty_cycle_keeps_mean_interval():
         packets_to_send=30,
         duty_cycle=0.01,
         mobility=False,
+        pure_poisson_mode=True,
         seed=123,
     )
     sim.run()
@@ -26,6 +27,7 @@ def test_collisions_keep_mean_interval():
         packets_to_send=200,
         duty_cycle=0.01,
         mobility=False,
+        pure_poisson_mode=True,
         seed=42,
     )
     sim.run()
