@@ -573,6 +573,9 @@ class Simulator:
         if not node.alive:
             return
         requested_time = time
+        if node.current_end_time is not None and time < node.current_end_time:
+            time = node.current_end_time
+            reason = "overlap"
         event_id = self.event_id_counter
         self.event_id_counter += 1
         if self.duty_cycle_manager and not self.pure_poisson_mode:
@@ -904,7 +907,6 @@ class Simulator:
                                 node._last_arrival_time,
                                 self.interval_rng,
                                 self.packet_interval,
-                                min_interval=node.last_airtime,
                                 variation=self.interval_variation,
                                 limit=(
                                     self.packets_to_send if self.packets_to_send else None
@@ -918,7 +920,7 @@ class Simulator:
                         node._last_arrival_time = next_time
                     self.schedule_event(
                         node,
-                        next_time,
+                        max(next_time, self.current_time),
                         reason="poisson"
                         if self.transmission_mode.lower() == "random"
                         else "periodic",
