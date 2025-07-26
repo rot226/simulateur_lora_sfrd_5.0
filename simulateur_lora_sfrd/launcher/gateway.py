@@ -164,7 +164,10 @@ class Gateway:
             colliders.sort(key=lambda t: t['rssi'], reverse=True)
             sf_list = [t['sf'] for t in colliders]
             rssi_list = [t['rssi'] for t in colliders]
-            winners = flora_phy.capture(rssi_list, sf_list)
+            start_list = [t['start_time'] for t in colliders]
+            end_list = [t['end_time'] for t in colliders]
+            freq_list = [t['frequency'] for t in colliders]
+            winners = flora_phy.capture(rssi_list, sf_list, start_list, end_list, freq_list)
             capture = any(winners)
             if capture:
                 win_idx = winners.index(True)

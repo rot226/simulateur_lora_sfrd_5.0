@@ -37,26 +37,65 @@ class FloraPHY:
             loss += random.gauss(0.0, self.channel.shadowing_std)
         return loss + self.channel.system_loss_dB
 
-    def capture(self, rssi_list: list[float], sf_list: list[int]) -> list[bool]:
+    def capture(
+        self,
+        rssi_list: list[float],
+        sf_list: list[int],
+        start_list: list[float],
+        end_list: list[float],
+        freq_list: list[float],
+    ) -> list[bool]:
+        """Return the capture decision for each concurrent signal.
+
+        The algorithm follows the same logic as ``LoRaReceiver`` in FLoRa:
+        the strongest packet wins only if the power difference with each
+        interferer is above the ``NON_ORTH_DELTA`` threshold *and* the
+        interferer overlaps past the ``preamble - 6`` symbols window.
+        """
+
         if not rssi_list:
             return []
+
         order = sorted(range(len(rssi_list)), key=lambda i: rssi_list[i], reverse=True)
         winners = [False] * len(rssi_list)
         if len(order) == 1:
             winners[order[0]] = True
             return winners
+
         idx0 = order[0]
         sf0 = sf_list[idx0]
         rssi0 = rssi_list[idx0]
+        freq0 = freq_list[idx0]
+        start0 = start_list[idx0]
+        end0 = end_list[idx0]
+
+        symbol_time = (2 ** sf0) / self.channel.bandwidth
+        cs_begin = start0 + symbol_time * (self.channel.preamble_symbols - 6)
+
         captured = True
         for idx in order[1:]:
+            # only interfering packets on the same frequency matter
+            if freq_list[idx] != freq0:
+                continue
+
+            # check if the packets overlap in time
+            overlap = min(end0, end_list[idx]) > max(start0, start_list[idx])
+            if not overlap:
+                continue
+
             diff = rssi0 - rssi_list[idx]
             th = self.NON_ORTH_DELTA[sf0 - 7][sf_list[idx] - 7]
-            if diff < th:
+            capture_effect = diff >= th
+
+            timing_collision = cs_begin < end_list[idx]
+
+            if not capture_effect and timing_collision:
                 captured = False
                 break
+
         if captured:
             winners[idx0] = True
+
         return winners
 
     def packet_error_rate(self, snr: float, sf: int, payload_bytes: int = 20) -> float:
