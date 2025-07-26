@@ -106,6 +106,31 @@ def test_rssi_snr_match(tmp_path):
     assert stats["snr"] == pytest.approx(snr)
 
 
+def test_energy_consumption_match(tmp_path):
+    """Total energy parsed from a .sca file should match simulator metrics."""
+    pytest.importorskip('pandas')
+    sim = Simulator(
+        num_nodes=1,
+        num_gateways=1,
+        transmission_mode="Periodic",
+        packet_interval=1.0,
+        packets_to_send=1,
+        mobility=False,
+        fixed_sf=7,
+        seed=0,
+    )
+    sim.run()
+    metrics = sim.get_metrics()
+    energy = metrics["energy_J"]
+    sca = tmp_path / "run.sca"
+    sca.write_text(
+        f"scalar sim sent 1\nscalar sim received 1\nscalar sim sf7 1\nscalar sim energy_J {energy}\n"
+    )
+    flora_metrics = load_flora_metrics(sca)
+    diff = abs(flora_metrics["energy_J"] - energy)
+    assert diff / energy <= 0.05
+
+
 def test_flora_full_mode(tmp_path):
     """PDR and SF distribution should match FLoRa within 1%."""
     pytest.importorskip('pandas')
