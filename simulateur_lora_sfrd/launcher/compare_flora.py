@@ -22,18 +22,23 @@ def _parse_sca_file(path: Path) -> dict[str, Any]:
         for line in f:
             parts = line.strip().split()
             if len(parts) >= 4 and parts[0] == "scalar":
-                name = parts[2]
+                name = parts[2].strip('"')
                 try:
                     value = float(parts[3])
                 except ValueError:
                     continue
-                metrics[name] = metrics.get(name, 0.0) + value
+                if name in {"energy", "energy_J"}:
+                    metrics["energy_J"] = metrics.get("energy_J", 0.0) + value
+                else:
+                    metrics[name] = metrics.get(name, 0.0) + value
 
     row: dict[str, Any] = {}
     for key, val in metrics.items():
         if key in {"sent", "received", "collisions"}:
             row[key] = int(val)
-        elif key in {"throughput_bps", "energy_J", "energy", "rssi", "snr", "avg_delay_s"}:
+        elif key == "energy":
+            row["energy_J"] = float(val)
+        elif key in {"throughput_bps", "energy_J", "rssi", "snr", "avg_delay_s"}:
             row[key] = float(val)
         elif key.startswith("sf") and key[2:].isdigit():
             row[key] = int(val)
