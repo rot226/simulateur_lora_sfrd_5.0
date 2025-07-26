@@ -1,7 +1,7 @@
 # Simulateur Réseau LoRa (Python 3.10+)
 
 Bienvenue ! Ce projet est un **simulateur complet de réseau LoRa**, inspiré du fonctionnement de FLoRa sous OMNeT++, codé entièrement en Python.
-
+Pour un apercu des differences avec FLoRa, consultez docs/lorawan_features.md.
 ## 🛠️ Installation
 
 1. **Clonez ou téléchargez** le projet.
