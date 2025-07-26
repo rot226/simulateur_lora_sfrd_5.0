@@ -103,6 +103,9 @@ def _validate_positive_inputs() -> bool:
     if float(interval_input.value) <= 0:
         export_message.object = "⚠️ L'intervalle doit être supérieur à 0 !"
         return False
+    if float(first_interval_input.value) <= 0:
+        export_message.object = "⚠️ Le 1er intervalle doit être supérieur à 0 !"
+        return False
     return True
 
 
@@ -114,6 +117,7 @@ mode_select = pn.widgets.RadioButtonGroup(
     name="Mode d'émission", options=["Aléatoire", "Périodique"], value="Aléatoire"
 )
 interval_input = pn.widgets.FloatInput(name="Intervalle moyen (s)", value=100.0, step=1.0, start=0.1)
+first_interval_input = pn.widgets.FloatInput(name="1er intervalle (s)", value=100.0, step=1.0, start=0.1)
 packets_input = pn.widgets.IntInput(
     name="Nombre de paquets par nœud (0=infin)", value=80, step=1, start=0
 )
@@ -515,6 +519,21 @@ def on_mode_change(event):
 mode_select.param.watch(on_mode_change, "value")
 
 
+# --- Synchronisation des intervalles ---
+def _sync_from_interval(event):
+    if first_interval_input.value != event.new:
+        first_interval_input.value = event.new
+
+
+def _sync_from_first(event):
+    if interval_input.value != event.new:
+        interval_input.value = event.new
+
+
+interval_input.param.watch(_sync_from_interval, "value")
+first_interval_input.param.watch(_sync_from_first, "value")
+
+
 # --- Sélection du profil ADR ---
 def _update_adr_badge(name: str) -> None:
     adr_active_badge.object = (
@@ -754,6 +773,7 @@ def setup_simulation(seed_offset: int = 0):
         area_size=float(area_input.value),
         transmission_mode="Random" if mode_select.value == "Aléatoire" else "Periodic",
         packet_interval=float(interval_input.value),
+        first_packet_interval=float(first_interval_input.value),
         packets_to_send=int(packets_input.value),
         adr_node=adr_node_checkbox.value,
         adr_server=adr_server_checkbox.value,
@@ -845,6 +865,7 @@ def setup_simulation(seed_offset: int = 0):
     area_input.disabled = True
     mode_select.disabled = True
     interval_input.disabled = True
+    first_interval_input.disabled = True
     packets_input.disabled = True
     adr_node_checkbox.disabled = True
     adr_server_checkbox.disabled = True
@@ -975,6 +996,7 @@ def on_stop(event):
     area_input.disabled = False
     mode_select.disabled = False
     interval_input.disabled = False
+    first_interval_input.disabled = False
     packets_input.disabled = False
     adr_node_checkbox.disabled = False
     adr_server_checkbox.disabled = False
@@ -1344,6 +1366,7 @@ controls = pn.WidgetBox(
     area_input,
     mode_select,
     interval_input,
+    first_interval_input,
     packets_input,
     seed_input,
     num_runs_input,
