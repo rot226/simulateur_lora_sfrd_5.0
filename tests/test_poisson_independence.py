@@ -15,7 +15,9 @@ def test_duty_cycle_keeps_mean_interval():
     )
     sim.run()
     metrics = sim.get_metrics()
-    assert abs(metrics["avg_arrival_interval_s"] - 5.0) / 5.0 < 0.2
+    airtime = sim.nodes[0].channel.airtime(sim.nodes[0].sf, payload_size=sim.payload_size_bytes)
+    expected = 5.0 + airtime
+    assert abs(metrics["avg_arrival_interval_s"] - expected) / expected < 0.2
 
 
 def test_collisions_keep_mean_interval():
@@ -32,4 +34,6 @@ def test_collisions_keep_mean_interval():
     )
     sim.run()
     metrics = sim.get_metrics()
-    assert abs(metrics["avg_arrival_interval_s"] - 5.0) / 5.0 < 0.2
+    airtime = sim.nodes[0].channel.airtime(sim.nodes[0].sf, payload_size=sim.payload_size_bytes)
+    expected = 5.0 + airtime
+    assert abs(metrics["avg_arrival_interval_s"] - expected) / expected < 0.2

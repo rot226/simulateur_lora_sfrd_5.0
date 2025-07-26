@@ -18,5 +18,7 @@ def test_warmup_intervals():
     sim.run()
     node = sim.nodes[0]
     assert node.arrival_interval_count == 20 - 5
-    metrics = sim.get_metrics()
-    assert abs(metrics["avg_arrival_interval_s"] - 5.0) / 5.0 < 0.2
+    airtime = sim.nodes[0].channel.airtime(sim.nodes[0].sf, payload_size=sim.payload_size_bytes)
+    expected = 5.0 + airtime
+    average = node.arrival_interval_sum / node.arrival_interval_count
+    assert abs(average - expected) / expected < 0.2

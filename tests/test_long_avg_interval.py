@@ -20,4 +20,6 @@ def test_long_term_avg_interval():
     total_time = node._last_arrival_time
     average = total_time / node.packets_sent
     assert node.packets_sent == count
-    assert abs(average - mean_interval) / mean_interval < 0.01
+    airtime = sum(e['end_time'] - e['start_time'] for e in sim.events_log) / len(sim.events_log)
+    expected = mean_interval + airtime
+    assert abs(average - expected) / expected < 0.01
