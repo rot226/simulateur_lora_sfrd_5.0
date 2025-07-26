@@ -1,4 +1,6 @@
 from simulateur_lora_sfrd.launcher.simulator import Simulator
+from simulateur_lora_sfrd.launcher.node import Node
+import numpy as np
 
 
 def test_next_event_after_airtime():
@@ -18,3 +20,13 @@ def test_next_event_after_airtime():
         airtime = events[i]["end_time"] - events[i]["start_time"]
         delta = events[i + 1]["start_time"] - events[i]["start_time"]
         assert delta >= airtime
+
+
+def test_poisson_min_interval_resampling():
+    rng = np.random.Generator(np.random.MT19937(0))
+    node = Node(0, 0, 0, 7, 20)
+    node.ensure_poisson_arrivals(10.0, rng, 0.1, min_interval=1.0, limit=10)
+    last = 0.0
+    for t in node.arrival_queue:
+        assert t - last >= 1.0
+        last = t

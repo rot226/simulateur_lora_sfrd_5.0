@@ -404,9 +404,11 @@ class Node:
     ) -> None:
         """Generate Poisson arrival times up to ``up_to`` seconds.
 
-        ``min_interval`` is retained for backward compatibility but no
-        longer filters sampled intervals. ``variation`` applies a
-        multiplicative jitter factor to each sampled interval.
+        ``min_interval`` acts as a lower bound for each sampled interval.
+        ``delta`` is repeatedly resampled until it is greater or equal to
+        this value, mimicking FLoRa's ``do … while`` loop that enforces the
+        next transmission to occur after the previous airtime. ``variation``
+        applies a multiplicative jitter factor to each accepted interval.
         """
         assert isinstance(mean_interval, float) and mean_interval > 0, (
             "mean_interval must be positive float"
@@ -421,12 +423,15 @@ class Node:
         while (not self.arrival_queue or last <= up_to) and (
             limit is None or self.arrival_interval_count < limit
         ):
-            delta = sample_interval(mean_interval, rng)
-            if variation > 0.0:
-                factor = 1.0 + (2.0 * rng.random() - 1.0) * variation
-                if factor < 0.0:
-                    factor = 0.0
-                delta *= factor
+            while True:
+                delta = sample_interval(mean_interval, rng)
+                if variation > 0.0:
+                    factor = 1.0 + (2.0 * rng.random() - 1.0) * variation
+                    if factor < 0.0:
+                        factor = 0.0
+                    delta *= factor
+                if delta >= min_interval:
+                    break
             if self._warmup_remaining > 0:
                 self._warmup_remaining -= 1
             else:
