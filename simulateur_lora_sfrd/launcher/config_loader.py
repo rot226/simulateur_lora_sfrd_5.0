@@ -106,3 +106,31 @@ def parse_flora_interval(path: str | Path) -> float | None:
     if match:
         return float(match.group(1))
     return None
+
+
+def parse_flora_first_interval(path: str | Path) -> float | None:
+    """Return the mean initial delay defined in a FLoRa INI file.
+
+    The parameter ``timeToFirstPacket`` follows the same format as
+    ``timeToNextPacket`` and is expressed as ``exponential(<value>s)``.  The
+    returned value corresponds to ``<value>`` as a float or ``None`` if the
+    parameter is missing.
+    """
+
+    text = Path(path).read_text()
+    match = re.search(r"timeToFirstPacket\s*=\s*exponential\((\d+(?:\.\d+)?)s\)", text)
+    if match:
+        return float(match.group(1))
+    return None
+
+
+def parse_flora_intervals(path: str | Path) -> tuple[float | None, float | None]:
+    """Return both packet intervals defined in ``path``.
+
+    The tuple contains ``(timeToNextPacket, timeToFirstPacket)``.  Each value is
+    ``None`` when the corresponding parameter is absent.
+    """
+
+    next_i = parse_flora_interval(path)
+    first_i = parse_flora_first_interval(path)
+    return next_i, first_i
