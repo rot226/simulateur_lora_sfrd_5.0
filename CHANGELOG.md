@@ -8,6 +8,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Changed
 - Significantly increased channel degradation in `adr_standard_1` for simulator validation.
 - Send interval distribution now uses a strict exponential model without any cap to match FLoRa.
+- Transmissions scheduled during an ongoing packet are postponed until the
+  current airtime finishes.
 
 ## [5.0] - 2025-07-24
 ### Added

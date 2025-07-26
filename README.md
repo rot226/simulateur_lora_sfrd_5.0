@@ -166,7 +166,9 @@ scénarios FLoRa. Voici la liste complète des options :
 - `interval_variation`: coefficient de jitter appliqué multiplicativement
   à l'intervalle exponentiel (0 par défaut pour coller au comportement FLoRa). L'intervalle est multiplié par `1 ± U` avec `U` échantillonné dans `[-interval_variation, interval_variation]`.
 - Les instants de transmission suivent strictement une loi exponentielle de
-  moyenne `packet_interval` lorsque le mode `Random` est sélectionné.
+  moyenne `packet_interval` lorsque le mode `Random` est sélectionné. Une
+  émission planifiée pendant qu'un paquet est encore en cours est reportée à la
+  fin de la transmission.
 - `packets_to_send` : nombre de paquets émis **par nœud** avant arrêt (0 = infini).
 - `lock_step_poisson` : pré-génère une séquence Poisson réutilisée entre exécutions (nécessite `packets_to_send`).
 - `adr_node` / `adr_server` : active l'ADR côté nœud ou serveur.

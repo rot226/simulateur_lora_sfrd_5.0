@@ -1,4 +1,5 @@
 from simulateur_lora_sfrd.launcher.simulator import Simulator
+from simulateur_lora_sfrd.launcher.adr_standard_1 import apply as apply_adr
 
 
 def test_duty_cycle_keeps_mean_interval():
@@ -28,6 +29,23 @@ def test_collisions_keep_mean_interval():
         mobility=False,
         seed=42,
     )
+    sim.run()
+    metrics = sim.get_metrics()
+    assert abs(metrics["avg_arrival_interval_s"] - 5.0) / 5.0 < 0.2
+
+
+def test_degrade_channel_keeps_mean_interval():
+    sim = Simulator(
+        num_nodes=1,
+        num_gateways=1,
+        transmission_mode="Random",
+        packet_interval=5.0,
+        packets_to_send=30,
+        duty_cycle=0.01,
+        mobility=False,
+        seed=321,
+    )
+    apply_adr(sim, degrade_channel=True)
     sim.run()
     metrics = sim.get_metrics()
     assert abs(metrics["avg_arrival_interval_s"] - 5.0) / 5.0 < 0.2

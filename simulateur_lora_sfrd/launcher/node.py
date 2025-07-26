@@ -404,9 +404,10 @@ class Node:
     ) -> None:
         """Generate Poisson arrival times up to ``up_to`` seconds.
 
-        ``min_interval`` enforces a minimal delay between samples by
-        discarding draws below this threshold. ``variation`` applies a
-        multiplicative jitter factor to each sampled interval.
+        ``min_interval`` is kept for backward compatibility and has no
+        effect: intervals always follow the exponential distribution.
+        ``variation`` applies a multiplicative jitter factor to each sampled
+        interval.
         """
         assert isinstance(mean_interval, float) and mean_interval > 0, (
             "mean_interval must be positive float"
@@ -427,13 +428,6 @@ class Node:
                 if factor < 0.0:
                     factor = 0.0
                 delta *= factor
-            while delta < min_interval:
-                delta = sample_interval(mean_interval, rng)
-                if variation > 0.0:
-                    factor = 1.0 + (2.0 * rng.random() - 1.0) * variation
-                    if factor < 0.0:
-                        factor = 0.0
-                    delta *= factor
             if self._warmup_remaining > 0:
                 self._warmup_remaining -= 1
             else:
