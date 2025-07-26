@@ -228,6 +228,12 @@ réception :
 - `pa_non_linearity_curve` : triplet de coefficients polynomiaux pour
   définir une non‑linéarité personnalisée.
 - `pa_distortion_std_dB` : variation aléatoire due aux imperfections du PA.
+- `pa_ramp_up_s` / `pa_ramp_down_s` : temps de montée et de descente du PA
+  influençant la puissance effective.
+- `impulsive_noise_prob` / `impulsive_noise_dB` : ajout de bruit impulsif selon
+  une probabilité donnée.
+- `adjacent_interference_dB` : pénalité appliquée aux brouilleurs situés sur un
+  canal adjacent.
 - `phase_noise_std_dB` : bruit de phase ajouté au SNR.
 - `oscillator_leakage_dB` / `oscillator_leakage_std_dB` : fuite
   d'oscillateur ajoutée au bruit.

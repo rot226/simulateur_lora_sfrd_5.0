@@ -104,6 +104,8 @@ class AdvancedChannel:
         indoor_floor_loss_dB: float = 15.0,
         tx_start_delay_s: float = 0.0,
         rx_start_delay_s: float = 0.0,
+        pa_ramp_up_s: float = 0.0,
+        pa_ramp_down_s: float = 0.0,
         cost231_correction_dB: float = 0.0,
         okumura_hata_correction_dB: float = 0.0,
         modem_snr_offsets: dict[str, float] | None = None,
@@ -172,6 +174,8 @@ class AdvancedChannel:
             ``itu_indoor``.
         :param tx_start_delay_s: Délai d'activation de l'émetteur (s).
         :param rx_start_delay_s: Délai d'activation du récepteur (s).
+        :param pa_ramp_up_s: Temps de montée du PA (s).
+        :param pa_ramp_down_s: Temps de descente du PA (s).
         :param obstacle_map: Maillage décrivant les pertes additionnelles (dB)
             sur le trajet. Une valeur négative bloque totalement la liaison.
         :param map_area_size: Taille (mètres) correspondant au maillage pour
@@ -266,10 +270,13 @@ class AdvancedChannel:
         )
         self.tx_start_delay_s = float(tx_start_delay_s)
         self.rx_start_delay_s = float(rx_start_delay_s)
+        self.pa_ramp_up_s = float(pa_ramp_up_s)
+        self.pa_ramp_down_s = float(pa_ramp_down_s)
         self._tx_timer = 0.0
         self._rx_timer = 0.0
         self.tx_state = "on" if self.tx_start_delay_s == 0.0 else "off"
         self.rx_state = "on" if self.rx_start_delay_s == 0.0 else "off"
+        self._tx_level = 1.0 if self.tx_state == "on" else 0.0
         if obstacle_map is None and obstacle_map_file:
             from .map_loader import load_map
             obstacle_map = load_map(obstacle_map_file)
@@ -310,8 +317,14 @@ class AdvancedChannel:
         if self.tx_start_delay_s > 0.0:
             self.tx_state = "starting"
             self._tx_timer = self.tx_start_delay_s
+            self._tx_level = 0.0
+        elif self.pa_ramp_up_s > 0.0:
+            self.tx_state = "ramping_up"
+            self._tx_timer = self.pa_ramp_up_s
+            self._tx_level = 0.0
         else:
             self.tx_state = "on"
+            self._tx_level = 1.0
 
     def start_rx(self) -> None:
         """Activate receiver after a startup delay."""
@@ -322,7 +335,13 @@ class AdvancedChannel:
             self.rx_state = "on"
 
     def stop_tx(self) -> None:
-        self.tx_state = "off"
+        if self.pa_ramp_down_s > 0.0 and self.tx_state == "on":
+            self.tx_state = "ramping_down"
+            self._tx_timer = self.pa_ramp_down_s
+            self._tx_level = 1.0
+        else:
+            self.tx_state = "off"
+            self._tx_level = 0.0
 
     def stop_rx(self) -> None:
         self.rx_state = "off"
@@ -332,7 +351,25 @@ class AdvancedChannel:
         if self.tx_state == "starting":
             self._tx_timer -= dt
             if self._tx_timer <= 0.0:
+                if self.pa_ramp_up_s > 0.0:
+                    self.tx_state = "ramping_up"
+                    self._tx_timer = self.pa_ramp_up_s
+                    self._tx_level = 0.0
+                else:
+                    self.tx_state = "on"
+                    self._tx_level = 1.0
+        elif self.tx_state == "ramping_up":
+            self._tx_timer -= dt
+            self._tx_level = 1.0 - max(self._tx_timer, 0.0) / self.pa_ramp_up_s
+            if self._tx_timer <= 0.0:
                 self.tx_state = "on"
+                self._tx_level = 1.0
+        elif self.tx_state == "ramping_down":
+            self._tx_timer -= dt
+            self._tx_level = max(self._tx_timer, 0.0) / self.pa_ramp_down_s
+            if self._tx_timer <= 0.0:
+                self.tx_state = "off"
+                self._tx_level = 0.0
         if self.rx_state == "starting":
             self._rx_timer -= dt
             if self._rx_timer <= 0.0:
@@ -523,6 +560,8 @@ class AdvancedChannel:
         if self.pa_non_linearity_curve:
             a, b, c = self.pa_non_linearity_curve
             tx_power_dBm += a * tx_power_dBm ** 2 + b * tx_power_dBm + c
+        if self._tx_level < 1.0:
+            tx_power_dBm += 20.0 * math.log10(max(self._tx_level, 1e-3))
         rssi = (
             tx_power_dBm
             + self.base.tx_antenna_gain_dB
@@ -553,8 +592,17 @@ class AdvancedChannel:
         else:
             noise = thermal + self.base.noise_figure_dB + self.base.interference_dB
         noise += self.base.humidity_noise_coeff_dB * (self._humidity.sample() / 100.0)
+        for f, bw, power in self.base.band_interference:
+            half = (bw + self.base.bandwidth) / 2.0
+            diff = abs(self.base.frequency_hz - f)
+            if diff <= half:
+                noise += power
+            elif self.base.adjacent_interference_dB > 0 and diff <= half + self.base.bandwidth:
+                noise += max(power - self.base.adjacent_interference_dB, 0.0)
         if self.base.noise_floor_std > 0:
             noise += random.gauss(0, self.base.noise_floor_std)
+        if self.base.impulsive_noise_prob > 0.0 and random.random() < self.base.impulsive_noise_prob:
+            noise += self.base.impulsive_noise_dB
         noise += model.noise_variation()
         rssi += self.fading_model.sample_db()
 

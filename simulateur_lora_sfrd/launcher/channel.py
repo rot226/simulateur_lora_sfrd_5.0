@@ -98,6 +98,11 @@ class Channel:
         humidity_noise_coeff_dB: float = 0.0,
         frontend_filter_order: int = 0,
         frontend_filter_bw: float | None = None,
+        pa_ramp_up_s: float = 0.0,
+        pa_ramp_down_s: float = 0.0,
+        impulsive_noise_prob: float = 0.0,
+        impulsive_noise_dB: float = 0.0,
+        adjacent_interference_dB: float = 0.0,
         use_flora_curves: bool = False,
         *,
         bandwidth: float = 125e3,
@@ -176,6 +181,13 @@ class Channel:
             la sélectivité de la chaîne RF. ``0`` pour désactiver.
         :param frontend_filter_bw: Largeur de bande du filtre (Hz). Par défaut,
             la même valeur que ``bandwidth``.
+        :param pa_ramp_up_s: Temps de montée du PA simulé (s).
+        :param pa_ramp_down_s: Temps de descente du PA (s).
+        :param impulsive_noise_prob: Probabilité d'ajouter du bruit impulsif à
+            chaque calcul de bruit.
+        :param impulsive_noise_dB: Amplitude du bruit impulsif ajouté (dB).
+        :param adjacent_interference_dB: Pénalité appliquée aux brouilleurs sur
+            un canal adjacent (dB).
         :param environment: Chaîne optionnelle pour charger un preset
             ("urban", "suburban" ou "rural").
         :param region: Nom d'un plan de fréquences prédéfini ("EU868", "US915",
@@ -245,6 +257,11 @@ class Channel:
         self.humidity_noise_coeff_dB = humidity_noise_coeff_dB
         self.frontend_filter_order = int(frontend_filter_order)
         self.frontend_filter_bw = float(frontend_filter_bw) if frontend_filter_bw is not None else bandwidth
+        self.pa_ramp_up_s = float(pa_ramp_up_s)
+        self.pa_ramp_down_s = float(pa_ramp_down_s)
+        self.impulsive_noise_prob = float(impulsive_noise_prob)
+        self.impulsive_noise_dB = float(impulsive_noise_dB)
+        self.adjacent_interference_dB = float(adjacent_interference_dB)
         self.use_flora_curves = use_flora_curves
         self.omnet = OmnetModel(
             fine_fading_std,
@@ -298,6 +315,10 @@ class Channel:
                 pa_non_linearity_dB=pa_non_linearity_dB,
                 pa_non_linearity_std_dB=pa_non_linearity_std_dB,
                 phase_noise_std_dB=phase_noise_std_dB,
+                tx_start_delay_s=0.0,
+                rx_start_delay_s=0.0,
+                pa_ramp_up_s=pa_ramp_up_s,
+                pa_ramp_down_s=pa_ramp_down_s,
             )
             self.flora_phy = None
             self.advanced_capture = True
@@ -327,10 +348,15 @@ class Channel:
         noise += self.humidity_noise_coeff_dB * (self._humidity.sample() / 100.0)
         for f, bw, power in self.band_interference:
             half = (bw + self.bandwidth) / 2.0
-            if abs(self.frequency_hz - f) <= half:
+            diff = abs(self.frequency_hz - f)
+            if diff <= half:
                 noise += power
+            elif self.adjacent_interference_dB > 0 and diff <= half + self.bandwidth:
+                noise += max(power - self.adjacent_interference_dB, 0.0)
         if self.noise_floor_std > 0:
             noise += random.gauss(0, self.noise_floor_std)
+        if self.impulsive_noise_prob > 0.0 and random.random() < self.impulsive_noise_prob:
+            noise += self.impulsive_noise_dB
         return noise
 
     def path_loss(self, distance: float) -> float:
