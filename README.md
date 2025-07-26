@@ -113,8 +113,7 @@ grille en évitant les obstacles et peut prendre en compte un relief ainsi que
 des hauteurs de bâtiments. L'altitude du nœud est alors mise à jour à chaque
 déplacement pour un calcul radio plus réaliste. Ce modèle peut désormais lire
 une **carte d'obstacles dynamiques** (fichier JSON) listant les positions,
-rayons et vitesses des objets à éviter. Le tableau de bord propose un champ
-« Carte d’obstacles dynamiques » pour charger ce fichier.
+rayons et vitesses des objets à éviter.
 Deux champs « Vitesse min » et « Vitesse max » sont disponibles dans le
 `dashboard` pour définir cette plage avant de lancer la simulation.
 Plusieurs schémas supplémentaires peuvent être utilisés :
@@ -138,7 +137,7 @@ aléatoire des fréquences entre les nœuds.
 
 ## Durée et accélération de la simulation
 
-Le tableau de bord permet maintenant de fixer une **durée réelle maximale** en secondes. Lorsque cette limite est atteinte, la simulation s'arrête automatiquement. Un bouton « Accélérer jusqu'à la fin » lance l'exécution rapide pour obtenir aussitôt les métriques finales.
+Le tableau de bord permet maintenant de fixer une **durée réelle maximale** en secondes. Par défaut cette limite vaut `86400` s (24 h). Lorsque cette limite est atteinte, la simulation s'arrête automatiquement. Un bouton « Accélérer jusqu'à la fin » lance l'exécution rapide pour obtenir aussitôt les métriques finales.
 **Attention :** cette accélération ne fonctionne que si un nombre fini de paquets est défini. Si le champ *Nombre de paquets* vaut 0 (infini), la simulation ne se termine jamais et l'export reste impossible.
 Depuis la version 4.0.1, une fois toutes les transmissions envoyées, l'accélération désactive la mobilité des nœuds restants afin d'éviter un blocage du simulateur.
 
@@ -160,8 +159,9 @@ scénarios FLoRa. Voici la liste complète des options :
   passerelles.
 - `transmission_mode` : `Random` (émissions Poisson) ou `Periodic`.
 - `packet_interval` : moyenne ou période fixe entre transmissions (s).
+  La valeur par défaut est `100` s.
 - `first_packet_interval` : moyenne exponentielle appliquée uniquement au
-  premier envoi (`None` pour reprendre `packet_interval`).
+  premier envoi (`None` pour reprendre `packet_interval`). Par défaut `100` s.
 - `first_packet_min_delay` : délai minimal avant la première transmission (s).
 - `interval_variation`: coefficient de jitter appliqué multiplicativement
   à l'intervalle exponentiel (0 par défaut pour coller au comportement FLoRa). L'intervalle est multiplié par `1 ± U` avec `U` échantillonné dans `[-interval_variation, interval_variation]`.
