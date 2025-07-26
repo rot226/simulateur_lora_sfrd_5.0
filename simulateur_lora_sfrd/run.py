@@ -28,6 +28,7 @@ def simulate(
     mode,
     interval,
     steps,
+    first_interval=None,
     channels=1,
     *,
     fine_fading_std=0.0,
@@ -51,6 +52,10 @@ def simulate(
         raise ValueError("channels must be >= 1")
     if not isinstance(interval, float) or interval <= 0:
         raise ValueError("mean_interval must be positive float")
+    if first_interval is None:
+        first_interval = interval
+    if not isinstance(first_interval, float) or first_interval <= 0:
+        raise ValueError("first_interval must be positive float")
     if steps <= 0:
         raise ValueError("steps must be > 0")
 
@@ -80,15 +85,14 @@ def simulate(
     for node in range(nodes):
         rng = rng_manager.get_stream("traffic", node)
         if mode_lower == "periodic":
-            # Randomize the initial offset like the full Simulator
-            t = rng.random() * interval
+            # Décale le premier paquet selon ``first_interval``
+            t = rng.random() * first_interval
             while t < steps:
                 send_times[node].append(t)
                 t += interval
             send_times[node] = sorted(set(send_times[node]))
         else:  # mode "Random"
-            # Génère les instants d'envoi selon une loi exponentielle
-            t = sample_interval(interval, rng)
+            t = sample_interval(first_interval, rng)
             while t < steps:
                 send_times[node].append(t)
                 t += sample_interval(interval, rng)
@@ -233,6 +237,11 @@ def main(argv=None):
         help="Intervalle moyen ou fixe entre transmissions",
     )
     parser.add_argument(
+        "--first-interval",
+        type=float,
+        help="Intervalle moyen appliqué au tout premier paquet",
+    )
+    parser.add_argument(
         "--steps",
         type=int,
         default=100,
@@ -288,8 +297,11 @@ def main(argv=None):
     if pre_args.config and Path(pre_args.config).is_file():
         cp = configparser.ConfigParser()
         cp.read(pre_args.config)
-        if cp.has_section("simulation") and "mean_interval" in cp["simulation"]:
-            parser.set_defaults(interval=float(cp["simulation"]["mean_interval"]))
+        if cp.has_section("simulation"):
+            if "mean_interval" in cp["simulation"]:
+                parser.set_defaults(interval=float(cp["simulation"]["mean_interval"]))
+            if "first_interval" in cp["simulation"]:
+                parser.set_defaults(first_interval=float(cp["simulation"]["first_interval"]))
 
     args = parser.parse_args(argv)
 
@@ -331,6 +343,7 @@ def main(argv=None):
             args.mode,
             args.interval,
             args.steps,
+            args.first_interval,
             args.channels,
             fine_fading_std=args.fine_fading,
             noise_std=args.noise_std,
