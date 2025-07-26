@@ -504,6 +504,7 @@ class Simulator:
                         self.interval_rng,
                         self.packet_interval,
                         self.packets_to_send,
+                        variation=self.interval_variation,
                     )
                 else:
                     node.ensure_poisson_arrivals(
@@ -511,6 +512,7 @@ class Simulator:
                         self.interval_rng,
                         self.packet_interval,
                         min_interval=node.last_airtime,
+                        variation=self.interval_variation,
                         limit=(
                             self.packets_to_send if self.packets_to_send else None
                         ),
@@ -888,6 +890,7 @@ class Simulator:
                                 self.interval_rng,
                                 self.packet_interval,
                                 min_interval=node.last_airtime,
+                                variation=self.interval_variation,
                                 limit=(
                                     self.packets_to_send if self.packets_to_send else None
                                 ),
