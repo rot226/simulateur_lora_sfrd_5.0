@@ -82,6 +82,7 @@ class Gateway:
             sont ignorées pour la détection de collision.
         """
         key = (sf, frequency)
+        symbol_duration = (2 ** sf) / bandwidth
         concurrent_transmissions = [
             t for t in self.active_map.get(key, []) if t['end_time'] > current_time
         ]
@@ -109,6 +110,7 @@ class Gateway:
             'freq_offset': freq_offset,
             'sync_offset': sync_offset,
             'bandwidth': bandwidth,
+            'symbol_duration': symbol_duration,
             'lost_flag': False,
         }
         colliders.append(new_transmission)
@@ -191,6 +193,17 @@ class Gateway:
                     capture = True
             else:
                 capture = True
+
+        if capture:
+            # Apply 5-symbol rule: the winning packet must have
+            # started at least 5 symbols before the new one.
+            capture_allowed = False
+            if strongest is not new_transmission:
+                elapsed = current_time - strongest.get('start_time', current_time)
+                if elapsed >= 5 * symbol_duration:
+                    capture_allowed = True
+            if not capture_allowed:
+                capture = False
 
         if capture:
             # Le signal le plus fort sera décodé, les autres sont perdus
