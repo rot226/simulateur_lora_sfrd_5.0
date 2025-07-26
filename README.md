@@ -465,6 +465,33 @@ Pour reproduire un scénario FLoRa :
 5. Renseignez **Graine** pour conserver exactement le même placement et la même
    séquence d'intervalles d'une exécution à l'autre.
 6. Ou lancez `python examples/run_flora_example.py` qui combine ces réglages.
+
+### Compilation de FLoRa (OMNeT++)
+
+Le dossier `flora-master` contient la version originale du simulateur FLoRa.
+Après avoir installé OMNeT++ et cloné le framework INET 4.4 à la racine du
+projet :
+
+```bash
+git clone https://github.com/inet-framework/inet.git -b v4.4 inet4.4
+cd inet4.4 && make makefiles && make -j$(nproc)
+```
+
+Compilez ensuite FLoRa :
+
+```bash
+cd ../flora-master
+make makefiles
+make -j$(nproc)
+```
+
+Exécutez enfin le scénario d'exemple pour générer un fichier `.sca` dans
+`flora-master/results` :
+
+```bash
+./src/run_flora -u Cmdenv simulations/examples/n100-gw1.ini
+```
+
 ## Format du fichier CSV
 
 L'option `--output` de `run.py` permet d'enregistrer les métriques de la
@@ -523,6 +550,13 @@ L'exécution de `pytest` permet de vérifier la cohérence des calculs de RSSI e
 
 ```bash
 pytest -q
+```
+
+Un test dédié compare également les résultats du simulateur Python avec ceux du
+FLoRa original lorsqu'un fichier `.sca` est disponible :
+
+```bash
+pytest tests/test_flora_sca.py -q
 ```
 
 Vous pouvez aussi comparer les métriques générées avec les formules théoriques détaillées dans `tests/test_simulator.py`.
