@@ -304,6 +304,7 @@ class Channel:
         self._humidity = _CorrelatedValue(
             humidity_percent, humidity_std_percent, fading_correlation, rng=self.rng
         )
+        self._impulse = _CorrelatedValue(0.0, impulsive_noise_dB, fading_correlation, rng=self.rng)
         self.fine_fading_std = fine_fading_std
         self.fading_correlation = fading_correlation
         self.variable_noise_std = variable_noise_std
@@ -325,6 +326,9 @@ class Channel:
         # Seuil de capture (différence de RSSI en dB pour qu'un signal plus fort capture la réception)
         self.capture_threshold_dB = capture_threshold_dB
         self.orthogonal_sf = orthogonal_sf
+        self.last_rssi_dBm = 0.0
+        self.last_noise_dBm = 0.0
+        self.last_filter_att_dB = 0.0
 
         if self.phy_model == "omnet":
             from .omnet_phy import OmnetPHY
@@ -354,32 +358,45 @@ class Channel:
             self.omnet_phy = None
             self.flora_phy = None
 
-    def noise_floor_dBm(self) -> float:
+    def noise_floor_dBm(self, freq_offset_hz: float = 0.0) -> float:
         """Retourne le niveau de bruit (dBm) pour la bande passante configurée.
 
         Le bruit peut varier autour de la valeur moyenne pour simuler un canal
         plus réaliste.
         """
         if self.omnet_phy:
-            return self.omnet_phy.noise_floor()
+            noise = self.omnet_phy.noise_floor()
+            self.last_noise_dBm = noise
+            return noise
         temp = self._temperature.sample()
         original = self.omnet.temperature_K
         self.omnet.temperature_K = temp
         thermal = self.omnet.variable_thermal_noise_dBm(self.bandwidth)
         self.omnet.temperature_K = original
-        noise = thermal + self.noise_figure_dB + self.interference_dB
-        noise += self.humidity_noise_coeff_dB * (self._humidity.sample() / 100.0)
-        for f, bw, power in self.band_interference:
+        base = thermal + self.noise_figure_dB
+        power = 10 ** (base / 10.0)
+        if self.interference_dB != 0.0:
+            power += 10 ** ((self.interference_dB - self._filter_attenuation_db(freq_offset_hz)) / 10.0)
+        hum = self.humidity_noise_coeff_dB * (self._humidity.sample() / 100.0)
+        if hum != 0.0:
+            power += 10 ** ((base + hum) / 10.0) - 10 ** (base / 10.0)
+        for f, bw, p in self.band_interference:
             half = (bw + self.bandwidth) / 2.0
             diff = abs(self.frequency_hz - f)
             if diff <= half:
-                noise += power
+                att = self._filter_attenuation_db(diff)
+                power += 10 ** ((p - att) / 10.0)
             elif self.adjacent_interference_dB > 0 and diff <= half + self.bandwidth:
-                noise += max(power - self.adjacent_interference_dB, 0.0)
+                val = max(p - self.adjacent_interference_dB, 0.0) - self._filter_attenuation_db(diff)
+                power += 10 ** (val / 10.0)
         if self.noise_floor_std > 0:
-            noise += self.rng.normal(0, self.noise_floor_std)
-        if self.impulsive_noise_prob > 0.0 and self.rng.random() < self.impulsive_noise_prob:
-            noise += self.impulsive_noise_dB
+            power *= 10 ** (self.rng.normal(0.0, self.noise_floor_std) / 10.0)
+        if self.impulsive_noise_prob > 0.0:
+            val = self._impulse.sample()
+            if self.rng.random() < self.impulsive_noise_prob:
+                power += 10 ** (val / 10.0)
+        noise = 10 * math.log10(power)
+        self.last_noise_dBm = noise
         return noise
 
     def path_loss(self, distance: float) -> float:
@@ -450,18 +467,21 @@ class Channel:
         if self.clock_jitter_std_s > 0.0:
             sync_offset_s += self.rng.normal(0.0, self.clock_jitter_std_s)
 
-        rssi -= self._filter_attenuation_db(freq_offset_hz)
+        attenuation = self._filter_attenuation_db(freq_offset_hz)
+        rssi -= attenuation
 
         if self.phy_model == "flora_full" and sf is not None:
             noise = self._flora_noise_dBm(sf)
         else:
-            noise = self.noise_floor_dBm()
+            noise = self.noise_floor_dBm(freq_offset_hz)
         snr = rssi - noise + self.snr_offset_dB
         penalty = self._alignment_penalty_db(freq_offset_hz, sync_offset_s, sf)
         snr -= penalty
         snr -= abs(self._phase_noise.sample())
         if sf is not None:
             snr += 10 * math.log10(2 ** sf)
+        self.last_rssi_dBm = rssi
+        self.last_filter_att_dB = attenuation
         return rssi, snr
 
     def packet_error_rate(self, snr: float, sf: int, payload_bytes: int = 20) -> float:
