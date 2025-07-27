@@ -415,13 +415,13 @@ class NetworkServer:
 
                     if nstep > 0:
                         while nstep > 0 and (
-                            sf > 7 or p_idx < max(TX_POWER_INDEX_TO_DBM.keys())
+                            p_idx < max(TX_POWER_INDEX_TO_DBM.keys()) or sf > 7
                         ):
-                            if sf > 7:
-                                sf -= 1
-                            elif p_idx < max(TX_POWER_INDEX_TO_DBM.keys()):
+                            if p_idx < max(TX_POWER_INDEX_TO_DBM.keys()):
                                 p_idx += 1
                                 power = TX_POWER_INDEX_TO_DBM[p_idx]
+                            elif sf > 7:
+                                sf -= 1
                             nstep -= 1
                     elif nstep < 0:
                         while nstep < 0 and (p_idx > 0 or sf < 12):
