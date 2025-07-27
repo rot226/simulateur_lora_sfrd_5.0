@@ -1,5 +1,5 @@
 import math
-import random
+import numpy as np
 
 
 class GaussMarkov:
@@ -14,14 +14,19 @@ class GaussMarkov:
         speed_std: float = 0.2,
         direction_std: float = 0.2,
         step: float = 1.0,
+        rng: np.random.Generator | None = None,
     ) -> None:
         self.area_size = float(area_size)
         self.mean_speed = float(mean_speed)
-        self.mean_direction = mean_direction if mean_direction is not None else random.random() * 2 * math.pi
+        init_rng = rng or np.random.Generator(np.random.MT19937())
+        self.mean_direction = (
+            mean_direction if mean_direction is not None else init_rng.random() * 2 * math.pi
+        )
         self.alpha = float(alpha)
         self.speed_std = float(speed_std)
         self.direction_std = float(direction_std)
         self.step = float(step)
+        self.rng = init_rng
 
     # ------------------------------------------------------------------
     def assign(self, node) -> None:
@@ -36,12 +41,12 @@ class GaussMarkov:
         node.speed = (
             self.alpha * node.speed
             + (1 - self.alpha) * self.mean_speed
-            + math.sqrt(1 - self.alpha ** 2) * random.gauss(0.0, self.speed_std)
+            + math.sqrt(1 - self.alpha ** 2) * self.rng.normal(0.0, self.speed_std)
         )
         node.direction = (
             self.alpha * node.direction
             + (1 - self.alpha) * self.mean_direction
-            + math.sqrt(1 - self.alpha ** 2) * random.gauss(0.0, self.direction_std)
+            + math.sqrt(1 - self.alpha ** 2) * self.rng.normal(0.0, self.direction_std)
         )
         node.vx = node.speed * math.cos(node.direction)
         node.vy = node.speed * math.sin(node.direction)

@@ -1,7 +1,8 @@
 from pathlib import Path
 from typing import Iterable
-import random
 import math
+import numpy as np
+import numpy as np
 
 from .waypoint_planner import WaypointPlanner3D
 from .map_loader import load_map
@@ -21,6 +22,7 @@ class PlannedRandomWaypoint:
         obstacle_height_map: str | Path | Iterable[Iterable[float]] | None = None,
         max_height: float = 0.0,
         slope_scale: float = 0.1,
+        rng: np.random.Generator | None = None,
     ) -> None:
         if terrain is None:
             raise ValueError("terrain map is required for planned random waypoint")
@@ -30,6 +32,7 @@ class PlannedRandomWaypoint:
             elevation = load_map(elevation)
         if obstacle_height_map is not None and isinstance(obstacle_height_map, (str, Path)):
             obstacle_height_map = load_map(obstacle_height_map)
+        self.rng = rng or np.random.Generator(np.random.MT19937())
         self.planner = WaypointPlanner3D(
             area_size,
             terrain,
@@ -37,6 +40,7 @@ class PlannedRandomWaypoint:
             obstacle_height_map=obstacle_height_map,
             max_height=max_height,
             slope_scale=slope_scale,
+            rng=self.rng,
         )
         self.area_size = float(area_size)
         self.min_speed = float(min_speed)
@@ -44,7 +48,9 @@ class PlannedRandomWaypoint:
 
     # --------------------------------------------------------------
     def assign(self, node) -> None:
-        node.speed = float(random.uniform(self.min_speed, self.max_speed))
+        node.speed = float(
+            self.min_speed + (self.max_speed - self.min_speed) * self.rng.random()
+        )
         goal = self.planner.random_free_point()
         node.path = self.planner.find_path((node.x, node.y), goal)
         node.path_index = 0

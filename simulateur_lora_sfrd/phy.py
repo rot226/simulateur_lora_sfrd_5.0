@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import random
+import numpy as np
 
 from .loranode import Node
 
@@ -26,7 +27,7 @@ class LoRaPHY:
         dest: Node,
         payload_size: int,
         *,
-        rng: random.Random | None = None,
+        rng: np.random.Generator | None = None,
     ) -> tuple[float, float, float, bool]:
         """Simulate a transmission to ``dest``.
 

@@ -1,6 +1,6 @@
 # Path planner using A* over a terrain map with optional elevation and 3D obstacles.
 import math
-import random
+import numpy as np
 from typing import List, Tuple
 
 
@@ -16,6 +16,7 @@ class WaypointPlanner3D:
         obstacle_height_map: List[List[float]] | None = None,
         max_height: float = 0.0,
         slope_scale: float = 0.1,
+        rng: np.random.Generator | None = None,
     ) -> None:
         self.area_size = float(area_size)
         self.terrain = terrain
@@ -35,6 +36,7 @@ class WaypointPlanner3D:
         else:
             self.h_rows = self.h_cols = 0
         self.slope_scale = slope_scale
+        self.rng = rng or np.random.Generator(np.random.MT19937())
 
     # --------------------------------------------------------------
     def _terrain_factor_cell(self, cx: int, cy: int) -> float | None:
@@ -132,8 +134,8 @@ class WaypointPlanner3D:
 
     def random_free_point(self) -> Tuple[float, float]:
         while True:
-            cx = random.randrange(self.cols)
-            cy = random.randrange(self.rows)
+            cx = int(self.rng.integers(self.cols))
+            cy = int(self.rng.integers(self.rows))
             if self._terrain_factor_cell(cx, cy) is not None:
                 if self._height_cell(cx, cy) <= self.max_height:
                     return self._cell_to_coord((cx, cy))

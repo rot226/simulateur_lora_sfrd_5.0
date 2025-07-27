@@ -1,7 +1,7 @@
-import random
 from simulateur_lora_sfrd.phy import LoRaPHY
 from simulateur_lora_sfrd.loranode import Node
 from simulateur_lora_sfrd.launcher.channel import Channel
+from traffic.rng_manager import RngManager
 
 
 def test_loraphy_transmit_deterministic():
@@ -11,10 +11,10 @@ def test_loraphy_transmit_deterministic():
     n2 = Node(1, 0, 0, 7, 14, channel=ch2)
 
     phy = LoRaPHY(n1)
-    rng1 = random.Random(123)
-    random.seed(0)
+    mgr1 = RngManager(0)
+    rng1 = mgr1.get_stream("phy", 0)
     res1 = phy.transmit(n2, 20, rng=rng1)
-    rng2 = random.Random(123)
-    random.seed(0)
+    mgr2 = RngManager(0)
+    rng2 = mgr2.get_stream("phy", 0)
     res2 = phy.transmit(n2, 20, rng=rng2)
     assert res1 == res2

@@ -1,5 +1,5 @@
 import math
-import random
+import numpy as np
 from typing import List, Tuple
 
 
@@ -16,6 +16,7 @@ class TerrainMapMobility:
         elevation: List[List[float]] | None = None,
         obstacle_height_map: List[List[float]] | None = None,
         max_height: float = 0.0,
+        rng: np.random.Generator | None = None,
     ) -> None:
         self.area_size = float(area_size)
         self.terrain = terrain
@@ -36,6 +37,7 @@ class TerrainMapMobility:
             self.h_cols = len(obstacle_height_map[0]) if self.h_rows else 0
         else:
             self.h_rows = self.h_cols = 0
+        self.rng = rng or np.random.Generator(np.random.MT19937())
 
     # ------------------------------------------------------------------
     def _speed_factor_cell(self, cx: int, cy: int) -> float:
@@ -113,8 +115,8 @@ class TerrainMapMobility:
 
     def _random_free_cell(self) -> Tuple[int, int]:
         while True:
-            cx = random.randrange(self.cols)
-            cy = random.randrange(self.rows)
+            cx = int(self.rng.integers(self.cols))
+            cy = int(self.rng.integers(self.rows))
             if self.terrain[cy][cx] > 0 and self._height_cell(cx, cy) <= self.max_height:
                 return cx, cy
 
@@ -129,7 +131,9 @@ class TerrainMapMobility:
 
     # ------------------------------------------------------------------
     def assign(self, node) -> None:
-        node.speed = float(random.uniform(self.min_speed, self.max_speed))
+        node.speed = float(
+            self.min_speed + (self.max_speed - self.min_speed) * self.rng.random()
+        )
         node.path = self._new_path(node.x, node.y)
         node.path_index = 0
         node.last_move_time = 0.0

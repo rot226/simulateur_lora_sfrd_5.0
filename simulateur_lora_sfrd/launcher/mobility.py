@@ -1,5 +1,6 @@
 import math
-import random
+import numpy as np
+import numpy as np
 
 
 class RandomWaypoint:
@@ -26,6 +27,7 @@ class RandomWaypoint:
         step: float = 1.0,
         slope_scale: float = 0.1,
         dynamic_obstacles: list[dict[str, float]] | None = None,
+        rng: np.random.Generator | None = None,
     ) -> None:
         """
         Initialise le modèle de mobilité.
@@ -61,6 +63,7 @@ class RandomWaypoint:
             self.e_rows = 0
             self.e_cols = 0
         self.dynamic_obstacles = [dict(o) for o in (dynamic_obstacles or [])]
+        self.rng = rng or np.random.Generator(np.random.MT19937())
         self._last_obs_update = 0.0
 
     # ------------------------------------------------------------------
@@ -120,8 +123,8 @@ class RandomWaypoint:
         Initialise également son dernier temps de déplacement.
         """
         # Tirer un angle de direction uniforme dans [0, 2π) et une vitesse uniforme dans [min_speed, max_speed].
-        angle = random.random() * 2 * math.pi
-        speed = random.uniform(self.min_speed, self.max_speed)
+        angle = self.rng.random() * 2 * math.pi
+        speed = self.min_speed + (self.max_speed - self.min_speed) * self.rng.random()
         # Définir les composantes de vitesse selon la direction.
         node.vx = speed * math.cos(angle)
         node.vy = speed * math.sin(angle)
