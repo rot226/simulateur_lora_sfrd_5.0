@@ -295,18 +295,19 @@ collision.
 
 ### Modélisation physique détaillée
 
-Un module optionnel `advanced_channel.py` introduit des modèles de
-propagation supplémentaires inspirés de la couche physique OMNeT++. Le
-mode `cost231` applique la formule Hata COST‑231 avec les hauteurs de
-stations paramétrables et un coefficient d'ajustement via
-`cost231_correction_dB`. Un mode `okumura_hata` reprend la variante
-d'origine (urbain, suburbain ou zone ouverte) avec un terme correctif
-`okumura_hata_correction_dB`. Un mode `itu_indoor` permet de simuler des
-environnements intérieurs. Le mode `3d` calcule la distance réelle en 3D
-entre l'émetteur et le récepteur et les autres modèles peuvent également
-prendre en compte un dénivelé si `tx_pos` et `rx_pos` comportent une
-altitude. Il est également
-possible de simuler un fading `rayleigh` ou `rician` pour représenter des
+ Un module optionnel `advanced_channel.py` introduit des modèles de
+ propagation supplémentaires inspirés de la couche physique OMNeT++. Le
+ mode `cost231` applique la formule Hata COST‑231 avec les hauteurs de
+ stations paramétrables et un coefficient d'ajustement via
+ `cost231_correction_dB`. Un mode `cost231_3d` tient compte de la distance
+ 3D réelle et des hauteurs renseignées dans `tx_pos`/`rx_pos`. Un mode
+ `okumura_hata` reprend la variante d'origine (urbain, suburbain ou zone
+ ouverte) avec un terme correctif `okumura_hata_correction_dB`. Un mode
+ `itu_indoor` permet de simuler des environnements intérieurs. Le mode
+ `3d` calcule simplement la distance réelle en 3D et les autres modèles
+ peuvent également prendre en compte un dénivelé si `tx_pos` et `rx_pos`
+ comportent une altitude. Il est également possible de simuler un fading
+ `rayleigh`, `rician` ou désormais `nakagami` pour représenter des
 multi-trajets plus réalistes. Des gains d'antenne et pertes de câble
 peuvent être précisés, ainsi qu'une variation temporelle du bruit grâce
 à `noise_floor_std`. Des pertes liées aux conditions météo peuvent être
@@ -319,12 +320,13 @@ de l'humidité peut également être activé grâce aux paramètres
 ```python
 from simulateur_lora_sfrd.launcher.advanced_channel import AdvancedChannel
 ch = AdvancedChannel(
-    propagation_model="okumura_hata",
+    propagation_model="cost231_3d",
     terrain="suburban",
     okumura_hata_correction_dB=2.0,
     weather_loss_dB_per_km=1.0,
     weather_loss_std_dB_per_km=0.5,
-    fading="rayleigh",  # modèle corrélé dans le temps
+    fading="nakagami",  # modèle corrélé dans le temps
+    obstacle_losses={"wall": 5.0, "building": 20.0},
     modem_snr_offsets={"lora": 0.0},
 )
 ```
@@ -351,6 +353,10 @@ Une carte ``obstacle_height_map`` peut bloquer complètement un lien en
 fonction de l'altitude parcourue et les différences de hauteur sont
 prises en compte dans tous les modèles lorsque ``tx_pos`` et ``rx_pos``
 indiquent une altitude.
+Une ``obstacle_map`` peut désormais contenir des identifiants (par
+exemple ``wall`` ou ``building``) associés à des pertes définies via le
+paramètre ``obstacle_losses`` pour modéliser précisément les obstacles
+traversés.
 Il est désormais possible de modéliser la sélectivité du filtre RF grâce aux
 paramètres ``frontend_filter_order`` et ``frontend_filter_bw``. Une valeur non
 nulle applique une atténuation dépendante du décalage fréquentiel, permettant de

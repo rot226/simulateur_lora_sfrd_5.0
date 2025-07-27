@@ -7,7 +7,7 @@ import numpy as np
 
 
 class _CorrelatedFading:
-    """Temporal correlation for Rayleigh/Rician fading with multiple taps."""
+    """Temporal correlation for Rayleigh/Rician/Nakagami fading."""
 
     def __init__(
         self,
@@ -23,18 +23,23 @@ class _CorrelatedFading:
         self.paths = max(1, int(paths))
         self.i = [0.0] * self.paths
         self.q = [0.0] * self.paths
+        self.amp = 1.0
         self.rng = rng or np.random.Generator(np.random.MT19937())
 
     def sample_db(self) -> float:
-        if self.kind not in {"rayleigh", "rician"}:
+        if self.kind not in {"rayleigh", "rician", "nakagami"}:
             return 0.0
         std = math.sqrt(max(1.0 - self.corr ** 2, 0.0))
         if self.kind == "rayleigh":
             mean_i = 0.0
             sigma = 1.0
-        else:  # rician
+        elif self.kind == "rician":
             mean_i = math.sqrt(self.k / (self.k + 1.0))
             sigma = math.sqrt(1.0 / (2.0 * (self.k + 1.0)))
+        else:  # nakagami
+            new_amp = math.sqrt(self.rng.gamma(max(self.k, 0.1), 1.0 / max(self.k, 0.1)))
+            self.amp = self.corr * self.amp + std * new_amp
+            return 20 * math.log10(max(self.amp, 1e-12))
 
         sum_i = 0.0
         sum_q = 0.0
@@ -80,6 +85,7 @@ class AdvancedChannel:
         propagation_model: str = "cost231",
         fading: str = "rayleigh",
         rician_k: float = 1.0,
+        nakagami_m: float = 1.0,
         terrain: str = "urban",
         weather_loss_dB_per_km: float = 0.0,
         weather_loss_std_dB_per_km: float = 0.0,
@@ -114,6 +120,7 @@ class AdvancedChannel:
         obstacle_map_file: str | None = None,
         obstacle_height_map_file: str | None = None,
         default_obstacle_dB: float = 0.0,
+        obstacle_losses: dict[str, float] | None = None,
         multipath_paths: int = 1,
         indoor_n_floors: int = 0,
         indoor_floor_loss_dB: float = 15.0,
@@ -132,9 +139,10 @@ class AdvancedChannel:
         :param base_station_height: Hauteur de la passerelle (m).
         :param mobile_height: Hauteur de l'émetteur mobile (m).
         :param propagation_model: Nom du modèle de perte (``cost231``,
-            ``okumura_hata`` ou ``3d``).
-        :param fading: Type de fading (``rayleigh`` ou ``rician``).
+            ``cost231_3d``, ``okumura_hata`` ou ``3d``).
+        :param fading: Type de fading (``rayleigh``, ``rician`` ou ``nakagami``).
         :param rician_k: Facteur ``K`` pour le fading rician.
+        :param nakagami_m: Paramètre ``m`` pour le fading Nakagami.
         :param terrain: Type de terrain pour Okumura‑Hata.
         :param weather_loss_dB_per_km: Atténuation météo moyenne en dB/km.
         :param weather_loss_std_dB_per_km: Variation temporelle de cette
@@ -205,6 +213,8 @@ class AdvancedChannel:
             ``obstacle_height_map``.
         :param default_obstacle_dB: Pénalité par défaut en dB lorsqu'un obstacle
             est rencontré sans valeur explicite dans ``obstacle_map``.
+        :param obstacle_losses: Dictionnaire associant un type d'obstacle à
+            une perte en dB pour ``obstacle_map`` texte ou JSON.
         :param cost231_correction_dB: Décalage appliqué au modèle COST‑231 pour
             affiner la calibration.
         :param okumura_hata_correction_dB: Décalage appliqué au modèle
@@ -234,8 +244,10 @@ class AdvancedChannel:
         self.propagation_model = propagation_model
         self.fading = fading
         self.rician_k = rician_k
+        self.nakagami_m = nakagami_m
+        k_param = rician_k if fading != "nakagami" else nakagami_m
         self.fading_model = _CorrelatedFading(
-            fading, rician_k, fading_correlation, paths=multipath_paths, rng=self.rng
+            fading, k_param, fading_correlation, paths=multipath_paths, rng=self.rng
         )
         self.terrain = terrain.lower()
         self.weather_loss_dB_per_km = weather_loss_dB_per_km
@@ -313,6 +325,7 @@ class AdvancedChannel:
         self.obstacle_map = obstacle_map
         self.obstacle_height_map = obstacle_height_map
         self.default_obstacle_dB = float(default_obstacle_dB)
+        self.obstacle_losses = obstacle_losses or {}
         self.map_area_size = map_area_size
         if obstacle_map or obstacle_height_map:
             self._rows = len(obstacle_map or obstacle_height_map)
@@ -416,6 +429,11 @@ class AdvancedChannel:
             loss = self.base.path_loss(d)
         elif self.propagation_model == "cost231":
             loss = self._cost231_loss(d) + self.cost231_correction_dB
+        elif self.propagation_model == "cost231_3d":
+            if height_diff is None:
+                height_diff = self.base_station_height - self.mobile_height
+            d3d = math.sqrt(distance ** 2 + height_diff ** 2)
+            loss = self._cost231_loss(d3d) + self.cost231_correction_dB
         elif self.propagation_model == "okumura_hata":
             loss = self._okumura_hata_loss(d) + self.okumura_hata_correction_dB
         elif self.propagation_model == "itu_indoor":
@@ -463,10 +481,18 @@ class AdvancedChannel:
             visited.add(cell)
             obstacle_val = None
             if self.obstacle_map:
-                obstacle_val = float(self.obstacle_map[cy][cx])
+                obstacle_val = self.obstacle_map[cy][cx]
+                if isinstance(obstacle_val, str):
+                    obstacle_val = self.obstacle_losses.get(obstacle_val, self.default_obstacle_dB)
+                else:
+                    obstacle_val = float(obstacle_val)
             height = None
             if self.obstacle_height_map:
-                height = float(self.obstacle_height_map[cy][cx])
+                height_val = self.obstacle_height_map[cy][cx]
+                try:
+                    height = float(height_val)
+                except (TypeError, ValueError):
+                    height = None
             if height is not None and height > 0.0 and z <= height:
                 val = (
                     obstacle_val
