@@ -2,7 +2,19 @@
 
 from . import random
 
-__all__ = ["random", "array", "zeros", "linspace", "diff", "histogram"]
+# Minimal scalar type used by pytest.approx
+bool_ = bool
+
+__all__ = [
+    "random",
+    "array",
+    "zeros",
+    "linspace",
+    "diff",
+    "histogram",
+    "isscalar",
+    "bool_",
+]
 
 
 def array(obj, dtype=None):
@@ -47,3 +59,8 @@ def histogram(a, bins=10):
             idx -= 1
         hist[idx] += 1
     return hist, edges
+
+
+def isscalar(obj) -> bool:
+    """Return True if *obj* behaves like a scalar."""
+    return not hasattr(obj, "__iter__") or isinstance(obj, (bytes, str, bytearray))
