@@ -314,6 +314,9 @@ class Simulator:
                             ch.path_loss_d0,
                             ch.reference_distance,
                         ) = Channel.ENV_PRESETS["flora"]
+                for ch in self.multichannel.channels:
+                    if flora_mode and ch.multipath_taps <= 1:
+                        ch.multipath_taps = 3
         else:
             if channels is None:
                 env = "flora" if (flora_mode or phy_model.startswith("flora")) else None
@@ -324,6 +327,7 @@ class Simulator:
                         phy_model=ch_phy_model,
                         environment=env,
                         flora_loss_model=flora_loss_model,
+                        multipath_taps=3 if flora_mode else 1,
                     )
                 ]
             else:
@@ -344,6 +348,8 @@ class Simulator:
                                 ch.path_loss_d0,
                                 ch.reference_distance,
                             ) = Channel.ENV_PRESETS["flora"]
+                        if flora_mode and ch.multipath_taps <= 1:
+                            ch.multipath_taps = 3
                         ch_list.append(ch)
                     else:
                         ch_list.append(
@@ -357,6 +363,7 @@ class Simulator:
                                     else None
                                 ),
                                 flora_loss_model=flora_loss_model,
+                                multipath_taps=3 if flora_mode else 1,
                             )
                         )
             self.multichannel = MultiChannel(ch_list, method=channel_distribution)
