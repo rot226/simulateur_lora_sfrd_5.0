@@ -11,4 +11,4 @@ def test_write_intervals(tmp_path):
     gateways = [{"x": 3.0, "y": 4.0}]
     write_flora_ini(nodes, gateways, ini, next_interval=7.5, first_interval=1.5)
     assert parse_flora_interval(ini) == 7.5
-    assert parse_flora_first_interval(ini) == 1.5
+    assert parse_flora_first_interval(ini) == 7.5

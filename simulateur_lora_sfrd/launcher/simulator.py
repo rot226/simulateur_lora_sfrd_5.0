@@ -75,7 +75,6 @@ class Simulator:
         transmission_mode: str = "Random",
         packet_interval: float = 60.0,
         first_packet_interval: float | None = None,
-        first_packet_min_delay: float = 0.0,
         warm_up_intervals: int = 0,
         log_mean_after: int | None = None,
         interval_variation: float = 0.0,
@@ -125,7 +124,6 @@ class Simulator:
         :param transmission_mode: 'Random' pour transmissions aléatoires (Poisson) ou 'Periodic' pour périodiques.
         :param packet_interval: Intervalle moyen entre transmissions (si Random, moyenne en s; si Periodic, période fixe en s).
         :param first_packet_interval: Intervalle moyen appliqué uniquement au tout premier envoi (``None`` pour utiliser ``packet_interval``).
-        :param first_packet_min_delay: Délai minimal avant la première transmission (s).
         :param warm_up_intervals: Nombre d'intervalles à ignorer dans les métriques (warm-up).
         :param log_mean_after: Nombre d'intervalles comptabilisés après warm-up
             avant journalisation de la moyenne empirique (``None`` pour désactiver).
@@ -210,7 +208,8 @@ class Simulator:
             if first_packet_interval is not None
             else packet_interval
         )
-        self.first_packet_min_delay = first_packet_min_delay
+        # Minimal delay before the first transmission (5 s in FLoRa mode)
+        self.first_packet_min_delay = 0.0
         self.warm_up_intervals = warm_up_intervals
         self.log_mean_after = log_mean_after
         if interval_variation < 0 or interval_variation > 3:
@@ -543,7 +542,7 @@ class Simulator:
                 else:
                     node.ensure_poisson_arrivals(
                         node.last_tx_time,
-                        self.first_packet_interval,
+                        self.packet_interval,
                         self.interval_rng,
                         min_interval=max(
                             node.last_airtime, self.first_packet_min_delay

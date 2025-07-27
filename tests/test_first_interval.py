@@ -61,3 +61,29 @@ def test_dashboard_first_interval_sync(monkeypatch):
     dashboard.interval_input.value = 30
     dashboard.on_interval_update(types.SimpleNamespace(new=30))
     assert dashboard.first_packet_input.value == 25
+
+
+def test_first_interval_matches_poisson():
+    seed = 123
+    sim = Simulator(
+        num_nodes=1,
+        num_gateways=1,
+        transmission_mode="Random",
+        packet_interval=5.0,
+        first_packet_interval=10.0,
+        packets_to_send=2,
+        mobility=False,
+        pure_poisson_mode=True,
+        seed=seed,
+    )
+    from traffic.rng_manager import RngManager
+    from traffic.exponential import sample_interval
+
+    rng = RngManager((seed or 0) ^ 3091881735).get_stream("traffic", 0)
+    expected_first = sample_interval(5.0, rng)
+    expected_second = expected_first + sample_interval(5.0, rng)
+
+    sim.run()
+    times = [e["poisson_time"] for e in sim.nodes[0].interval_log]
+    assert times[0] == pytest.approx(expected_first)
+    assert times[1] == pytest.approx(expected_second)
