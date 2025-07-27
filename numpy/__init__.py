@@ -2,7 +2,17 @@
 
 from . import random
 
-__all__ = ["random", "array", "zeros", "linspace", "diff", "histogram"]
+__all__ = [
+    "random",
+    "array",
+    "zeros",
+    "linspace",
+    "diff",
+    "histogram",
+    "isscalar",
+    "asarray",
+    "ndarray",
+]
 
 
 def array(obj, dtype=None):
@@ -47,3 +57,24 @@ def histogram(a, bins=10):
             idx -= 1
         hist[idx] += 1
     return hist, edges
+
+
+# Compatibility helpers for ``pytest`` which expects a few ``numpy`` APIs.
+class ndarray(list):
+    """Minimal stand‑in for :class:`numpy.ndarray`."""
+
+
+def asarray(obj):
+    """Return a list representation of *obj* as an ``ndarray``."""
+    if isinstance(obj, ndarray):
+        return obj
+    return ndarray(array(obj))
+
+
+def isscalar(obj) -> bool:
+    """Return ``True`` if *obj* behaves like a scalar value."""
+    return not isinstance(obj, (list, tuple, dict, set, ndarray))
+
+
+# Alias used by ``pytest`` when checking for numpy booleans.
+bool_ = bool
