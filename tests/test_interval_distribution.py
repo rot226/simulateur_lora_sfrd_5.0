@@ -1,6 +1,7 @@
 import numpy as np
 import pytest
 import math
+import scipy.stats
 
 from traffic.exponential import sample_interval
 
@@ -42,3 +43,14 @@ def test_interval_distribution_cv(seed: int) -> None:
     std = math.sqrt(variance)
     cv = std / mean
     assert abs(cv - 1.0) < 0.02
+
+
+@pytest.mark.parametrize("seed", range(10))
+def test_interval_distribution_ks(seed: int) -> None:
+    """``sample_interval`` should match an exponential distribution."""
+
+    mean_interval = 10.0
+    rng = np.random.Generator(np.random.MT19937(seed))
+    samples = [sample_interval(mean_interval, rng) for _ in range(10_000)]
+    statistic, pvalue = scipy.stats.kstest(samples, "expon", args=(0, mean_interval))
+    assert pvalue >= 0.05
