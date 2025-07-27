@@ -1,21 +1,28 @@
 import math
-import random
+import numpy as np
 from .omnet_model import OmnetModel
 
 
 class _CorrelatedValue:
     """Correlated random walk used for optional impairments."""
 
-    def __init__(self, mean: float, std: float, correlation: float) -> None:
+    def __init__(
+        self,
+        mean: float,
+        std: float,
+        correlation: float,
+        rng: np.random.Generator | None = None,
+    ) -> None:
         self.mean = mean
         self.std = std
         self.corr = correlation
         self.value = mean
+        self.rng = rng or np.random.Generator(np.random.MT19937())
 
     def sample(self) -> float:
         self.value = self.corr * self.value + (1.0 - self.corr) * self.mean
         if self.std > 0.0:
-            self.value += random.gauss(0.0, self.std)
+            self.value += self.rng.normal(0.0, self.std)
         return self.value
 
 class Channel:
@@ -118,6 +125,7 @@ class Channel:
         region: str | None = None,
         channel_index: int = 0,
         orthogonal_sf: bool = True,
+        rng: np.random.Generator | None = None,
     ):
         """
         Initialise le canal radio avec paramètres de propagation.
@@ -229,6 +237,7 @@ class Channel:
             self.region = None
             self.channel_index = channel_index
 
+        self.rng = rng or np.random.Generator(np.random.MT19937())
         self.frequency_hz = frequency_hz
         self.path_loss_exp = path_loss_exp
         self.shadowing_std = shadowing_std  # σ en dB (ex: 6.0 pour environnement urbain/suburbain)
@@ -284,14 +293,16 @@ class Channel:
             temperature_K=temperature_K,
         )
         self._temperature = _CorrelatedValue(
-            temperature_K, temperature_std_K, fading_correlation
+            temperature_K, temperature_std_K, fading_correlation, rng=self.rng
         )
-        self._phase_noise = _CorrelatedValue(0.0, phase_noise_std_dB, fading_correlation)
+        self._phase_noise = _CorrelatedValue(
+            0.0, phase_noise_std_dB, fading_correlation, rng=self.rng
+        )
         self._pa_nl = _CorrelatedValue(
-            pa_non_linearity_dB, pa_non_linearity_std_dB, fading_correlation
+            pa_non_linearity_dB, pa_non_linearity_std_dB, fading_correlation, rng=self.rng
         )
         self._humidity = _CorrelatedValue(
-            humidity_percent, humidity_std_percent, fading_correlation
+            humidity_percent, humidity_std_percent, fading_correlation, rng=self.rng
         )
         self.fine_fading_std = fine_fading_std
         self.fading_correlation = fading_correlation
@@ -366,8 +377,8 @@ class Channel:
             elif self.adjacent_interference_dB > 0 and diff <= half + self.bandwidth:
                 noise += max(power - self.adjacent_interference_dB, 0.0)
         if self.noise_floor_std > 0:
-            noise += random.gauss(0, self.noise_floor_std)
-        if self.impulsive_noise_prob > 0.0 and random.random() < self.impulsive_noise_prob:
+            noise += self.rng.normal(0, self.noise_floor_std)
+        if self.impulsive_noise_prob > 0.0 and self.rng.random() < self.impulsive_noise_prob:
             noise += self.impulsive_noise_dB
         return noise
 
@@ -409,7 +420,7 @@ class Channel:
             )
         loss = self.path_loss(distance)
         if self.shadowing_std > 0 and not getattr(self, "flora_phy", None):
-            loss += random.gauss(0, self.shadowing_std)
+            loss += self.rng.normal(0, self.shadowing_std)
 
         tx_power_dBm += self._pa_nl.sample()
         # RSSI = P_tx + gains antennes - pertes - pertes câble
@@ -421,13 +432,13 @@ class Channel:
             - self.cable_loss_dB
         )
         if self.tx_power_std > 0:
-            rssi += random.gauss(0, self.tx_power_std)
+            rssi += self.rng.normal(0, self.tx_power_std)
         if self.fast_fading_std > 0:
-            rssi += random.gauss(0, self.fast_fading_std)
+            rssi += self.rng.normal(0, self.fast_fading_std)
         if self.multipath_taps > 1:
             rssi += self._multipath_fading_db()
         if self.time_variation_std > 0:
-            rssi += random.gauss(0, self.time_variation_std)
+            rssi += self.rng.normal(0, self.time_variation_std)
         rssi += self.omnet.fine_fading()
         rssi += self.rssi_offset_dB
         if freq_offset_hz is None:
@@ -437,7 +448,7 @@ class Channel:
             sync_offset_s = self.sync_offset_s
         sync_offset_s += self.omnet.clock_drift()
         if self.clock_jitter_std_s > 0.0:
-            sync_offset_s += random.gauss(0.0, self.clock_jitter_std_s)
+            sync_offset_s += self.rng.normal(0.0, self.clock_jitter_std_s)
 
         rssi -= self._filter_attenuation_db(freq_offset_hz)
 
@@ -476,8 +487,8 @@ class Channel:
         """Return a fading value in dB based on multiple Rayleigh paths."""
         if self.multipath_taps <= 1:
             return 0.0
-        i = sum(random.gauss(0.0, 1.0) for _ in range(self.multipath_taps))
-        q = sum(random.gauss(0.0, 1.0) for _ in range(self.multipath_taps))
+        i = sum(self.rng.normal(0.0, 1.0) for _ in range(self.multipath_taps))
+        q = sum(self.rng.normal(0.0, 1.0) for _ in range(self.multipath_taps))
         amp = math.sqrt(i * i + q * q) / math.sqrt(self.multipath_taps)
         return 20 * math.log10(max(amp, 1e-12))
 

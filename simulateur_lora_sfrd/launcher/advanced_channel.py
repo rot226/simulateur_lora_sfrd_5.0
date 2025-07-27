@@ -3,19 +3,27 @@
 from __future__ import annotations
 
 import math
-import random
+import numpy as np
 
 
 class _CorrelatedFading:
     """Temporal correlation for Rayleigh/Rician fading with multiple taps."""
 
-    def __init__(self, kind: str, k_factor: float, correlation: float, paths: int = 1) -> None:
+    def __init__(
+        self,
+        kind: str,
+        k_factor: float,
+        correlation: float,
+        paths: int = 1,
+        rng: np.random.Generator | None = None,
+    ) -> None:
         self.kind = kind
         self.k = k_factor
         self.corr = correlation
         self.paths = max(1, int(paths))
         self.i = [0.0] * self.paths
         self.q = [0.0] * self.paths
+        self.rng = rng or np.random.Generator(np.random.MT19937())
 
     def sample_db(self) -> float:
         if self.kind not in {"rayleigh", "rician"}:
@@ -31,8 +39,8 @@ class _CorrelatedFading:
         sum_i = 0.0
         sum_q = 0.0
         for p in range(self.paths):
-            self.i[p] = self.corr * self.i[p] + std * random.gauss(mean_i, sigma)
-            self.q[p] = self.corr * self.q[p] + std * random.gauss(0.0, sigma)
+            self.i[p] = self.corr * self.i[p] + std * self.rng.normal(mean_i, sigma)
+            self.q[p] = self.corr * self.q[p] + std * self.rng.normal(0.0, sigma)
             sum_i += self.i[p]
             sum_q += self.q[p]
         amp = math.sqrt(sum_i ** 2 + sum_q ** 2) / self.paths
@@ -42,16 +50,23 @@ class _CorrelatedFading:
 class _CorrelatedValue:
     """Correlated random walk used for drifting offsets."""
 
-    def __init__(self, mean: float, std: float, correlation: float) -> None:
+    def __init__(
+        self,
+        mean: float,
+        std: float,
+        correlation: float,
+        rng: np.random.Generator | None = None,
+    ) -> None:
         self.mean = mean
         self.std = std
         self.corr = correlation
         self.value = mean
+        self.rng = rng or np.random.Generator(np.random.MT19937())
 
     def sample(self) -> float:
         self.value = self.corr * self.value + (1.0 - self.corr) * self.mean
         if self.std > 0.0:
-            self.value += random.gauss(0.0, self.std)
+            self.value += self.rng.normal(0.0, self.std)
         return self.value
 
 
@@ -109,6 +124,7 @@ class AdvancedChannel:
         cost231_correction_dB: float = 0.0,
         okumura_hata_correction_dB: float = 0.0,
         modem_snr_offsets: dict[str, float] | None = None,
+        rng: np.random.Generator | None = None,
         **kwargs,
     ) -> None:
         """Initialise the advanced channel with optional propagation models.
@@ -199,6 +215,7 @@ class AdvancedChannel:
 
         from .channel import Channel
 
+        self.rng = rng or np.random.Generator(np.random.MT19937())
         self.base = Channel(
             fine_fading_std=fine_fading_std,
             fading_correlation=fading_correlation,
@@ -209,6 +226,7 @@ class AdvancedChannel:
             humidity_noise_coeff_dB=humidity_noise_coeff_dB,
             frontend_filter_order=frontend_filter_order,
             frontend_filter_bw=frontend_filter_bw,
+            rng=self.rng,
             **kwargs,
         )
         self.base_station_height = base_station_height
@@ -217,14 +235,17 @@ class AdvancedChannel:
         self.fading = fading
         self.rician_k = rician_k
         self.fading_model = _CorrelatedFading(
-            fading, rician_k, fading_correlation, paths=multipath_paths
+            fading, rician_k, fading_correlation, paths=multipath_paths, rng=self.rng
         )
         self.terrain = terrain.lower()
         self.weather_loss_dB_per_km = weather_loss_dB_per_km
         if weather_correlation is None:
             weather_correlation = fading_correlation
         self._weather_loss = _CorrelatedValue(
-            weather_loss_dB_per_km, weather_loss_std_dB_per_km, weather_correlation
+            weather_loss_dB_per_km,
+            weather_loss_std_dB_per_km,
+            weather_correlation,
+            rng=self.rng,
         )
         self.frequency_offset_hz = frequency_offset_hz
         self.freq_offset_std_hz = freq_offset_std_hz
@@ -232,16 +253,17 @@ class AdvancedChannel:
         self.sync_offset_std_s = sync_offset_std_s
         self.clock_jitter_std_s = clock_jitter_std_s
         self._freq_offset = _CorrelatedValue(
-            frequency_offset_hz, freq_offset_std_hz, fading_correlation
+            frequency_offset_hz, freq_offset_std_hz, fading_correlation, rng=self.rng
         )
         self._sync_offset = _CorrelatedValue(
-            sync_offset_s, sync_offset_std_s, fading_correlation
+            sync_offset_s, sync_offset_std_s, fading_correlation, rng=self.rng
         )
         self._tx_power_var = _CorrelatedValue(0.0, self.base.tx_power_std, fading_correlation)
         self._dev_freq_offset = _CorrelatedValue(
             dev_frequency_offset_hz,
             dev_freq_offset_std_hz,
             fading_correlation,
+            rng=self.rng,
         )
         self.indoor_n_floors = int(indoor_n_floors)
         self.indoor_floor_loss_dB = float(indoor_floor_loss_dB)
@@ -249,24 +271,28 @@ class AdvancedChannel:
             self.base.omnet.temperature_K,
             temperature_std_K,
             fading_correlation,
+            rng=self.rng,
         )
         self._pa_nl = _CorrelatedValue(
             pa_non_linearity_dB,
             pa_non_linearity_std_dB,
             fading_correlation,
+            rng=self.rng,
         )
-        self._pa_distortion = _CorrelatedValue(0.0, pa_distortion_std_dB, fading_correlation)
+        self._pa_distortion = _CorrelatedValue(0.0, pa_distortion_std_dB, fading_correlation, rng=self.rng)
         self.pa_non_linearity_curve = pa_non_linearity_curve
         self._humidity = _CorrelatedValue(
             humidity_percent,
             humidity_std_percent,
             fading_correlation,
+            rng=self.rng,
         )
-        self._phase_noise = _CorrelatedValue(0.0, phase_noise_std_dB, fading_correlation)
+        self._phase_noise = _CorrelatedValue(0.0, phase_noise_std_dB, fading_correlation, rng=self.rng)
         self._phase_offset = _CorrelatedValue(
             phase_offset_rad,
             phase_offset_std_rad,
             fading_correlation,
+            rng=self.rng,
         )
         self.tx_start_delay_s = float(tx_start_delay_s)
         self.rx_start_delay_s = float(rx_start_delay_s)
@@ -541,7 +567,7 @@ class AdvancedChannel:
         # Include short-term clock jitter
         sync_offset_s += self.base.omnet.clock_drift()
         if self.clock_jitter_std_s > 0.0:
-            sync_offset_s += random.gauss(0.0, self.clock_jitter_std_s)
+            sync_offset_s += self.rng.normal(0.0, self.clock_jitter_std_s)
 
         height_diff = None
         if tx_pos is not None and rx_pos is not None and len(tx_pos) >= 3 and len(rx_pos) >= 3:
@@ -553,7 +579,7 @@ class AdvancedChannel:
                 return -float("inf"), -float("inf")
             loss += extra
         if self.base.shadowing_std > 0:
-            loss += random.gauss(0, self.base.shadowing_std)
+            loss += self.rng.normal(0, self.base.shadowing_std)
 
         tx_power_dBm += self._pa_nl.sample()
         tx_power_dBm += self._pa_distortion.sample()
@@ -572,9 +598,9 @@ class AdvancedChannel:
         if self.base.tx_power_std > 0:
             rssi += self._tx_power_var.sample()
         if self.base.fast_fading_std > 0:
-            rssi += random.gauss(0, self.base.fast_fading_std)
+            rssi += self.rng.normal(0, self.base.fast_fading_std)
         if self.base.time_variation_std > 0:
-            rssi += random.gauss(0, self.base.time_variation_std)
+            rssi += self.rng.normal(0, self.base.time_variation_std)
         rssi += self.base.omnet.fine_fading()
 
         temperature = self._temperature.sample()
@@ -600,8 +626,8 @@ class AdvancedChannel:
             elif self.base.adjacent_interference_dB > 0 and diff <= half + self.base.bandwidth:
                 noise += max(power - self.base.adjacent_interference_dB, 0.0)
         if self.base.noise_floor_std > 0:
-            noise += random.gauss(0, self.base.noise_floor_std)
-        if self.base.impulsive_noise_prob > 0.0 and random.random() < self.base.impulsive_noise_prob:
+            noise += self.rng.normal(0, self.base.noise_floor_std)
+        if self.base.impulsive_noise_prob > 0.0 and self.rng.random() < self.base.impulsive_noise_prob:
             noise += self.base.impulsive_noise_dB
         noise += model.noise_variation()
         rssi += self.fading_model.sample_db()

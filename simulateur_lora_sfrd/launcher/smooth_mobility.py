@@ -1,5 +1,5 @@
 import math
-import random
+import numpy as np
 
 
 def bezier_point(p0, p1, p2, p3, t):
@@ -22,15 +22,26 @@ def bezier_point(p0, p1, p2, p3, t):
 class SmoothMobility:
     """Smooth node mobility based on cubic Bezier interpolation."""
 
-    def __init__(self, area_size: float, min_speed: float = 2.0, max_speed: float = 10.0, step: float = 1.0):
+    def __init__(
+        self,
+        area_size: float,
+        min_speed: float = 2.0,
+        max_speed: float = 10.0,
+        step: float = 1.0,
+        *,
+        rng: np.random.Generator | None = None,
+    ):
         self.area_size = area_size
         self.min_speed = min_speed
         self.max_speed = max_speed
         self.step = step
+        self.rng = rng or np.random.Generator(np.random.MT19937())
 
     def assign(self, node):
         """Initialize path and speed for a node."""
-        node.speed = float(random.uniform(self.min_speed, self.max_speed))
+        node.speed = float(
+            self.min_speed + (self.max_speed - self.min_speed) * self.rng.random()
+        )
         node.path = self._generate_path(node.x, node.y)
         node.path_progress = 0.0
         node.path_duration = self._approx_length(node.path) / node.speed
@@ -39,12 +50,12 @@ class SmoothMobility:
     def _generate_path(self, x: float, y: float):
         start = (float(x), float(y))
         dest = (
-            random.random() * self.area_size,
-            random.random() * self.area_size,
+            self.rng.random() * self.area_size,
+            self.rng.random() * self.area_size,
         )
         offset = (
-            (random.random() - 0.5) * (self.area_size * 0.1),
-            (random.random() - 0.5) * (self.area_size * 0.1),
+            (self.rng.random() - 0.5) * (self.area_size * 0.1),
+            (self.rng.random() - 0.5) * (self.area_size * 0.1),
         )
         cp1 = (
             start[0] + (dest[0] - start[0]) / 3 + offset[0],

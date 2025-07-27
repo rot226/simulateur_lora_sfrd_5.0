@@ -1,6 +1,6 @@
 import json
 import math
-import random
+import numpy as np
 
 from pathlib import Path
 from typing import List, Tuple, Iterable
@@ -21,6 +21,7 @@ class PathMobility:
         max_height: float = 0.0,
         step: float = 1.0,
         dynamic_obstacles: Iterable[dict] | str | Path | None = None,
+        rng: np.random.Generator | None = None,
     ) -> None:
         self.area_size = float(area_size)
         self.path_map = path_map
@@ -46,6 +47,7 @@ class PathMobility:
             data = Path(dynamic_obstacles).read_text()
             dynamic_obstacles = json.loads(data)
         self.dynamic_obstacles = [dict(o) for o in (dynamic_obstacles or [])]
+        self.rng = rng or np.random.Generator(np.random.MT19937())
         self._last_obs_update = 0.0
 
     # ------------------------------------------------------------------
@@ -138,8 +140,8 @@ class PathMobility:
 
     def _random_free_cell(self) -> Tuple[int, int]:
         while True:
-            cx = random.randrange(self.cols)
-            cy = random.randrange(self.rows)
+            cx = self.rng.integers(self.cols)
+            cy = self.rng.integers(self.rows)
             if self.path_map[cy][cx] >= 0 and self._height_cell(cx, cy) <= self.max_height:
                 return cx, cy
 
@@ -154,7 +156,9 @@ class PathMobility:
 
     # ------------------------------------------------------------------
     def assign(self, node):
-        node.speed = float(random.uniform(self.min_speed, self.max_speed))
+        node.speed = float(
+            self.min_speed + (self.max_speed - self.min_speed) * self.rng.random()
+        )
         node.path = self._new_path(node.x, node.y)
         node.path_index = 0
         node.last_move_time = 0.0
