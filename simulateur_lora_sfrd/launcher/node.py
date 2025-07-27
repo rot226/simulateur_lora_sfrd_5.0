@@ -211,6 +211,7 @@ class Node:
         self.in_transmission: bool = False
         self.current_end_time: float | None = None
         self.last_airtime: float = 0.0
+        self.total_airtime: float = 0.0
         self.last_rssi: float | None = None
         self.last_snr: float | None = None
         self.downlink_pending: int = 0
@@ -301,6 +302,7 @@ class Node:
             "energy_sleep_J": self.energy_sleep,
             "energy_processing_J": self.energy_processing,
             "energy_consumed_J": self.energy_consumed,
+            "airtime_s": self.total_airtime,
             "battery_capacity_J": self.battery_capacity_j,
             "battery_remaining_J": self.battery_remaining_j,
             "packets_sent": self.packets_sent,
