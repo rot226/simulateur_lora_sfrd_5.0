@@ -6,6 +6,7 @@ import random
 import numpy as np
 
 from traffic.exponential import sample_interval
+from traffic.rng_manager import RngManager
 from pathlib import Path
 from dataclasses import dataclass
 
@@ -385,8 +386,10 @@ class Simulator:
 
         # Graine commune pour reproduire FLoRa (placement et tirages aléatoires)
         self.seed = seed
+        stream_hash = 3091881735
+        self.rng_manager = RngManager((self.seed or 0) ^ stream_hash)
         self.pos_rng = random.Random(self.seed)
-        self.interval_rng = np.random.Generator(np.random.MT19937(self.seed or 0))
+        self.interval_rng = self.rng_manager.get_stream("traffic", 0)
         if self.seed is not None:
             random.seed(self.seed)
 
@@ -494,6 +497,7 @@ class Simulator:
             )
             if self.mobility_enabled:
                 self.mobility_model.assign(node)
+            node.rng = self.rng_manager.get_stream("traffic", node_id)
             self.nodes.append(node)
 
         # Configurer le serveur réseau avec les références pour ADR

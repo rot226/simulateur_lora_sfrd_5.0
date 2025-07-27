@@ -285,8 +285,9 @@ def main(argv=None):
     if pre_args.config and Path(pre_args.config).is_file():
         cp = configparser.ConfigParser()
         cp.read(pre_args.config)
-        if cp.has_section("simulation") and "mean_interval" in cp["simulation"]:
-            parser.set_defaults(interval=float(cp["simulation"]["mean_interval"]))
+        if cp.has_section("simulation") and "mu_send" in cp["simulation"]:
+            mu = float(cp["simulation"]["mu_send"])
+            parser.set_defaults(interval=mu, first_interval=mu)
 
     args = parser.parse_args(argv)
 
