@@ -61,3 +61,32 @@ def test_strong_signal_arrives_late():
     gw.end_reception(2, server, 2)
 
     assert server.packets_received == 0
+
+
+def test_cross_sf_collision():
+    gw = Gateway(0, 0, 0)
+    server = NetworkServer()
+    server.gateways = [gw]
+
+    # Two packets on the same frequency with different SF collide
+    gw.start_reception(1, 1, 7, -60, 1.0, 6.0, 0.0, 868e6, orthogonal_sf=False)
+    gw.start_reception(2, 2, 9, -60, 1.0, 6.0, 0.0, 868e6, orthogonal_sf=False)
+    gw.end_reception(1, server, 1)
+    gw.end_reception(2, server, 2)
+
+    assert server.packets_received == 0
+
+
+def test_cross_sf_capture_after_delay():
+    gw = Gateway(0, 0, 0)
+    server = NetworkServer()
+    server.gateways = [gw]
+
+    # Strong signal starts first and should capture the weaker one
+    gw.start_reception(1, 1, 7, -50, 1.0, 6.0, 0.0, 868e6, orthogonal_sf=False)
+    # Weaker packet with higher SF starts after more than 5 of its symbols
+    gw.start_reception(2, 2, 9, -60, 1.0, 6.0, 0.03, 868e6, orthogonal_sf=False)
+    gw.end_reception(1, server, 1)
+    gw.end_reception(2, server, 2)
+
+    assert server.packets_received == 1
