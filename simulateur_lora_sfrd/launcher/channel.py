@@ -354,6 +354,15 @@ class Channel:
             self.flora_phy = FloraPHY(self, loss_model=self.flora_loss_model)
             self.omnet_phy = None
             self.advanced_capture = True
+        elif self.phy_model == "flora_cpp":
+            try:
+                from .flora_cpp import FloraCppPHY
+                self.flora_phy = FloraCppPHY()
+            except Exception:
+                from .flora_phy import FloraPHY
+                self.flora_phy = FloraPHY(self, loss_model=self.flora_loss_model)
+            self.omnet_phy = None
+            self.advanced_capture = True
         else:
             self.omnet_phy = None
             self.flora_phy = None
