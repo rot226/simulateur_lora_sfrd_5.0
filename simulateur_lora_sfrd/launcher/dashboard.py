@@ -187,13 +187,8 @@ detection_threshold_input.disabled = True
 min_interference_input = pn.widgets.FloatInput(
     name="Min interference (s)", value=5.0, step=0.1, start=0.0
 )
+# Pas de champ dédié pour le délai minimal avant le premier envoi
 min_interference_input.disabled = True
-# Affichage en lecture seule du délai minimal avant le premier envoi
-first_packet_delay_display = pn.widgets.FloatInput(
-    name="Délai 1er paquet (s)",
-    value=5.0 if flora_mode_toggle.value else 0.0,
-    disabled=True,
-)
 # --- Paramètres supplémentaires ---
 battery_capacity_input = pn.widgets.FloatInput(
     name="Capacité batterie (J)", value=0.0, step=10.0, start=0.0
@@ -733,7 +728,6 @@ def setup_simulation(seed_offset: int = 0):
         phy_model="flora" if flora_mode_toggle.value else "omnet",
     )
 
-    first_packet_delay_display.value = sim.first_packet_min_delay
 
     if config_path:
         try:
@@ -1231,7 +1225,6 @@ def on_flora_toggle(event):
         detection_threshold_input.value = -110.0
         # En mode FLoRa, la durée minimale d'interférence est fixée à 5 s
         min_interference_input.value = 5.0
-        first_packet_delay_display.value = 5.0
         detection_threshold_input.disabled = True
         min_interference_input.disabled = True
         flora_mode_toggle.button_type = "primary"
@@ -1239,7 +1232,6 @@ def on_flora_toggle(event):
         detection_threshold_input.disabled = False
         min_interference_input.disabled = False
         flora_mode_toggle.button_type = "default"
-        first_packet_delay_display.value = 0.0
 
 flora_mode_toggle.param.watch(on_flora_toggle, "value")
 
@@ -1291,7 +1283,6 @@ controls = pn.WidgetBox(
     flora_mode_toggle,
     detection_threshold_input,
     min_interference_input,
-    first_packet_delay_display,
     battery_capacity_input,
     payload_size_input,
     node_class_select,
