@@ -47,3 +47,6 @@ Ce document résume les différences entre la simulation FLoRa d'origine
   supplémentaires qui n’existent pas dans FLoRa.
 - Les algorithmes ADR ne prennent pas en compte exactement les mêmes
   seuils, entraînant des évolutions de SF ou de puissance différentes.
+- Le compteur `adr_ack_cnt` est désormais remis à zéro à chaque downlink
+  et la montée en SF ou puissance suit la logique LoRaWAN après
+  `adr_ack_limit + adr_ack_delay` transmissions sans réponse.
