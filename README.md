@@ -566,6 +566,13 @@ run :
 python examples/analyse_runs.py résultats.csv
 ```
 
+Deux autres scripts facilitent la visualisation des métriques exportées :
+
+```bash
+python examples/plot_sf_distribution.py metrics1.csv  # histogramme des SF
+python examples/plot_energy.py metrics1.csv           # énergie totale ou par nœud
+```
+
 ## Nettoyage des résultats
 
 Le script `launcher/clean_results.py` supprime les doublons et les valeurs
