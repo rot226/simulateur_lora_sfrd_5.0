@@ -309,9 +309,12 @@ class Simulator:
                 for ch in self.multichannel.channels:
                     if getattr(ch, "environment", None) is None:
                         ch.environment = "flora"
-                        ch.path_loss_exp, ch.shadowing_std = Channel.ENV_PRESETS[
-                            "flora"
-                        ]
+                        (
+                            ch.path_loss_exp,
+                            ch.shadowing_std,
+                            ch.path_loss_d0,
+                            ch.reference_distance,
+                        ) = Channel.ENV_PRESETS["flora"]
         else:
             if channels is None:
                 env = "flora" if (flora_mode or phy_model.startswith("flora")) else None
@@ -336,9 +339,12 @@ class Simulator:
                             ch, "environment", None
                         ) is None:
                             ch.environment = "flora"
-                            ch.path_loss_exp, ch.shadowing_std = Channel.ENV_PRESETS[
-                                "flora"
-                            ]
+                            (
+                                ch.path_loss_exp,
+                                ch.shadowing_std,
+                                ch.path_loss_d0,
+                                ch.reference_distance,
+                            ) = Channel.ENV_PRESETS["flora"]
                         ch_list.append(ch)
                     else:
                         ch_list.append(
