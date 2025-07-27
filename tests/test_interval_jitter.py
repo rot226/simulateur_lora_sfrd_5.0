@@ -6,7 +6,7 @@ from simulateur_lora_sfrd.launcher.node import Node
 def test_jitter_multiplier():
     rng = np.random.Generator(np.random.MT19937(0))
     node = Node(0, 0, 0, 7, 20)
-    node.ensure_poisson_arrivals(10.0, rng, 1.0, variation=0.5, limit=1)
+    node.ensure_poisson_arrivals(10.0, 1.0, rng, variation=0.5, limit=1)
     delta = node.arrival_queue[0]
 
     rng2 = np.random.Generator(np.random.MT19937(0))

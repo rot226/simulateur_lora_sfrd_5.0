@@ -17,8 +17,8 @@ def test_node_poisson_assert():
     rng = np.random.Generator(np.random.MT19937(0))
     node = Node(0, 0, 0, 7, 20)
     with pytest.raises(AssertionError):
-        node.ensure_poisson_arrivals(10.0, rng, -5.0)
+        node.ensure_poisson_arrivals(10.0, -5.0, rng)
     with pytest.raises(AssertionError):
-        node.ensure_poisson_arrivals(10.0, rng, 5)
+        node.ensure_poisson_arrivals(10.0, 5, rng)
     with pytest.raises(AssertionError):
-        node.ensure_poisson_arrivals(10.0, rng, 5.0, variation=-1.0)
+        node.ensure_poisson_arrivals(10.0, 5.0, rng, variation=-1.0)

@@ -403,8 +403,8 @@ class Node:
     def ensure_poisson_arrivals(
         self,
         up_to: float,
-        rng: "np.random.Generator",
         mean_interval: float,
+        rng: "np.random.Generator | None" = None,
         min_interval: float = 0.0,
         variation: float = 0.0,
         limit: int | None = None,
@@ -417,6 +417,11 @@ class Node:
         next transmission to occur after the previous airtime. ``variation``
         applies a multiplicative jitter factor to each accepted interval.
         """
+        if rng is None:
+            rng = self.rng
+        assert isinstance(rng, np.random.Generator) and isinstance(
+            rng.bit_generator, np.random.MT19937
+        ), "rng must be numpy.random.Generator using MT19937"
         assert isinstance(mean_interval, float) and mean_interval > 0, (
             "mean_interval must be positive float"
         )
@@ -463,9 +468,9 @@ class Node:
 
     def precompute_poisson_arrivals(
         self,
-        rng: "np.random.Generator",
         mean_interval: float,
         count: int,
+        rng: "np.random.Generator | None" = None,
         *,
         variation: float = 0.0,
     ) -> None:
@@ -479,8 +484,8 @@ class Node:
         self._arrival_index = 0
         self.ensure_poisson_arrivals(
             float("inf"),
-            rng,
             mean_interval,
+            rng,
             min_interval=0.0,
             variation=variation,
             limit=count,

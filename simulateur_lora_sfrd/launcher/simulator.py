@@ -537,16 +537,16 @@ class Simulator:
                             "lock_step_poisson requires packets_to_send > 0"
                         )
                     node.precompute_poisson_arrivals(
-                        self.interval_rng,
                         self.packet_interval,
                         self.packets_to_send,
+                        self.interval_rng,
                         variation=self.interval_variation,
                     )
                 else:
                     node.ensure_poisson_arrivals(
                         node.last_tx_time,
-                        self.interval_rng,
                         self.first_packet_interval,
+                        self.interval_rng,
                         min_interval=max(
                             node.last_airtime, self.first_packet_min_delay
                         ),
@@ -937,8 +937,8 @@ class Simulator:
                         if not self.lock_step_poisson:
                             node.ensure_poisson_arrivals(
                                 node.last_tx_time,
-                                self.interval_rng,
                                 self.packet_interval,
+                                self.interval_rng,
                                 variation=self.interval_variation,
                                 limit=(
                                     self.packets_to_send

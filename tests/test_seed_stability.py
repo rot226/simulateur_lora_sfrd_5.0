@@ -9,7 +9,7 @@ def _intervals_hash(seed: int, mean_interval: float = 1.0, count: int = 10000) -
     rng = RngManager(seed).get_stream("traffic", 0)
     node = Node(0, 0, 0, 7, 14)
     node.ensure_poisson_arrivals(
-        1e9, rng, mean_interval, min_interval=0.0, limit=count
+        1e9, mean_interval, rng, min_interval=0.0, limit=count
     )
     h = hashlib.sha256()
     last = 0.0
