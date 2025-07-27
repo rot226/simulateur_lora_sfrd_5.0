@@ -1,6 +1,7 @@
 import numpy as np
 import pytest
 import math
+from scipy import stats
 
 from traffic.exponential import sample_interval
 
@@ -68,6 +69,16 @@ def test_interval_distribution_ks(seed: int) -> None:
     samples = [sample_interval(mean_interval, rng) for _ in range(count)]
     p = _ks_p_value(samples, mean_interval)
     assert p > 0.05
+
+@pytest.mark.parametrize("seed", range(10))
+def test_interval_distribution_kstest(seed: int) -> None:
+    mean_interval = 10.0
+    count = 10_000
+    rng = np.random.Generator(np.random.MT19937(seed))
+    samples = [sample_interval(mean_interval, rng) for _ in range(count)]
+    statistic, p = stats.kstest(samples, "expon", args=(0, mean_interval))
+    assert p >= 0.05
+
 
 
 def test_sample_interval_seed_reproducibility() -> None:
