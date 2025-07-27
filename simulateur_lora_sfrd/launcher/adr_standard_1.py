@@ -3,6 +3,7 @@ from __future__ import annotations
 from .simulator import Simulator
 from . import server
 from .advanced_channel import AdvancedChannel
+from .lorawan import TX_POWER_INDEX_TO_DBM
 
 # ---------------------------------------------------------------------------
 # Default parameters used when degrading channels to a more realistic model.
@@ -48,8 +49,10 @@ def apply(sim: Simulator, *, degrade_channel: bool = False) -> None:
     for node in sim.nodes:
         node.sf = 12
         node.initial_sf = 12
-        node.tx_power = 14.0
-        node.initial_tx_power = 14.0
+        # FLoRa uses 2 dBm as the minimum transmit power (index 6)
+        min_tx_power = TX_POWER_INDEX_TO_DBM[max(TX_POWER_INDEX_TO_DBM.keys())]
+        node.tx_power = min_tx_power
+        node.initial_tx_power = min_tx_power
         node.adr_ack_cnt = 0
         node.adr_ack_limit = 64
         node.adr_ack_delay = 32
