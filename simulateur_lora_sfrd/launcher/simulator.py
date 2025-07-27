@@ -883,34 +883,10 @@ class Simulator:
 
             # Gestion Adaptive Data Rate (ADR)
             if self.adr_node:
-                # Calculer la marge ADR sur les 20 derniers paquets
-                snr_values = [e["snr"] for e in node.history if e["snr"] is not None]
-                margin_val = None
-                if len(node.history) >= 20 and snr_values:
-                    max_snr = max(snr_values)
-                    # Marge = meilleur SNR - SNR minimal requis (pour SF actuel) - marge d'installation
-                    margin_val = (
-                        max_snr
-                        - Simulator.REQUIRED_SNR.get(node.sf, 0.0)
-                        - Simulator.MARGIN_DB
-                    )
-                # Vérifier déclenchement d'une requête ADR
-                if margin_val is not None and margin_val < 0:
-                    if self.adr_server:
-                        # Lien de mauvaise qualité – augmenter la portée uniquement
-                        if node.sf < 12:
-                            node.sf += 1
-                        elif node.tx_power < 20.0:
-                            node.tx_power = min(20.0, node.tx_power + 3.0)
-                        node.history.clear()
-                        logger.debug(
-                            f"ADR ajusté pour le nœud {node.id}: nouveau SF={node.sf}, TxPower={node.tx_power:.1f} dBm"
-                        )
-                    else:
-                        logger.debug(
-                            f"Requête ADR du nœud {node.id} ignorée (ADR serveur désactivé)."
-                        )
-
+                # Only track history here; the actual adaptation now relies on
+                # the standard adr_ack_cnt mechanism implemented in :class:`Node`.
+                pass
+                
             # Planifier retransmissions restantes ou prochaine émission
             if node._nb_trans_left > 0:
                 self.retransmissions += 1

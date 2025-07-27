@@ -432,8 +432,9 @@ peuvent mettre en file d'attente des downlinks via `NetworkServer.send_downlink`
 Depuis cette version, la gestion ADR suit la spécification LoRaWAN : en plus des
 commandes `LinkADRReq`/`LinkADRAns`, les bits `ADRACKReq` et `ADR` sont pris en
 charge, le `ChMask` et le `NbTrans` influencent réellement les transmissions,
-le compteur `adr_ack_cnt` respecte le délai `ADR_ACK_DELAY` et le serveur
-répond automatiquement lorsqu'un équipement sollicite `ADRACKReq`. Cette
+le compteur `adr_ack_cnt` respecte le délai `ADR_ACK_DELAY`, est remis à zéro
+à chaque downlink et le serveur répond automatiquement lorsqu'un équipement
+sollicite `ADRACKReq`. Cette
 implémentation est complète et directement inspirée du modèle FLoRa,
 adaptée ici sous une forme plus légère sans OMNeT++.
 
