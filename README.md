@@ -201,6 +201,9 @@ scénarios FLoRa. Voici la liste complète des options :
 - `beacon_interval` : durée séparant deux beacons pour la classe B (s).
 - `ping_slot_interval` : intervalle de base entre ping slots successifs (s).
 - `ping_slot_offset` : délai après le beacon avant le premier ping slot (s).
+- `dump_intervals` : conserve l'historique des dates Poisson et effectives.
+  La méthode `dump_interval_logs()` écrit un fichier Parquet par nœud pour
+  analyser la planification finale et vérifier empiriquement la loi exponentielle.
 
 ## Paramètres radio avancés
 
@@ -651,6 +654,11 @@ python examples/run_basic.py          # simulation rapide avec 20 nœuds
 python examples/run_basic.py --dump-intervals  # exporte les intervalles
 python examples/run_flora_example.py  # reproduction d'un scénario FLoRa
 ```
+
+L'option `--dump-intervals` active `dump_interval_logs` : un fichier Parquet est
+généré pour chaque nœud avec la date Poisson attendue et l'instant réel de
+transmission. Ces traces permettent de vérifier empiriquement la distribution
+des arrivées.
 
 Les utilitaires `analyse_resultats.py` et `analyse_runs.py` aident à traiter les
 fichiers CSV produits par `run.py` ou par le tableau de bord.
