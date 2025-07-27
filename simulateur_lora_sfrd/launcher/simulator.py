@@ -659,6 +659,7 @@ class Simulator:
             # Durée de la transmission
             duration = node.channel.airtime(sf, payload_size=self.payload_size_bytes)
             node.last_airtime = duration
+            node.total_airtime += duration
             end_time = time + duration
             if self.duty_cycle_manager and not self.pure_poisson_mode:
                 self.duty_cycle_manager.update_after_tx(node_id, time, duration)
@@ -1232,6 +1233,9 @@ class Simulator:
             for ct in class_types
         }
 
+        energy_by_node = {n.id: n.energy_consumed for n in self.nodes}
+        airtime_by_node = {n.id: n.total_airtime for n in self.nodes}
+
         interval_sum = 0.0
         interval_count = 0
         for n in self.nodes:
@@ -1273,6 +1277,8 @@ class Simulator:
             "pdr_by_sf": pdr_by_sf,
             "pdr_by_gateway": pdr_by_gateway,
             "pdr_by_class": pdr_by_class,
+            "energy_by_node": energy_by_node,
+            "airtime_by_node": airtime_by_node,
             **{f"energy_class_{ct}_J": energy_by_class[ct] for ct in energy_by_class},
             "retransmissions": self.retransmissions,
         }
