@@ -64,8 +64,6 @@ class Simulator:
     # Constantes ADR LoRaWAN standard
     REQUIRED_SNR = {7: -7.5, 8: -10.0, 9: -12.5, 10: -15.0, 11: -17.5, 12: -20.0}
     MARGIN_DB = 15.0  # marge d'installation en dB (typiquement 15 dB)
-    # Ancien seuil PER déclenchant l'ADR, désormais inutilisé
-    PER_THRESHOLD = 0.1
 
     def __init__(
         self,
