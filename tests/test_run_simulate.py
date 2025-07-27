@@ -1,6 +1,7 @@
 import pytest
 from simulateur_lora_sfrd.run import simulate, PAYLOAD_SIZE
 from traffic.rng_manager import RngManager
+from traffic.exponential import sample_interval
 
 
 def test_simulate_single_node_periodic():
@@ -49,3 +50,25 @@ def test_simulate_periodic_float_interval():
 def test_simulate_invalid_parameters(nodes, gateways, mode, interval, steps):
     with pytest.raises(ValueError):
         simulate(nodes, gateways, mode, interval, steps, rng_manager=RngManager(0))
+
+
+def test_simulate_random_no_rescale():
+    rng_manager = RngManager(0)
+    delivered, collisions, _, _, _, _ = simulate(
+        1,
+        1,
+        "Random",
+        10.0,
+        100,
+        rng_manager=rng_manager,
+    )
+
+    rng = RngManager(0).get_stream("traffic", 0)
+    expected = []
+    t = sample_interval(10.0, rng)
+    while t < 100:
+        expected.append(t)
+        t += sample_interval(10.0, rng)
+
+    assert collisions == 0
+    assert delivered == len(expected)

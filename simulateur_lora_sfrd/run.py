@@ -100,22 +100,6 @@ def simulate(
                 send_times[node].append(t)
                 t += sample_interval(interval, rng)
 
-    if mode_lower == "random" and first_interval is None:
-        total = 0.0
-        count = 0
-        for times in send_times.values():
-            last = 0.0
-            for t in times:
-                total += t - last
-                last = t
-                count += 1
-        if count:
-            observed = total / count
-            if abs(observed - interval) / interval > 0.05:
-                scale = interval / observed
-                for node, times in send_times.items():
-                    scaled = [t * scale for t in times if t * scale < steps]
-                    send_times[node] = scaled
 
     # Simulation pas à pas
     events: dict[float, list[int]] = {}
