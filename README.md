@@ -121,9 +121,11 @@ Plusieurs schémas supplémentaires peuvent être utilisés :
   de terrain et sur des obstacles dynamiques optionnels.
 - `PlannedRandomWaypoint` applique la même logique mais choisit un point d'arrivée
   aléatoire puis planifie un chemin en A* pour contourner un relief 3D ou des
-  obstacles fixes.
+  obstacles fixes. Une option `slope_limit` permet d'éviter les pentes trop fortes.
 - `TerrainMapMobility` permet désormais de suivre une carte rasterisée en
   pondérant la vitesse par cellule et en tenant compte d'obstacles 3D.
+- `PathMobility` et le planificateur A* acceptent également un `slope_limit`
+  pour ignorer les transitions dépassant une inclinaison donnée.
 - `GaussMarkov` et les traces GPS restent disponibles pour modéliser des
   mouvements plus spécifiques.
 

@@ -16,6 +16,8 @@ class TerrainMapMobility:
         elevation: List[List[float]] | None = None,
         obstacle_height_map: List[List[float]] | None = None,
         max_height: float = 0.0,
+        slope_scale: float = 0.1,
+        slope_limit: float | None = None,
         rng: np.random.Generator | None = None,
     ) -> None:
         self.area_size = float(area_size)
@@ -24,6 +26,8 @@ class TerrainMapMobility:
         self.max_speed = float(max_speed)
         self.rows = len(terrain)
         self.cols = len(terrain[0]) if self.rows else 0
+        self.slope_scale = float(slope_scale)
+        self.slope_limit = slope_limit
         self.elevation = elevation
         if elevation:
             self.e_rows = len(elevation)
@@ -45,6 +49,15 @@ class TerrainMapMobility:
         if val <= 0:
             return float("inf")
         return 1.0 / val
+
+    def _elevation_cell(self, cx: int, cy: int) -> float:
+        if not self.elevation or self.e_rows == 0 or self.e_cols == 0:
+            return 0.0
+        ex = int(cx / self.cols * self.e_cols)
+        ey = int(cy / self.rows * self.e_rows)
+        ex = min(max(ex, 0), self.e_cols - 1)
+        ey = min(max(ey, 0), self.e_rows - 1)
+        return float(self.elevation[ey][ex])
 
     def _height_cell(self, cx: int, cy: int) -> float:
         if not self.obstacle_height_map or self.h_rows == 0 or self.h_cols == 0:
@@ -87,6 +100,14 @@ class TerrainMapMobility:
             if 0 <= nx < self.cols and 0 <= ny < self.rows:
                 if self.terrain[ny][nx] > 0:
                     if self._height_cell(nx, ny) <= self.max_height:
+                        if self.slope_limit is not None and self.elevation:
+                            alt_a = self._elevation_cell(x, y)
+                            alt_b = self._elevation_cell(nx, ny)
+                            dist = math.hypot(dx, dy)
+                            if dist > 0:
+                                slope = (alt_b - alt_a) / dist
+                                if abs(slope) > self.slope_limit:
+                                    continue
                         yield nx, ny
 
     def _find_path(self, start: Tuple[int, int], goal: Tuple[int, int]):
@@ -105,7 +126,16 @@ class TerrainMapMobility:
                 return [self._cell_to_coord(c) for c in cells]
             open_set.remove(current)
             for nb in self._neighbors(current):
-                tentative_g = g_score[current] + self._speed_factor_cell(*nb)
+                cost = self._speed_factor_cell(*nb)
+                if self.elevation:
+                    alt_a = self._elevation_cell(*current)
+                    alt_b = self._elevation_cell(*nb)
+                    dist = math.hypot(nb[0] - current[0], nb[1] - current[1])
+                    if dist > 0:
+                        slope = (alt_b - alt_a) / dist
+                        if slope > 0:
+                            cost *= 1.0 + slope * self.slope_scale
+                tentative_g = g_score[current] + cost
                 if tentative_g < g_score.get(nb, float("inf")):
                     came_from[nb] = current
                     g_score[nb] = tentative_g
@@ -158,6 +188,19 @@ class TerrainMapMobility:
             node.x += dx * ratio
             node.y += dy * ratio
             distance -= move
+            if (
+                self.slope_limit is not None
+                and seg_len > 0
+                and abs(
+                    (self._elevation(dest_x, dest_y) - self._elevation(node.x, node.y))
+                    / seg_len
+                )
+                > self.slope_limit
+            ):
+                node.path = self._new_path(node.x, node.y)
+                node.path_index = 0
+                distance = 0
+                break
             if ratio >= 1.0:
                 node.path_index += 1
         if node.path_index >= len(node.path) - 1:
