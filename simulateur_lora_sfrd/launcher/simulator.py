@@ -64,10 +64,8 @@ class Simulator:
     # Constantes ADR LoRaWAN standard
     REQUIRED_SNR = {7: -7.5, 8: -10.0, 9: -12.5, 10: -15.0, 11: -17.5, 12: -20.0}
     MARGIN_DB = 15.0  # marge d'installation en dB (typiquement 15 dB)
-    # Ajustement pour réagir plus vite aux liaisons dégradées
-    # Une valeur plus basse améliore en général le PDR au prix de plus
-    # de transmissions et de réglages ADR plus fréquents
-    PER_THRESHOLD = 0.1  # Seuil de Packet Error Rate pour déclencher ADR
+    # Ancien seuil PER déclenchant l'ADR, désormais inutilisé
+    PER_THRESHOLD = 0.1
 
     def __init__(
         self,
@@ -885,17 +883,10 @@ class Simulator:
 
             # Gestion Adaptive Data Rate (ADR)
             if self.adr_node:
-                # Calculer le PER récent et la marge ADR
-                total_count = len(node.history)
-                success_count = sum(1 for e in node.history if e["delivered"])
-                per = (
-                    (total_count - success_count) / total_count
-                    if total_count > 0
-                    else 0.0
-                )
+                # Calculer la marge ADR sur les 20 derniers paquets
                 snr_values = [e["snr"] for e in node.history if e["snr"] is not None]
                 margin_val = None
-                if snr_values:
+                if len(node.history) >= 20 and snr_values:
                     max_snr = max(snr_values)
                     # Marge = meilleur SNR - SNR minimal requis (pour SF actuel) - marge d'installation
                     margin_val = (
@@ -904,9 +895,7 @@ class Simulator:
                         - Simulator.MARGIN_DB
                     )
                 # Vérifier déclenchement d'une requête ADR
-                if per > Simulator.PER_THRESHOLD or (
-                    margin_val is not None and margin_val < 0
-                ):
+                if margin_val is not None and margin_val < 0:
                     if self.adr_server:
                         # Lien de mauvaise qualité – augmenter la portée uniquement
                         if node.sf < 12:
