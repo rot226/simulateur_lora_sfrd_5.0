@@ -1,10 +1,17 @@
 import json
 from pathlib import Path
-from typing import Iterable, Union, List
+from typing import Iterable, Union, List, Any
 
 
-def load_map(source: Union[str, Path, Iterable[Iterable[float]]]) -> List[List[float]]:
-    """Load a 2D float matrix from a JSON file, plain text matrix or iterable.
+def _parse(value: Any) -> Any:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return value
+
+
+def load_map(source: Union[str, Path, Iterable[Iterable[Any]]]) -> List[List[Any]]:
+    """Load a 2D matrix from a JSON file, plain text matrix or iterable.
 
     ``source`` can be a path to a JSON file or a simple whitespace separated
     text file. It can also directly be an iterable of iterables of numbers.
@@ -18,9 +25,9 @@ def load_map(source: Union[str, Path, Iterable[Iterable[float]]]) -> List[List[f
         else:
             lines = [line.strip() for line in text.splitlines() if line.strip()]
             data = [
-                [float(v) for v in line.replace(",", " ").split()]
+                [_parse(v) for v in line.replace(",", " ").split()]
                 for line in lines
             ]
     else:
         data = [list(row) for row in source]
-    return [[float(v) for v in row] for row in data]
+    return [[_parse(v) for v in row] for row in data]
