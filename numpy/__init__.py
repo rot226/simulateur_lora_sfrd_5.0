@@ -2,7 +2,20 @@
 
 from . import random
 
-__all__ = ["random", "array", "zeros", "linspace", "diff", "histogram"]
+__all__ = [
+    "random",
+    "array",
+    "zeros",
+    "linspace",
+    "diff",
+    "histogram",
+    "isscalar",
+    "bool_",
+]
+
+__version__ = "0.0"
+
+bool_ = bool
 
 
 def array(obj, dtype=None):
@@ -47,3 +60,8 @@ def histogram(a, bins=10):
             idx -= 1
         hist[idx] += 1
     return hist, edges
+
+
+def isscalar(obj):
+    """Return ``True`` if ``obj`` looks like a scalar value."""
+    return not hasattr(obj, "__len__") or isinstance(obj, (str, bytes, bytearray))
