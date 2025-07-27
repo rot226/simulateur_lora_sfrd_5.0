@@ -21,7 +21,13 @@ class LoRaPHY:
         return self.channel.airtime(self.node.sf, payload_size)
 
     # ------------------------------------------------------------------
-    def transmit(self, dest: Node, payload_size: int) -> tuple[float, float, float, bool]:
+    def transmit(
+        self,
+        dest: Node,
+        payload_size: int,
+        *,
+        rng: random.Random | None = None,
+    ) -> tuple[float, float, float, bool]:
         """Simulate a transmission to ``dest``.
 
         Parameters
@@ -46,7 +52,8 @@ class LoRaPHY:
             sync_offset_s=self.node.current_sync_offset,
         )
         per = self.channel.packet_error_rate(snr, self.node.sf, payload_bytes=payload_size)
-        success = random.random() > per
+        rand = rng.random() if rng is not None else random.random()
+        success = rand > per
         return rssi, snr, self.airtime(payload_size), success
 
 
