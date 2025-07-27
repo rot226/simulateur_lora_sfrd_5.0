@@ -572,6 +572,18 @@ run :
 python examples/analyse_runs.py résultats.csv
 ```
 
+Deux autres utilitaires exploitent les fichiers `metrics_*.csv` exportés par le
+tableau de bord :
+
+```bash
+python examples/plot_sf_distribution.py metrics1.csv metrics2.csv
+python examples/plot_energy.py metrics.csv            # énergie totale
+python examples/plot_energy.py --per-node metrics.csv # par nœud
+```
+
+`plot_sf_distribution.py` génère `sf_distribution.png` alors que
+`plot_energy.py` crée `energy_total.png` ou `energy_per_node.png`.
+
 ## Calcul de l'airtime
 
 La durée d'un paquet LoRa est obtenue à partir de la formule théorique :
