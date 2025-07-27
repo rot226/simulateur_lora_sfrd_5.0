@@ -594,7 +594,11 @@ class Simulator:
         if not node.alive:
             return
         requested_time = time
-        if node.current_end_time is not None and time < node.current_end_time:
+        if (
+            not self.pure_poisson_mode
+            and node.current_end_time is not None
+            and time < node.current_end_time
+        ):
             time = node.current_end_time
             reason = "overlap"
         event_id = self.event_id_counter
@@ -946,7 +950,7 @@ class Simulator:
                         node._last_arrival_time = next_time
                     self.schedule_event(
                         node,
-                        max(next_time, self.current_time),
+                        next_time if self.pure_poisson_mode else max(next_time, self.current_time),
                         reason=(
                             "poisson"
                             if self.transmission_mode.lower() == "random"
