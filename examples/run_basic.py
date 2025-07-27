@@ -22,7 +22,7 @@ if __name__ == "__main__":
 
     sim = Simulator(
         num_nodes=args.nodes,
-        packet_interval=10,
+        packet_interval=10.0,
         transmission_mode="Random",
         adr_method="avg",
         dump_intervals=args.dump_intervals,
