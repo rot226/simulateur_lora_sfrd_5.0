@@ -83,9 +83,17 @@ class Gateway:
         """
         key = (sf, frequency)
         symbol_duration = (2 ** sf) / bandwidth
-        concurrent_transmissions = [
-            t for t in self.active_map.get(key, []) if t['end_time'] > current_time
-        ]
+        # Gather all active transmissions that share the same frequency. When
+        # ``orthogonal_sf`` is ``True`` we only consider the same SF. Otherwise
+        # we must look across all SFs on this frequency.
+        if orthogonal_sf:
+            candidates = self.active_map.get(key, [])
+        else:
+            candidates = []
+            for (sf_k, freq_k), txs in self.active_map.items():
+                if freq_k == frequency:
+                    candidates.extend(txs)
+        concurrent_transmissions = [t for t in candidates if t['end_time'] > current_time]
 
         # Filtrer les transmissions dont le chevauchement est significatif
         interfering_transmissions = []
@@ -234,8 +242,9 @@ class Gateway:
             # Retirer toutes les transmissions concurrentes actives qui sont perdantes
             for t in interfering_transmissions:
                 if t['lost_flag']:
+                    t_key = (t['sf'], t['frequency'])
                     try:
-                        self.active_map[key].remove(t)
+                        self.active_map[t_key].remove(t)
                         self.active_by_event.pop(t['event_id'], None)
                     except (ValueError, KeyError):
                         pass
@@ -257,8 +266,9 @@ class Gateway:
                 t['lost_flag'] = True
             # Retirer tous les paquets concurrents actifs (ils ne seront pas décodés finalement)
             for t in interfering_transmissions:
+                t_key = (t['sf'], t['frequency'])
                 try:
-                    self.active_map[key].remove(t)
+                    self.active_map[t_key].remove(t)
                     self.active_by_event.pop(t['event_id'], None)
                 except (ValueError, KeyError):
                     pass
