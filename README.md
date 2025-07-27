@@ -254,8 +254,7 @@ réception :
   `(freq, bw, dB)` appliqués au calcul du bruit.
 - `environment` : preset rapide pour le modèle de propagation
   (`urban`, `urban_dense`, `suburban`, `rural`, `indoor` ou `flora`).
-- `phy_model` : "omnet", "flora" ou "flora_full" pour utiliser un modèle physique avancé
-  reprenant les formules de FLoRa.
+- `phy_model` : "omnet", "flora", "flora_full" ou "flora_cpp" pour utiliser un modèle physique avancé reprenant les formules de FLoRa. Le mode `flora_cpp` charge la bibliothèque C++ compilée depuis FLoRa pour une précision accrue.
 - `use_flora_curves` : applique directement les équations FLoRa pour la
   puissance reçue et le taux d'erreur.
 
@@ -365,7 +364,7 @@ variance de shadowing correspondants. Les champs restent modifiables si ce mode
 est désactivé. Pour reproduire fidèlement les scénarios FLoRa d'origine, pensez
 également à renseigner les positions des nœuds telles qu'indiquées dans l'INI.
 L'équivalent en script consiste à passer `flora_mode=True` au constructeur `Simulator`.
-Lorsque `phy_model="flora" ou "flora_full"` est utilisé (par exemple en mode FLoRa), le preset
+Lorsque `phy_model="flora", "flora_full" ou "flora_cpp"` est utilisé (par exemple en mode FLoRa), le preset
 `environment="flora"` est désormais appliqué automatiquement afin de conserver
 un exposant de 2,7 et un shadowing de 3,57 dB identiques au modèle d'origine.
 
@@ -377,7 +376,7 @@ avec l'option `flora_mode=True`. Ce mode applique automatiquement :
 - un exposant de perte de parcours fixé à `2.7` ;
 - un shadowing de `σ = 3.57` dB ;
 - un seuil de détection d'environ `-110` dBm.
-- l'utilisation automatique des formules FLoRa (`phy_model="flora" ou "flora_full"`).
+- l'utilisation automatique des formules FLoRa (`phy_model="flora", "flora_full" ou "flora_cpp"`).
 - un intervalle moyen de `100` s appliqué si aucun intervalle n'est spécifié.
 
 `Simulator` interprète `packet_interval` et `first_packet_interval` comme les
@@ -405,7 +404,7 @@ PER = 1 / (1 + exp(2 * (snr - (th + 2))))
 
 où `th` est le seuil SNR par Spreading Factor ({7: -7.5, 8: -10, 9: -12.5,
 10: -15, 11: -17.5, 12: -20} dB). Ces équations sont activées en passant
-`phy_model="flora" ou "flora_full"` ou `use_flora_curves=True` au constructeur du `Channel`.
+`phy_model="flora", "flora_full" ou "flora_cpp"` ou `use_flora_curves=True` au constructeur du `Channel`.
 
 Le paramètre ``flora_loss_model`` permet de choisir parmi plusieurs modèles
 d'atténuation : ``"lognorm"`` (par défaut), ``"oulu"`` correspondant à
@@ -487,7 +486,7 @@ Pour des résultats plus proches du terrain, activez `fast_fading_std` et
 Le canal `Channel` applique par défaut un seuil de capture de **6 dB** : un
 signal plus fort peut être décodé en présence d'interférences s'il dépasse le
 plus faible d'au moins 6 dB et si ce signal domine pendant **cinq symboles de
-preambule** au minimum. Lorsque `phy_model` vaut `"flora"` ou `"flora_full"`, la
+preambule** au minimum. Lorsque `phy_model` vaut `"flora"`, `"flora_full"` ou `"flora_cpp"`, la
 décision reprend la matrice `nonOrthDelta` du simulateur FLoRa original ; la
 différence de puissance exigée dépend alors des Spreading Factors en présence.
 
@@ -526,6 +525,17 @@ cd ../flora-master
 make makefiles
 make -j$(nproc)
 ```
+
+Pour interfacer le simulateur Python avec la couche physique C++, construisez
+la bibliothèque partagée `libflora_phy.so` :
+
+```bash
+cd ../flora-master
+make libflora_phy.so
+```
+
+Placez ce fichier à la racine du projet ou dans `flora-master` puis lancez le
+simulateur avec `phy_model="flora_cpp"` pour utiliser ces routines natives.
 
 Exécutez enfin le scénario d'exemple pour générer un fichier `.sca` dans
 `flora-master/results` :

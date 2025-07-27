@@ -270,9 +270,9 @@ def main(argv=None):
     )
     parser.add_argument(
         "--phy-model",
-        choices=["omnet", "flora"],
+        choices=["omnet", "flora", "flora_cpp"],
         default="omnet",
-        help="Modèle physique à utiliser (omnet ou flora)",
+        help="Modèle physique à utiliser (omnet, flora ou flora_cpp)",
     )
     parser.add_argument(
         "--debug-rx",
