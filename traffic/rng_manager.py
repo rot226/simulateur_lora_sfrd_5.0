@@ -3,7 +3,8 @@ from __future__ import annotations
 import hashlib
 import random
 import secrets
-import weakref
+# Use a regular set instead of WeakSet because numpy.random.Generator
+# does not support weak references in some numpy versions.
 import numpy as np
 from typing import Dict, Tuple
 
@@ -34,7 +35,7 @@ class RngManager:
         return self._streams[key]
 
 
-_allowed_generators: "weakref.WeakSet[np.random.Generator]" = weakref.WeakSet()
+_allowed_generators: "set[np.random.Generator]" = set()
 _hook_enabled = False
 _orig_random_funcs: dict[str, object] = {}
 _orig_numpy_methods: dict[str, object] = {}
