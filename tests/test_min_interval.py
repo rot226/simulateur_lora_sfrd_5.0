@@ -25,7 +25,7 @@ def test_next_event_after_airtime():
 def test_poisson_min_interval_resampling():
     rng = np.random.Generator(np.random.MT19937(0))
     node = Node(0, 0, 0, 7, 20)
-    node.ensure_poisson_arrivals(10.0, rng, 0.1, min_interval=1.0, limit=10)
+    node.ensure_poisson_arrivals(10.0, 0.1, rng, min_interval=1.0, limit=10)
     last = 0.0
     for t in node.arrival_queue:
         assert t - last >= 1.0
