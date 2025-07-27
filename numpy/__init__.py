@@ -2,7 +2,9 @@
 
 from . import random
 
-__all__ = ["random", "array", "zeros", "linspace", "diff", "histogram"]
+bool_ = bool
+
+__all__ = ["random", "array", "zeros", "linspace", "diff", "histogram", "isscalar"]
 
 
 def array(obj, dtype=None):
@@ -47,3 +49,12 @@ def histogram(a, bins=10):
             idx -= 1
         hist[idx] += 1
     return hist, edges
+
+
+def isscalar(obj) -> bool:
+    """Return True if *obj* is a scalar value."""
+    try:
+        iter(obj)
+    except TypeError:
+        return True
+    return False

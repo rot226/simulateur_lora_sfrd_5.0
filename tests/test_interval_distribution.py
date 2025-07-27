@@ -1,3 +1,4 @@
+import math
 import numpy as np
 import pytest
 
@@ -21,3 +22,23 @@ def test_interval_distribution_mean(seed: int) -> None:
         total += sample_interval(mean_interval, rng)
     average = total / count
     assert abs(average - mean_interval) / mean_interval < 0.01
+
+
+@pytest.mark.parametrize("seed", range(10))
+def test_interval_distribution_cv(seed: int) -> None:
+    """The coefficient of variation should be close to 1.0 for the exponential distribution."""
+
+    mean_interval = 10.0
+    count = 1_000_000
+    rng = np.random.Generator(np.random.MT19937(seed))
+    total = 0.0
+    total_sq = 0.0
+    for _ in range(count):
+        x = sample_interval(mean_interval, rng)
+        total += x
+        total_sq += x * x
+    mean = total / count
+    variance = total_sq / count - mean * mean
+    std = math.sqrt(variance)
+    cv = std / mean
+    assert abs(cv - 1.0) < 0.02
