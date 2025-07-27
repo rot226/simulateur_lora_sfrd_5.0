@@ -26,6 +26,7 @@ class RandomWaypoint:
         max_height: float = 0.0,
         step: float = 1.0,
         slope_scale: float = 0.1,
+        slope_limit: float | None = None,
         dynamic_obstacles: list[dict[str, float]] | None = None,
         rng: np.random.Generator | None = None,
     ) -> None:
@@ -34,12 +35,15 @@ class RandomWaypoint:
         :param area_size: Taille de l'aire carrée de simulation (mètres).
         :param min_speed: Vitesse minimale des nœuds (m/s).
         :param max_speed: Vitesse maximale des nœuds (m/s).
+        :param slope_limit: Pente maximale tolérée entre deux pas (``None`` pour
+            ignorer).
         """
         self.area_size = area_size
         self.min_speed = min_speed
         self.max_speed = max_speed
         self.step = step
         self.slope_scale = slope_scale
+        self.slope_limit = slope_limit
         self.terrain = terrain
         if terrain:
             self.rows = len(terrain)
@@ -147,6 +151,7 @@ class RandomWaypoint:
         if self.dynamic_obstacles:
             self._update_dynamic_obstacles(current_time - self._last_obs_update)
             self._last_obs_update = current_time
+        blocked = False
         # Ajuster le déplacement selon la carte de vitesse
         factor = self._terrain_factor(node.x, node.y)
         if factor is None:
@@ -161,6 +166,8 @@ class RandomWaypoint:
             dist = math.hypot(next_x - node.x, next_y - node.y)
             if dist > 0:
                 slope = (alt1 - alt0) / dist
+                if self.slope_limit is not None and abs(slope) > self.slope_limit:
+                    blocked = True
                 if slope > 0:
                     sf = 1.0 / (1.0 + slope * self.slope_scale)
                 else:
@@ -171,7 +178,7 @@ class RandomWaypoint:
         node.x += node.vx * dt * movement_factor
         node.y += node.vy * dt * movement_factor
         # Rebondir sur un obstacle infranchissable
-        blocked = self._terrain_factor(node.x, node.y) is None
+        blocked = blocked or self._terrain_factor(node.x, node.y) is None
         if not blocked and self.dynamic_obstacles:
             blocked = self._dynamic_blocked(node.x, node.y)
         if not blocked and self.obstacle_height_map:

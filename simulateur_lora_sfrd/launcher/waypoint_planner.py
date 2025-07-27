@@ -16,6 +16,7 @@ class WaypointPlanner3D:
         obstacle_height_map: List[List[float]] | None = None,
         max_height: float = 0.0,
         slope_scale: float = 0.1,
+        slope_limit: float | None = None,
         rng: np.random.Generator | None = None,
     ) -> None:
         self.area_size = float(area_size)
@@ -36,6 +37,7 @@ class WaypointPlanner3D:
         else:
             self.h_rows = self.h_cols = 0
         self.slope_scale = slope_scale
+        self.slope_limit = slope_limit
         self.rng = rng or np.random.Generator(np.random.MT19937())
 
     # --------------------------------------------------------------
@@ -83,6 +85,14 @@ class WaypointPlanner3D:
             if 0 <= nx < self.cols and 0 <= ny < self.rows:
                 if self._terrain_factor_cell(nx, ny) is not None:
                     if self._height_cell(nx, ny) <= self.max_height:
+                        if self.slope_limit is not None and self.elevation:
+                            alt_a = self._elevation_cell(x, y)
+                            alt_b = self._elevation_cell(nx, ny)
+                            dist = math.hypot(dx, dy)
+                            if dist > 0:
+                                slope = (alt_b - alt_a) / dist
+                                if abs(slope) > self.slope_limit:
+                                    continue
                         yield nx, ny
 
     def _heuristic(self, a: Tuple[int, int], b: Tuple[int, int]) -> float:
@@ -99,6 +109,8 @@ class WaypointPlanner3D:
             dist = math.hypot(b[0] - a[0], b[1] - a[1])
             if dist > 0:
                 slope = (alt_b - alt_a) / dist
+                if self.slope_limit is not None and abs(slope) > self.slope_limit:
+                    return float("inf")
                 if slope > 0:
                     cost *= 1.0 + slope * self.slope_scale
         return cost

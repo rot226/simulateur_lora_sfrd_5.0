@@ -22,6 +22,7 @@ class PlannedRandomWaypoint:
         obstacle_height_map: str | Path | Iterable[Iterable[float]] | None = None,
         max_height: float = 0.0,
         slope_scale: float = 0.1,
+        slope_limit: float | None = None,
         rng: np.random.Generator | None = None,
     ) -> None:
         if terrain is None:
@@ -33,6 +34,9 @@ class PlannedRandomWaypoint:
         if obstacle_height_map is not None and isinstance(obstacle_height_map, (str, Path)):
             obstacle_height_map = load_map(obstacle_height_map)
         self.rng = rng or np.random.Generator(np.random.MT19937())
+        """\
+        :param slope_limit: Pente maximale à éviter lors du calcul des chemins.
+        """
         self.planner = WaypointPlanner3D(
             area_size,
             terrain,
@@ -40,6 +44,7 @@ class PlannedRandomWaypoint:
             obstacle_height_map=obstacle_height_map,
             max_height=max_height,
             slope_scale=slope_scale,
+            slope_limit=slope_limit,
             rng=self.rng,
         )
         self.area_size = float(area_size)

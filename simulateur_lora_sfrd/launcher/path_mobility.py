@@ -20,14 +20,22 @@ class PathMobility:
         obstacle_height_map: List[List[float]] | None = None,
         max_height: float = 0.0,
         step: float = 1.0,
+        slope_scale: float = 0.1,
+        slope_limit: float | None = None,
         dynamic_obstacles: Iterable[dict] | str | Path | None = None,
         rng: np.random.Generator | None = None,
     ) -> None:
+        """\
+        :param slope_limit: Pente maximale autorisée entre deux cellules
+            successives (``None`` pour désactiver la contrainte).
+        """
         self.area_size = float(area_size)
         self.path_map = path_map
         self.min_speed = float(min_speed)
         self.max_speed = float(max_speed)
         self.step = float(step)
+        self.slope_scale = float(slope_scale)
+        self.slope_limit = slope_limit
         self.rows = len(path_map)
         self.cols = len(path_map[0]) if self.rows else 0
         self.elevation = elevation
@@ -60,6 +68,12 @@ class PathMobility:
         hy = min(max(hy, 0), self.h_rows - 1)
         return float(self.obstacle_height_map[hy][hx])
 
+    def _speed_factor_cell(self, cx: int, cy: int) -> float:
+        val = float(self.path_map[cy][cx])
+        if val <= 0:
+            return float("inf")
+        return 1.0 / val
+
     def _update_dynamic_obstacles(self, dt: float) -> None:
         for obs in self.dynamic_obstacles:
             obs["x"] = float(obs.get("x", 0.0) + obs.get("vx", 0.0) * dt)
@@ -87,6 +101,15 @@ class PathMobility:
         cy = min(max(cy, 0), self.e_rows - 1)
         return float(self.elevation[cy][cx])
 
+    def _elevation_cell(self, cx: int, cy: int) -> float:
+        if not self.elevation or self.e_rows == 0 or self.e_cols == 0:
+            return 0.0
+        ex = int(cx / self.cols * self.e_cols)
+        ey = int(cy / self.rows * self.e_rows)
+        ex = min(max(ex, 0), self.e_cols - 1)
+        ey = min(max(ey, 0), self.e_rows - 1)
+        return float(self.elevation[ey][ex])
+
     # ------------------------------------------------------------------
     def _coord_to_cell(self, x: float, y: float) -> Tuple[int, int]:
         cx = int(x / self.area_size * self.cols)
@@ -110,7 +133,28 @@ class PathMobility:
             if 0 <= nx < self.cols and 0 <= ny < self.rows:
                 if self.path_map[ny][nx] >= 0:
                     if self._height_cell(nx, ny) <= self.max_height:
+                        if self.slope_limit is not None and self.elevation:
+                            alt_a = self._elevation_cell(x, y)
+                            alt_b = self._elevation_cell(nx, ny)
+                            dist = math.hypot(dx, dy)
+                            if dist > 0:
+                                slope = (alt_b - alt_a) / dist
+                                if abs(slope) > self.slope_limit:
+                                    continue
                         yield nx, ny
+
+    def _movement_cost(self, a: Tuple[int, int], b: Tuple[int, int]) -> float:
+        cost = 1.0
+        if self.elevation:
+            alt_a = self._elevation_cell(*a)
+            alt_b = self._elevation_cell(*b)
+            dist = math.hypot(b[0] - a[0], b[1] - a[1])
+            if dist > 0:
+                slope = (alt_b - alt_a) / dist
+                if slope > 0:
+                    cost *= 1.0 + slope * self.slope_scale
+        cost *= self._speed_factor_cell(*b)
+        return cost
 
     def _find_path(
         self, start: Tuple[int, int], goal: Tuple[int, int]
@@ -130,7 +174,7 @@ class PathMobility:
                 return [self._cell_to_coord(c) for c in cells]
             open_set.remove(current)
             for nb in self._neighbors(current):
-                tentative_g = g_score[current] + 1.0
+                tentative_g = g_score[current] + self._movement_cost(current, nb)
                 if tentative_g < g_score.get(nb, float("inf")):
                     came_from[nb] = current
                     g_score[nb] = tentative_g
@@ -189,6 +233,20 @@ class PathMobility:
                 new_y = node.y + dy * ratio
                 move_len = distance
             if self.dynamic_obstacles and self._dynamic_blocked(new_x, new_y):
+                node.path = self._new_path(node.x, node.y)
+                node.path_index = 0
+                distance = 0
+                break
+            if (
+                self.slope_limit is not None
+                and self.elevation
+                and seg_len > 0
+                and abs(
+                    (self._elevation(dest_x, dest_y) - self._elevation(node.x, node.y))
+                    / seg_len
+                )
+                > self.slope_limit
+            ):
                 node.path = self._new_path(node.x, node.y)
                 node.path_index = 0
                 distance = 0
