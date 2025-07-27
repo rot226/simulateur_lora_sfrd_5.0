@@ -524,9 +524,23 @@ class Simulator:
         # Journal des événements (pour export CSV)
         self.events_log: list[dict] = []
 
-        # Planifier le premier envoi de chaque nœud
+        # Planifier le(s) envoi(s) de chaque nœud
         for node in self.nodes:
             if self.transmission_mode.lower() == "random":
+                if self.pure_poisson_mode and self.packets_to_send > 0:
+                    limit = self.packets_to_send - self.warm_up_intervals
+                    if limit < 0:
+                        limit = 0
+                    node.ensure_poisson_arrivals(
+                        float("inf"),
+                        self.interval_rng,
+                        self.first_packet_interval,
+                        variation=self.interval_variation,
+                        limit=limit,
+                    )
+                    for t in list(node.arrival_queue)[: self.packets_to_send]:
+                        self.schedule_event(node, t, reason="poisson")
+                    continue
                 if self.lock_step_poisson:
                     if self.packets_to_send == 0:
                         raise ValueError(
@@ -594,7 +608,11 @@ class Simulator:
         if not node.alive:
             return
         requested_time = time
-        if node.current_end_time is not None and time < node.current_end_time:
+        if (
+            not self.pure_poisson_mode
+            and node.current_end_time is not None
+            and time < node.current_end_time
+        ):
             time = node.current_end_time
             reason = "overlap"
         event_id = self.event_id_counter
@@ -921,7 +939,9 @@ class Simulator:
                     node, self.current_time + 1.0, reason="retransmission"
                 )
             else:
-                if (
+                if self.pure_poisson_mode:
+                    pass
+                elif (
                     self.packets_to_send == 0
                     or node.packets_sent < self.packets_to_send
                 ):
