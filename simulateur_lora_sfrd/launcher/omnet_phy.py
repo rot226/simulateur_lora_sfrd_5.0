@@ -195,10 +195,12 @@ class OmnetPHY:
                 temp = self._temperature.sample()
                 original = self.model.temperature_K
                 self.model.temperature_K = temp
-                thermal = self.model.thermal_noise_dBm(ch.bandwidth)
+                eff_bw = min(ch.bandwidth, ch.frontend_filter_bw)
+                thermal = self.model.thermal_noise_dBm(eff_bw)
                 self.model.temperature_K = original
             else:
-                thermal = self.model.thermal_noise_dBm(ch.bandwidth)
+                eff_bw = min(ch.bandwidth, ch.frontend_filter_bw)
+                thermal = self.model.thermal_noise_dBm(eff_bw)
         noise = thermal + ch.noise_figure_dB + ch.interference_dB
         if ch.humidity_noise_coeff_dB != 0.0:
             noise += ch.humidity_noise_coeff_dB * (ch._humidity.sample() / 100.0)
@@ -292,7 +294,8 @@ class OmnetPHY:
         if freq_factor >= 1.0 and time_factor >= 1.0:
             return float("inf")
         phase_factor = abs(math.sin(phase_offset_rad / 2.0))
-        return 10 * math.log10(1.0 + freq_factor ** 2 + time_factor ** 2 + phase_factor ** 2)
+        penalty = 1.5 * (freq_factor ** 2 + time_factor ** 2 + phase_factor ** 2)
+        return 10 * math.log10(1.0 + penalty)
 
     def capture(
         self,

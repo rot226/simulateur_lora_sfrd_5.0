@@ -383,7 +383,8 @@ class Channel:
         temp = self._temperature.sample()
         original = self.omnet.temperature_K
         self.omnet.temperature_K = temp
-        thermal = self.omnet.variable_thermal_noise_dBm(self.bandwidth)
+        eff_bw = min(self.bandwidth, self.frontend_filter_bw)
+        thermal = self.omnet.variable_thermal_noise_dBm(eff_bw)
         self.omnet.temperature_K = original
         base = thermal + self.noise_figure_dB
         power = 10 ** (base / 10.0)
@@ -551,7 +552,8 @@ class Channel:
         time_factor = abs(sync_offset_s) / symbol_time
         if freq_factor >= 1.0 and time_factor >= 1.0:
             return float("inf")
-        return 10 * math.log10(1.0 + freq_factor ** 2 + time_factor ** 2)
+        penalty = 1.5 * (freq_factor ** 2 + time_factor ** 2)
+        return 10 * math.log10(1.0 + penalty)
 
     def airtime(self, sf: int, payload_size: int = 20) -> float:
         """Calcule l'airtime complet d'un paquet LoRa en secondes."""
@@ -603,5 +605,8 @@ class Channel:
 
 
     def _update_sensitivity(self) -> None:
-        noise = -174 + 10 * math.log10(self.bandwidth) + self.noise_figure_dB
-        self.sensitivity_dBm = {sf: noise + snr for sf, snr in self.SNR_THRESHOLDS.items()}
+        bw = min(self.bandwidth, self.frontend_filter_bw)
+        noise = -174 + 10 * math.log10(bw) + self.noise_figure_dB
+        self.sensitivity_dBm = {
+            sf: noise + snr for sf, snr in self.SNR_THRESHOLDS.items()
+        }

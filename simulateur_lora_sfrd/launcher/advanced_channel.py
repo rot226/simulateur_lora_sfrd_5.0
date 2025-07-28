@@ -637,7 +637,8 @@ class AdvancedChannel:
         )
         original_temp = model.temperature_K
         model.temperature_K = temperature
-        thermal = model.thermal_noise_dBm(self.base.bandwidth)
+        eff_bw = min(self.base.bandwidth, self.base.frontend_filter_bw)
+        thermal = model.thermal_noise_dBm(eff_bw)
         model.temperature_K = original_temp
         if self.base.phy_model == "flora_full" and sf is not None:
             noise = self.base._flora_noise_dBm(sf)
@@ -691,4 +692,5 @@ class AdvancedChannel:
         if freq_factor >= 1.0 and time_factor >= 1.0:
             return float("inf")
         phase_factor = abs(math.sin(phase_offset_rad / 2.0))
-        return 10 * math.log10(1.0 + freq_factor ** 2 + time_factor ** 2 + phase_factor ** 2)
+        penalty = 1.5 * (freq_factor ** 2 + time_factor ** 2 + phase_factor ** 2)
+        return 10 * math.log10(1.0 + penalty)
