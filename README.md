@@ -205,6 +205,9 @@ scénarios FLoRa. Voici la liste complète des options :
 - `dump_intervals` : conserve l'historique des dates Poisson et effectives.
   La méthode `dump_interval_logs()` écrit un fichier Parquet par nœud pour
   analyser la planification finale et vérifier empiriquement la loi exponentielle.
+- `phase_noise_std_dB` : bruit de phase appliqué au SNR.
+- `clock_jitter_std_s` : gigue d'horloge ajoutée à chaque calcul.
+- `pa_ramp_up_s` / `pa_ramp_down_s` : temps de montée et de descente du PA.
 
 ## Paramètres radio avancés
 
