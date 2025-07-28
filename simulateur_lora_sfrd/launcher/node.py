@@ -25,6 +25,9 @@ class Node:
         energy_rx (float) : Énergie dépensée en réception.
         energy_sleep (float) : Énergie dépensée en veille.
         energy_processing (float) : Énergie dépensée en traitement.
+        energy_startup (float) : Énergie dépensée lors du démarrage.
+        energy_listen (float) : Énergie dépensée en écoute.
+        energy_preamble (float) : Énergie dépensée pour le préambule.
         packets_sent (int) : Nombre total de paquets émis par ce nœud.
         packets_success (int) : Nombre de paquets reçus avec succès.
         packets_collision (int) : Nombre de paquets perdus en raison de collisions.
@@ -120,6 +123,9 @@ class Node:
         self.energy_rx = 0.0
         self.energy_sleep = 0.0
         self.energy_processing = 0.0
+        self.energy_startup = 0.0
+        self.energy_listen = 0.0
+        self.energy_preamble = 0.0
         # Transmission counters
         self.packets_sent = 0
         self.packets_success = 0
@@ -244,9 +250,12 @@ class Node:
 
         # Energy accounting state
         self.last_state_time = 0.0
-        self.state = "sleep"
-        if self.class_type.upper() == "C":
-            self.state = "rx"
+        if self.profile.startup_time_s > 0.0:
+            self.state = "startup"
+            self._startup_end = self.profile.startup_time_s
+        else:
+            self.state = "rx" if self.class_type.upper() == "C" else "sleep"
+            self._startup_end = 0.0
 
     @property
     def battery_level(self) -> float:
@@ -305,6 +314,9 @@ class Node:
             "energy_rx_J": self.energy_rx,
             "energy_sleep_J": self.energy_sleep,
             "energy_processing_J": self.energy_processing,
+            "energy_startup_J": self.energy_startup,
+            "energy_listen_J": self.energy_listen,
+            "energy_preamble_J": self.energy_preamble,
             "energy_consumed_J": self.energy_consumed,
             "airtime_s": self.total_airtime,
             "battery_capacity_J": self.battery_capacity_j,
@@ -393,6 +405,12 @@ class Node:
             self.energy_sleep += total
         elif state == "processing":
             self.energy_processing += total
+        elif state == "startup":
+            self.energy_startup += total
+        elif state == "listen":
+            self.energy_listen += total
+        elif state == "preamble":
+            self.energy_preamble += total
 
         if self.battery_remaining_j != float("inf"):
             self.battery_remaining_j -= total
@@ -406,6 +424,24 @@ class Node:
         if dt <= 0:
             self.last_state_time = current_time
             return
+
+        if self.state == "startup":
+            remaining = self._startup_end - self.last_state_time
+            if remaining <= 0:
+                self.state = "rx" if self.class_type.upper() == "C" else "sleep"
+                self.consume_until(current_time)
+                return
+            spent = min(dt, remaining)
+            self.add_energy(
+                self.profile.startup_current_a * self.profile.voltage_v * spent,
+                "startup",
+            )
+            self.last_state_time += spent
+            if current_time > self.last_state_time:
+                self.state = "rx" if self.class_type.upper() == "C" else "sleep"
+                self.consume_until(current_time)
+            return
+
         if self.state == "sleep":
             self.add_energy(
                 self.profile.sleep_current_a * self.profile.voltage_v * dt,
@@ -417,12 +453,20 @@ class Node:
                 if self.profile.listen_current_a > 0.0
                 else self.profile.rx_current_a
             )
-            self.add_energy(current * self.profile.voltage_v * dt, "rx")
+            state_name = "listen" if self.profile.listen_current_a > 0.0 else "rx"
+            self.add_energy(current * self.profile.voltage_v * dt, state_name)
         elif self.state == "processing":
             self.add_energy(
                 self.profile.process_current_a * self.profile.voltage_v * dt,
                 "processing",
             )
+        elif self.state == "listen":
+            current = (
+                self.profile.listen_current_a
+                if self.profile.listen_current_a > 0.0
+                else self.profile.rx_current_a
+            )
+            self.add_energy(current * self.profile.voltage_v * dt, "listen")
         self.last_state_time = current_time
 
     def ensure_poisson_arrivals(
