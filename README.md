@@ -260,7 +260,7 @@ réception :
   `(freq, bw, dB)` appliqués au calcul du bruit.
 - `environment` : preset rapide pour le modèle de propagation
   (`urban`, `urban_dense`, `suburban`, `rural`, `indoor` ou `flora`).
-- `phy_model` : "omnet", `"omnet_full"`, "flora", "flora_full" ou `"flora_cpp"` pour utiliser un modèle physique avancé reprenant les formules de FLoRa. Le mode `omnet_full` applique directement les équations du `LoRaAnalogModel` d'OMNeT++ avec bruit variable et sélectivité de canal. Le mode `flora_cpp` charge la bibliothèque C++ compilée depuis FLoRa pour une précision accrue.
+- `phy_model` : "omnet", `"omnet_full"`, "flora", "flora_full" ou `"flora_cpp"` pour utiliser un modèle physique avancé reprenant les formules de FLoRa. Le mode `omnet_full` applique directement les équations du `LoRaAnalogModel` d'OMNeT++ avec bruit variable, sélectivité de canal et une gestion précise des collisions partielles. Le mode `flora_cpp` charge la bibliothèque C++ compilée depuis FLoRa pour une précision accrue.
 - `use_flora_curves` : applique directement les équations FLoRa pour la
   puissance reçue et le taux d'erreur.
 

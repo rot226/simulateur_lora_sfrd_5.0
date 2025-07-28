@@ -168,13 +168,20 @@ class Gateway:
             def _snr(i: int) -> float:
                 rssi_i = colliders[i]['rssi']
                 total = 10 ** (noise_floor / 10)
+                start_i = colliders[i]['start_time']
+                end_i = colliders[i]['end_time']
+                duration_i = max(end_i - start_i, 1e-9)
                 for j, other in enumerate(colliders):
                     if j == i:
                         continue
                     pen = _penalty(colliders[i], other)
                     if pen == float('inf'):
                         continue
-                    total += 10 ** ((other['rssi'] - pen) / 10)
+                    overlap = min(end_i, other['end_time']) - max(start_i, other['start_time'])
+                    if overlap <= 0.0:
+                        continue
+                    weight = overlap / duration_i
+                    total += weight * 10 ** ((other['rssi'] - pen) / 10)
                 return rssi_i - 10 * math.log10(total)
 
             snrs = [ _snr(i) for i in range(len(colliders)) ]
