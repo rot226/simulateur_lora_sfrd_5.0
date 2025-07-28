@@ -113,6 +113,10 @@ class Simulator:
         dump_intervals: bool = False,
         pure_poisson_mode: bool = False,
         lock_step_poisson: bool = False,
+        phase_noise_std_dB: float = 0.0,
+        clock_jitter_std_s: float = 0.0,
+        pa_ramp_up_s: float = 0.0,
+        pa_ramp_down_s: float = 0.0,
     ):
         """
         Initialise la simulation LoRa avec les entités et paramètres donnés.
@@ -191,6 +195,10 @@ class Simulator:
         :param debug_rx: Active la journalisation détaillée des paquets reçus ou rejetés.
         :param dump_intervals: Exporte la série complète des intervalles dans un fichier Parquet.
         :param lock_step_poisson: Prégénère la séquence Poisson une seule fois et la réutilise.
+        :param phase_noise_std_dB: Bruit de phase appliqué au SNR (écart-type en dB).
+        :param clock_jitter_std_s: Gigue d'horloge ajoutée à chaque calcul (s).
+        :param pa_ramp_up_s: Temps de montée du PA (s).
+        :param pa_ramp_down_s: Temps de descente du PA (s).
         """
         # Paramètres de simulation
         if flora_mode and packet_interval == 60.0 and first_packet_interval is None:
@@ -242,6 +250,10 @@ class Simulator:
         self.config_file = config_file
         self.phy_model = phy_model
         self.flora_loss_model = flora_loss_model
+        self.phase_noise_std_dB = phase_noise_std_dB
+        self.clock_jitter_std_s = clock_jitter_std_s
+        self.pa_ramp_up_s = pa_ramp_up_s
+        self.pa_ramp_down_s = pa_ramp_down_s
         # Activation ou non de la mobilité des nœuds
         self.mobility_enabled = mobility
         if mobility_model is not None:
@@ -314,6 +326,18 @@ class Simulator:
                 for ch in self.multichannel.channels:
                     if flora_mode and ch.multipath_taps <= 1:
                         ch.multipath_taps = 3
+            for ch in self.multichannel.channels:
+                ch.phase_noise_std_dB = phase_noise_std_dB
+                ch.clock_jitter_std_s = clock_jitter_std_s
+                ch.pa_ramp_up_s = pa_ramp_up_s
+                ch.pa_ramp_down_s = pa_ramp_down_s
+                if hasattr(ch, "_phase_noise"):
+                    ch._phase_noise.std = phase_noise_std_dB
+                if getattr(ch, "omnet_phy", None):
+                    ch.omnet_phy.clock_jitter_std_s = clock_jitter_std_s
+                    ch.omnet_phy.pa_ramp_up_s = pa_ramp_up_s
+                    ch.omnet_phy.pa_ramp_down_s = pa_ramp_down_s
+                    ch.omnet_phy._phase_noise.std = phase_noise_std_dB
         else:
             if channels is None:
                 env = "flora" if (flora_mode or phy_model.startswith("flora")) else None
@@ -325,6 +349,10 @@ class Simulator:
                         environment=env,
                         flora_loss_model=flora_loss_model,
                         multipath_taps=3 if flora_mode else 1,
+                        phase_noise_std_dB=phase_noise_std_dB,
+                        clock_jitter_std_s=clock_jitter_std_s,
+                        pa_ramp_up_s=pa_ramp_up_s,
+                        pa_ramp_down_s=pa_ramp_down_s,
                     )
                 ]
             else:
@@ -347,6 +375,17 @@ class Simulator:
                             ) = Channel.ENV_PRESETS["flora"]
                         if flora_mode and ch.multipath_taps <= 1:
                             ch.multipath_taps = 3
+                        ch.phase_noise_std_dB = phase_noise_std_dB
+                        ch.clock_jitter_std_s = clock_jitter_std_s
+                        ch.pa_ramp_up_s = pa_ramp_up_s
+                        ch.pa_ramp_down_s = pa_ramp_down_s
+                        if hasattr(ch, "_phase_noise"):
+                            ch._phase_noise.std = phase_noise_std_dB
+                        if getattr(ch, "omnet_phy", None):
+                            ch.omnet_phy.clock_jitter_std_s = clock_jitter_std_s
+                            ch.omnet_phy.pa_ramp_up_s = pa_ramp_up_s
+                            ch.omnet_phy.pa_ramp_down_s = pa_ramp_down_s
+                            ch.omnet_phy._phase_noise.std = phase_noise_std_dB
                         ch_list.append(ch)
                     else:
                         ch_list.append(
@@ -361,6 +400,10 @@ class Simulator:
                                 ),
                                 flora_loss_model=flora_loss_model,
                                 multipath_taps=3 if flora_mode else 1,
+                                phase_noise_std_dB=phase_noise_std_dB,
+                                clock_jitter_std_s=clock_jitter_std_s,
+                                pa_ramp_up_s=pa_ramp_up_s,
+                                pa_ramp_down_s=pa_ramp_down_s,
                             )
                         )
             self.multichannel = MultiChannel(ch_list, method=channel_distribution)
