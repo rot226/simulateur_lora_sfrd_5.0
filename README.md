@@ -216,6 +216,8 @@ Le constructeur `Channel` accepte plusieurs options pour modéliser plus finemen
 réception :
 
 - `cable_loss` : pertes fixes (dB) entre le transceiver et l'antenne.
+- `tx_antenna_gain_dB` : gain d'antenne de l'émetteur (dB).
+- `rx_antenna_gain_dB` : gain d'antenne du récepteur (dB).
 - `receiver_noise_floor` : bruit thermique de référence en dBm/Hz (par défaut
   `-174`). Cette valeur est utilisée directement par le modèle OMNeT++ pour le
   calcul du bruit de fond.
@@ -257,7 +259,8 @@ réception :
 - `dev_frequency_offset_hz` / `dev_freq_offset_std_hz` : dérive propre à
   chaque émetteur.
 - `band_interference` : liste de brouilleurs sélectifs sous la forme
-  `(freq, bw, dB)` appliqués au calcul du bruit.
+ `(freq, bw, dB)` appliqués au calcul du bruit. Chaque entrée définit
+ un niveau de bruit spécifique pour la bande concernée.
 - `environment` : preset rapide pour le modèle de propagation
   (`urban`, `urban_dense`, `suburban`, `rural`, `indoor` ou `flora`).
 - `phy_model` : "omnet", `"omnet_full"`, "flora", "flora_full" ou `"flora_cpp"` pour utiliser un modèle physique avancé reprenant les formules de FLoRa. Le mode `omnet_full` applique directement les équations du `LoRaAnalogModel` d'OMNeT++ avec bruit variable et sélectivité de canal. Le mode `flora_cpp` charge la bibliothèque C++ compilée depuis FLoRa pour une précision accrue.
@@ -489,6 +492,8 @@ mais simplifie volontairement certains aspects.
 - le canal radio est désormais plus complet (multipath, interférences
   cumulées et sensibilité par SF calculée automatiquement) mais certains
   paramètres restent approximés
+- les calculs détaillés de puissance reçue avec antennes directionnelles et
+  l'influence des états TX/RX/IDLE de la radio ne sont pas encore modélisés
 - les temporisations et la file d'événements sont maintenant alignées sur
   FLoRa pour un PDR et des délais comparables à ±1 %
 - la sensibilité et le bruit thermiques sont maintenant calculés à partir du
