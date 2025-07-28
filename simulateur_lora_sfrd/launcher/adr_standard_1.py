@@ -14,15 +14,16 @@ from .lorawan import TX_POWER_INDEX_TO_DBM
 DEGRADE_PARAMS = {
     "propagation_model": "cost231",
     "fading": "rayleigh",
-    "path_loss_exp": 8.7,  # harsh propagation environment
-    "shadowing_std": 9.0,
-    "variable_noise_std": 400.0,
-    "fine_fading_std": 200.0,
-    "freq_offset_std_hz": 100000.0,
-    "sync_offset_std_s": 0.6,
+    # Increased attenuation to validate channel robustness
+    "path_loss_exp": 10.0,
+    "shadowing_std": 12.0,
+    "variable_noise_std": 800.0,
+    "fine_fading_std": 300.0,
+    "freq_offset_std_hz": 200000.0,
+    "sync_offset_std_s": 1.2,
     "advanced_capture": True,
-    "detection_threshold_dBm": -95.0,
-    "capture_threshold_dB": 9.0,
+    "detection_threshold_dBm": -98.0,
+    "capture_threshold_dB": 12.0,
 }
 
 
