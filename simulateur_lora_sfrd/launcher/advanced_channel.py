@@ -121,6 +121,7 @@ class AdvancedChannel:
         obstacle_height_map_file: str | None = None,
         default_obstacle_dB: float = 0.0,
         obstacle_losses: dict[str, float] | None = None,
+        obstacle_variability_std_dB: float = 0.0,
         multipath_paths: int = 1,
         indoor_n_floors: int = 0,
         indoor_floor_loss_dB: float = 15.0,
@@ -215,6 +216,8 @@ class AdvancedChannel:
             est rencontré sans valeur explicite dans ``obstacle_map``.
         :param obstacle_losses: Dictionnaire associant un type d'obstacle à
             une perte en dB pour ``obstacle_map`` texte ou JSON.
+        :param obstacle_variability_std_dB: Variation aléatoire corrélée appliquée
+            à la perte due aux obstacles (dB).
         :param cost231_correction_dB: Décalage appliqué au modèle COST‑231 pour
             affiner la calibration.
         :param okumura_hata_correction_dB: Décalage appliqué au modèle
@@ -326,6 +329,9 @@ class AdvancedChannel:
         self.obstacle_height_map = obstacle_height_map
         self.default_obstacle_dB = float(default_obstacle_dB)
         self.obstacle_losses = obstacle_losses or {}
+        self._obstacle_var = _CorrelatedValue(
+            0.0, obstacle_variability_std_dB, fading_correlation, rng=self.rng
+        )
         self.map_area_size = map_area_size
         if obstacle_map or obstacle_height_map:
             self._rows = len(obstacle_map or obstacle_height_map)
@@ -603,7 +609,7 @@ class AdvancedChannel:
             extra = self._obstacle_loss(tx_pos, rx_pos)
             if extra == float("inf"):
                 return -float("inf"), -float("inf")
-            loss += extra
+            loss += extra + self._obstacle_var.sample()
         if self.base.shadowing_std > 0:
             loss += self.rng.normal(0, self.base.shadowing_std)
 

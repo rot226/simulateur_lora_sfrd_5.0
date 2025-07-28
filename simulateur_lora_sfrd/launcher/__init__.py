@@ -14,6 +14,7 @@ from .path_mobility import PathMobility
 from .terrain_mobility import TerrainMapMobility
 from .gauss_markov import GaussMarkov
 from .gps_mobility import GPSTraceMobility, MultiGPSTraceMobility
+from .trace3d_mobility import Trace3DMobility
 from .map_loader import load_map
 from .lorawan import LoRaWANFrame, compute_rx1, compute_rx2
 from .downlink_scheduler import DownlinkScheduler
@@ -37,6 +38,7 @@ __all__ = [
     "PathMobility",
     "TerrainMapMobility",
     "GaussMarkov",
+    "Trace3DMobility",
     "GPSTraceMobility",
     "MultiGPSTraceMobility",
     "load_map",
