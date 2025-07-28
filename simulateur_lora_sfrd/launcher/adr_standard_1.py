@@ -15,15 +15,16 @@ DEGRADE_PARAMS = {
     "propagation_model": "cost231",
     "fading": "rayleigh",
     # Increased attenuation to validate channel robustness
-    "path_loss_exp": 10.0,
-    "shadowing_std": 12.0,
-    "variable_noise_std": 800.0,
-    "fine_fading_std": 300.0,
-    "freq_offset_std_hz": 200000.0,
-    "sync_offset_std_s": 1.2,
+    # Stronger degradation for validation campaigns
+    "path_loss_exp": 12.0,
+    "shadowing_std": 15.0,
+    "variable_noise_std": 1000.0,
+    "fine_fading_std": 400.0,
+    "freq_offset_std_hz": 300000.0,
+    "sync_offset_std_s": 1.5,
     "advanced_capture": True,
-    "detection_threshold_dBm": -98.0,
-    "capture_threshold_dB": 12.0,
+    "detection_threshold_dBm": -95.0,
+    "capture_threshold_dB": 14.0,
 }
 
 
