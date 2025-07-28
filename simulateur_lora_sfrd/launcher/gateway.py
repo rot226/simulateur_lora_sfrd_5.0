@@ -168,6 +168,8 @@ class Gateway:
                     return False
             return True
 
+        flora_mode = False
+
         if capture_mode in {"advanced", "omnet"} and noise_floor is not None:
             def _snr(i: int) -> float:
                 rssi_i = colliders[i]['rssi']
@@ -212,6 +214,32 @@ class Gateway:
             else:
                 strongest = colliders[0]
             second = None
+        elif (
+            capture_mode == "omnet"
+            and getattr(self, "omnet_phy", None) is not None
+            and getattr(self.omnet_phy, "flora_capture", False)
+        ):
+            colliders.sort(key=lambda t: t['rssi'], reverse=True)
+            sf_list = [t['sf'] for t in colliders]
+            rssi_list = [t['rssi'] for t in colliders]
+            start_list = [t['start_time'] for t in colliders]
+            end_list = [t['end_time'] for t in colliders]
+            freq_list = [t['frequency'] for t in colliders]
+            winners = self.omnet_phy.capture(
+                rssi_list,
+                start_list=start_list,
+                end_list=end_list,
+                sf_list=sf_list,
+                freq_list=freq_list,
+            )
+            capture = any(winners)
+            if capture:
+                win_idx = winners.index(True)
+                strongest = colliders[win_idx]
+            else:
+                strongest = colliders[0]
+            second = None
+            flora_mode = True
         else:
             colliders.sort(key=lambda t: t['rssi'], reverse=True)
             strongest = colliders[0]
@@ -221,7 +249,7 @@ class Gateway:
                 metric = t['rssi'] - _penalty(strongest, t)
                 if second is None or metric > second:
                     second = metric
-        if capture_mode != "flora":
+        if capture_mode != "flora" and not flora_mode:
             capture = False
             if second is not None:
                 if (
