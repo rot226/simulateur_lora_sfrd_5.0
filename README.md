@@ -574,6 +574,9 @@ cd ../flora-master
 make libflora_phy.so
 ```
 
+Vous pouvez également exécuter directement `./scripts/build_flora_cpp.sh` depuis
+la racine du dépôt pour automatiser cette compilation.
+
 Placez ce fichier à la racine du projet ou dans `flora-master` puis lancez le
 simulateur avec `phy_model="flora_cpp"` pour utiliser ces routines natives.
 

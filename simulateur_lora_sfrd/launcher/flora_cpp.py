@@ -1,29 +1,41 @@
 import ctypes
+import os
 from pathlib import Path
 
 class FloraCppPHY:
     """Wrapper around the native FLoRa physical layer."""
 
     def __init__(self, lib_path: str | None = None) -> None:
+        env = os.environ.get("FLORA_CPP_LIB")
         paths = []
         if lib_path:
             paths.append(Path(lib_path))
-        else:
+        if env:
+            paths.append(Path(env))
+        if not paths:
             paths.extend([
                 Path("libflora_phy.so"),
                 Path(__file__).with_name("libflora_phy.so"),
                 Path(__file__).resolve().parent.parent.parent / "flora-master" / "libflora_phy.so",
             ])
         self.lib = None
+        last_error = None
         for p in paths:
             if p.exists():
                 try:
                     self.lib = ctypes.CDLL(str(p))
                     break
-                except OSError:
+                except OSError as e:
+                    last_error = e
                     continue
         if self.lib is None:
-            raise OSError("libflora_phy.so not found")
+            msg = (
+                "libflora_phy.so introuvable. "
+                "Compilez-le via scripts/build_flora_cpp.sh"
+            )
+            if last_error:
+                msg += f" ({last_error})"
+            raise OSError(msg)
 
         self.lib.flora_path_loss.argtypes = [ctypes.c_double]
         self.lib.flora_path_loss.restype = ctypes.c_double
