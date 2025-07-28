@@ -709,7 +709,7 @@ def setup_simulation(seed_offset: int = 0):
                 frequency_hz=868e6 + i * 200e3,
                 fine_fading_std=float(fine_fading_input.value),
                 variable_noise_std=float(noise_std_input.value),
-                phy_model="flora" if flora_mode_toggle.value else "omnet",
+                phy_model="flora_full" if flora_mode_toggle.value else "omnet",
                 use_flora_curves=flora_mode_toggle.value,
             )
             for i in range(num_channels_input.value)
@@ -725,7 +725,7 @@ def setup_simulation(seed_offset: int = 0):
         config_file=config_path,
         mobility_model=mobility_instance,
         seed=seed,
-        phy_model="flora" if flora_mode_toggle.value else "omnet",
+        phy_model="flora_full" if flora_mode_toggle.value else "omnet",
     )
 
 

@@ -248,7 +248,7 @@ class Simulator:
         self.flora_mode = flora_mode
         self.flora_timing = flora_timing
         self.config_file = config_file
-        self.phy_model = phy_model
+        self.phy_model = "flora_full" if flora_mode and not phy_model else phy_model
         self.flora_loss_model = flora_loss_model
         self.phase_noise_std_dB = phase_noise_std_dB
         self.clock_jitter_std_s = clock_jitter_std_s
@@ -312,7 +312,7 @@ class Simulator:
                     ch.detection_threshold_dBm = detection_threshold_dBm
             if flora_mode:
                 for ch in self.multichannel.channels:
-                    ch.phy_model = "flora"
+                    ch.phy_model = "flora_full"
             if flora_mode or phy_model.startswith("flora"):
                 for ch in self.multichannel.channels:
                     if getattr(ch, "environment", None) is None:
@@ -341,7 +341,7 @@ class Simulator:
         else:
             if channels is None:
                 env = "flora" if (flora_mode or phy_model.startswith("flora")) else None
-                ch_phy_model = "flora" if flora_mode else phy_model
+                ch_phy_model = "flora_full" if flora_mode else phy_model
                 ch_list = [
                     Channel(
                         detection_threshold_dBm=detection_threshold_dBm,
@@ -362,7 +362,7 @@ class Simulator:
                         if detection_threshold_dBm != -float("inf"):
                             ch.detection_threshold_dBm = detection_threshold_dBm
                         if flora_mode:
-                            ch.phy_model = "flora"
+                            ch.phy_model = "flora_full"
                         if (flora_mode or phy_model.startswith("flora")) and getattr(
                             ch, "environment", None
                         ) is None:

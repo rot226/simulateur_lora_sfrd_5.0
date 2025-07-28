@@ -9,3 +9,4 @@ def test_default_intervals_flora_mode():
     assert sim.min_interference_time == 5.0
     assert sim.channel.environment == "flora"
     assert sim.channel.multipath_taps == 3
+    assert sim.channel.phy_model == "flora_full"
