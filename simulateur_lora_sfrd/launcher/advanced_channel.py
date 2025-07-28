@@ -573,6 +573,8 @@ class AdvancedChannel:
         *,
         tx_pos: tuple[float, float] | tuple[float, float, float] | None = None,
         rx_pos: tuple[float, float] | tuple[float, float, float] | None = None,
+        tx_angle: float | None = None,
+        rx_angle: float | None = None,
         freq_offset_hz: float | None = None,
         sync_offset_s: float | None = None,
         modem: str | None = None,
@@ -634,6 +636,15 @@ class AdvancedChannel:
         if self.base.time_variation_std > 0:
             rssi += self.rng.normal(0, self.base.time_variation_std)
         rssi += self.base.omnet.fine_fading()
+
+        if tx_angle is not None and rx_angle is not None and tx_pos and rx_pos:
+            dx = rx_pos[0] - tx_pos[0]
+            dy = rx_pos[1] - tx_pos[1]
+            los = math.atan2(dy, dx)
+            tx_diff = abs((los - tx_angle + math.pi) % (2 * math.pi) - math.pi)
+            rx_diff = abs((los + math.pi - rx_angle + math.pi) % (2 * math.pi) - math.pi)
+            rssi += self._directional_gain(tx_diff)
+            rssi += self._directional_gain(rx_diff)
 
         temperature = self._temperature.sample()
         model = (
@@ -700,3 +711,8 @@ class AdvancedChannel:
         phase_factor = abs(math.sin(phase_offset_rad / 2.0))
         penalty = 1.5 * (freq_factor ** 2 + time_factor ** 2 + phase_factor ** 2)
         return 10 * math.log10(1.0 + penalty)
+
+    def _directional_gain(self, angle_rad: float) -> float:
+        """Simple cosine-squared antenna pattern."""
+        gain = max(math.cos(angle_rad), 0.0) ** 2
+        return 10 * math.log10(max(gain, 1e-3))

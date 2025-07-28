@@ -113,6 +113,10 @@ class Channel:
         impulsive_noise_dB: float = 0.0,
         adjacent_interference_dB: float = 0.0,
         use_flora_curves: bool = False,
+        tx_current_a: float = 0.0,
+        rx_current_a: float = 0.0,
+        idle_current_a: float = 0.0,
+        voltage_v: float = 3.3,
         *,
         bandwidth: float = 125e3,
         coding_rate: int = 1,
@@ -287,6 +291,10 @@ class Channel:
         self.impulsive_noise_dB = float(impulsive_noise_dB)
         self.adjacent_interference_dB = float(adjacent_interference_dB)
         self.use_flora_curves = use_flora_curves
+        self.tx_current_a = float(tx_current_a)
+        self.rx_current_a = float(rx_current_a)
+        self.idle_current_a = float(idle_current_a)
+        self.voltage_v = float(voltage_v)
         self.omnet = OmnetModel(
             fine_fading_std,
             fading_correlation,
@@ -349,6 +357,10 @@ class Channel:
                 rx_start_delay_s=0.0,
                 pa_ramp_up_s=pa_ramp_up_s,
                 pa_ramp_down_s=pa_ramp_down_s,
+                tx_current_a=self.tx_current_a,
+                rx_current_a=self.rx_current_a,
+                idle_current_a=self.idle_current_a,
+                voltage_v=self.voltage_v,
             )
             self.flora_phy = None
             self.advanced_capture = True

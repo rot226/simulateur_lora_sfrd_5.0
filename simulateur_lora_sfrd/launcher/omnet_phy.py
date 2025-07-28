@@ -49,6 +49,10 @@ class OmnetPHY:
         rx_start_delay_s: float = 0.0,
         pa_ramp_up_s: float = 0.0,
         pa_ramp_down_s: float = 0.0,
+        tx_current_a: float = 0.0,
+        rx_current_a: float = 0.0,
+        idle_current_a: float = 0.0,
+        voltage_v: float = 3.3,
     ) -> None:
         """Initialise helper with optional hardware impairments."""
         self.channel = channel
@@ -104,11 +108,18 @@ class OmnetPHY:
         self.rx_start_delay_s = float(rx_start_delay_s)
         self.pa_ramp_up_s = float(pa_ramp_up_s)
         self.pa_ramp_down_s = float(pa_ramp_down_s)
+        self.tx_current_a = float(tx_current_a)
+        self.rx_current_a = float(rx_current_a)
+        self.idle_current_a = float(idle_current_a)
+        self.voltage_v = float(voltage_v)
         self.tx_state = "on" if self.tx_start_delay_s == 0.0 else "off"
         self.rx_state = "on" if self.rx_start_delay_s == 0.0 else "off"
         self._tx_timer = 0.0
         self._rx_timer = 0.0
         self._tx_level = 1.0 if self.tx_state == "on" else 0.0
+        self.energy_tx = 0.0
+        self.energy_rx = 0.0
+        self.energy_idle = 0.0
 
     # ------------------------------------------------------------------
     # Transceiver state helpers
@@ -146,6 +157,15 @@ class OmnetPHY:
         self.rx_state = "off"
 
     def update(self, dt: float) -> None:
+        # Accumulate energy consumption based on current state
+        if self.tx_state != "off":
+            level = self._tx_level if self.tx_state != "starting" else 0.0
+            self.energy_tx += self.voltage_v * self.tx_current_a * level * dt
+        elif self.rx_state == "on":
+            self.energy_rx += self.voltage_v * self.rx_current_a * dt
+        else:
+            self.energy_idle += self.voltage_v * self.idle_current_a * dt
+
         if self.tx_state == "starting":
             self._tx_timer -= dt
             if self._tx_timer <= 0.0:
@@ -172,6 +192,15 @@ class OmnetPHY:
             self._rx_timer -= dt
             if self._rx_timer <= 0.0:
                 self.rx_state = "on"
+
+    @property
+    def radio_state(self) -> str:
+        """Return simplified transceiver state (TX/RX/IDLE)."""
+        if self.tx_state != "off":
+            return "TX"
+        if self.rx_state == "on":
+            return "RX"
+        return "IDLE"
 
     # ------------------------------------------------------------------
     def path_loss(self, distance: float) -> float:
