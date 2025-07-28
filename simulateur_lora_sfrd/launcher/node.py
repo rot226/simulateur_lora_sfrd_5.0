@@ -45,6 +45,8 @@ class Node:
         sf: int,
         tx_power: float,
         channel=None,
+        orientation_az: float = 0.0,
+        orientation_el: float = 0.0,
         devaddr: int | None = None,
         join_eui: int = 0,
         dev_eui: int | None = None,
@@ -89,6 +91,8 @@ class Node:
         self.x = x
         self.y = y
         self.altitude = 0.0
+        self.orientation_az = orientation_az
+        self.orientation_el = orientation_el
         self.initial_sf = sf
         self.sf = sf
         self.initial_tx_power = tx_power
