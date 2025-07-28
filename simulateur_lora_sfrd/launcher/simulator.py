@@ -312,7 +312,7 @@ class Simulator:
                     ch.detection_threshold_dBm = detection_threshold_dBm
             if flora_mode:
                 for ch in self.multichannel.channels:
-                    ch.phy_model = "flora"
+                    ch.phy_model = "omnet_full"
             if flora_mode or phy_model.startswith("flora"):
                 for ch in self.multichannel.channels:
                     if getattr(ch, "environment", None) is None:
@@ -341,7 +341,7 @@ class Simulator:
         else:
             if channels is None:
                 env = "flora" if (flora_mode or phy_model.startswith("flora")) else None
-                ch_phy_model = "flora" if flora_mode else phy_model
+                ch_phy_model = "omnet_full" if flora_mode else phy_model
                 ch_list = [
                     Channel(
                         detection_threshold_dBm=detection_threshold_dBm,
@@ -362,7 +362,7 @@ class Simulator:
                         if detection_threshold_dBm != -float("inf"):
                             ch.detection_threshold_dBm = detection_threshold_dBm
                         if flora_mode:
-                            ch.phy_model = "flora"
+                            ch.phy_model = "omnet_full"
                         if (flora_mode or phy_model.startswith("flora")) and getattr(
                             ch, "environment", None
                         ) is None:
@@ -392,7 +392,7 @@ class Simulator:
                             Channel(
                                 frequency_hz=float(ch),
                                 detection_threshold_dBm=detection_threshold_dBm,
-                                phy_model="flora" if flora_mode else phy_model,
+                                phy_model="omnet_full" if flora_mode else phy_model,
                                 environment=(
                                     "flora"
                                     if (flora_mode or phy_model.startswith("flora"))
