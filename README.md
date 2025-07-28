@@ -242,8 +242,12 @@ réception :
 - `pa_distortion_std_dB` : variation aléatoire due aux imperfections du PA.
 - `pa_ramp_up_s` / `pa_ramp_down_s` : temps de montée et de descente du PA
   influençant la puissance effective.
+  Ces paramètres interagissent désormais avec le calcul OMNeT++ pour
+  reproduire fidèlement la distorsion du signal.
 - `impulsive_noise_prob` / `impulsive_noise_dB` : ajout de bruit impulsif selon
   une probabilité donnée.
+- Ces phénomènes sont désormais pris en compte par le modèle OMNeT++ complet
+  afin d'obtenir un PER très proche des simulations FLoRa.
 - `adjacent_interference_dB` : pénalité appliquée aux brouilleurs situés sur un
   canal adjacent.
 - `phase_noise_std_dB` : bruit de phase ajouté au SNR.
@@ -256,6 +260,8 @@ réception :
   peuvent entrer en collision comme celles du même SF.
 - `freq_offset_std_hz` et `sync_offset_std_s` : variations du décalage
   fréquentiel et temporel prises en compte par le modèle OMNeT++.
+- Ces offsets corrélés sont désormais appliqués à chaque transmission,
+  affinant la synchronisation et rapprochant le PER du comportement FLoRa.
 - `dev_frequency_offset_hz` / `dev_freq_offset_std_hz` : dérive propre à
   chaque émetteur.
 - `band_interference` : liste de brouilleurs sélectifs sous la forme
@@ -344,7 +350,8 @@ L'objet `AdvancedChannel` peut également introduire des offsets de
 fréquence et de synchronisation variables au cours du temps pour se
 rapprocher du comportement observé avec OMNeT++. Les paramètres
 `freq_offset_std_hz` et `sync_offset_std_s` contrôlent l'amplitude de ces
-variations corrélées. Une non‑linéarité d'amplificateur peut être
+variations corrélées et améliorent la précision du taux d'erreur.
+Une non‑linéarité d'amplificateur peut être
 spécifiée grâce aux paramètres `pa_non_linearity_dB`,
 `pa_non_linearity_std_dB` et `pa_non_linearity_curve`. Le SNR peut en
 outre être corrigé par modem à l'aide de `modem_snr_offsets`.
@@ -373,6 +380,9 @@ Il est désormais possible de modéliser la sélectivité du filtre RF grâce au
 paramètres ``frontend_filter_order`` et ``frontend_filter_bw``. Une valeur non
 nulle applique une atténuation dépendante du décalage fréquentiel, permettant de
 reproduire les effets observés dans OMNeT++.
+La sensibilité calculée utilise désormais la largeur de bande du filtre,
+si bien qu'un filtre plus étroit réduit le bruit thermique et améliore
+automatiquement la portée.
 
 Le tableau de bord propose désormais un bouton **Mode FLoRa complet**. Quand il
 est activé, `detection_threshold_dBm` est automatiquement fixé à `-110` dBm et
