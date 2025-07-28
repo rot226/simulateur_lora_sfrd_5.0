@@ -770,6 +770,8 @@ class Simulator:
                 if hasattr(node.channel, "_obstacle_loss"):
                     kwargs["tx_pos"] = (node.x, node.y, getattr(node, "altitude", 0.0))
                     kwargs["rx_pos"] = (gw.x, gw.y, getattr(gw, "altitude", 0.0))
+                    kwargs["tx_angle"] = getattr(node, "direction", 0.0)
+                    kwargs["rx_angle"] = getattr(gw, "direction", 0.0)
                 rssi, snr = node.channel.compute_rssi(
                     tx_power,
                     distance,
@@ -1048,6 +1050,10 @@ class Simulator:
                 if hasattr(node.channel, "_obstacle_loss"):
                     kwargs["tx_pos"] = (gw.x, gw.y, getattr(gw, "altitude", 0.0))
                     kwargs["rx_pos"] = (node.x, node.y, getattr(node, "altitude", 0.0))
+                    kwargs["tx_angle"] = getattr(gw, "direction", 0.0)
+                    kwargs["rx_angle"] = getattr(node, "direction", 0.0)
+                    kwargs["tx_angle"] = getattr(gw, "direction", 0.0)
+                    kwargs["rx_angle"] = getattr(node, "direction", 0.0)
                 rssi, snr = node.channel.compute_rssi(
                     node.tx_power,
                     distance,
