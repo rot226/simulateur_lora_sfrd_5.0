@@ -17,7 +17,7 @@ def test_simulate_single_node_periodic():
     assert delivered == 10
     assert collisions == 0
     assert pdr == 100.0
-    assert energy == 10.0
+    assert pytest.approx(energy, rel=1e-6) == 0.132619833984
     assert avg_delay == 0
     assert throughput == PAYLOAD_SIZE * 8 * delivered / 10
 

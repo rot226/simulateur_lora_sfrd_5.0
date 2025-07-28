@@ -35,6 +35,10 @@ def simulate(
     noise_std=0.0,
     debug_rx=False,
     phy_model="omnet",
+    voltage=3.3,
+    tx_current=0.06,
+    rx_current=0.011,
+    idle_current=1e-6,
     rng_manager: RngManager | None = None,
 ):
     """Exécute une simulation LoRa simplifiée et retourne les métriques.
@@ -71,6 +75,17 @@ def simulate(
     collisions = 0
     delivered = 0
     energy_consumed = 0.0
+    from .launcher.channel import Channel
+
+    channel = Channel(
+        tx_current_a=tx_current,
+        rx_current_a=rx_current,
+        idle_current_a=idle_current,
+        voltage_v=voltage,
+    )
+    airtime = channel.airtime(7, payload_size=PAYLOAD_SIZE)
+    tx_energy = (tx_current - idle_current) * voltage * airtime
+    rx_energy = (rx_current - idle_current) * voltage * airtime
     # Liste des délais de livraison (0 pour chaque paquet car la transmission
     # réussie est immédiate dans ce modèle simplifié)
     delays = []
@@ -117,7 +132,7 @@ def simulate(
                 if nb_tx == 0:
                     continue
                 total_transmissions += nb_tx
-                energy_consumed += nb_tx * 1.0
+                energy_consumed += nb_tx * (tx_energy + rx_energy)
                 if nb_tx == 1:
                     n = nodes_on_ch[0]
                     rng = rng_manager.get_stream("traffic", n)
@@ -186,6 +201,9 @@ def simulate(
     pdr = (delivered / total_transmissions) * 100 if total_transmissions > 0 else 0
     avg_delay = (sum(delays) / len(delays)) if delays else 0
     throughput_bps = delivered * PAYLOAD_SIZE * 8 / steps if steps > 0 else 0.0
+
+    idle_energy = (nodes + max(1, gateways)) * idle_current * voltage * steps
+    energy_consumed += idle_energy
 
     return (
         delivered,
@@ -275,6 +293,30 @@ def main(argv=None):
         help="Modèle physique à utiliser (omnet, flora ou flora_cpp)",
     )
     parser.add_argument(
+        "--voltage",
+        type=float,
+        default=3.3,
+        help="Tension d'alimentation du transceiver (V)",
+    )
+    parser.add_argument(
+        "--tx-current",
+        type=float,
+        default=0.06,
+        help="Courant en émission (A)",
+    )
+    parser.add_argument(
+        "--rx-current",
+        type=float,
+        default=0.011,
+        help="Courant en réception (A)",
+    )
+    parser.add_argument(
+        "--idle-current",
+        type=float,
+        default=1e-6,
+        help="Courant en veille (A)",
+    )
+    parser.add_argument(
         "--debug-rx",
         action="store_true",
         help="Trace chaque paquet reçu ou rejeté",
@@ -336,12 +378,16 @@ def main(argv=None):
             noise_std=args.noise_std,
             debug_rx=args.debug_rx,
             phy_model=args.phy_model,
+            voltage=args.voltage,
+            tx_current=args.tx_current,
+            rx_current=args.rx_current,
+            idle_current=args.idle_current,
             rng_manager=rng_manager,
         )
         results.append((delivered, collisions, pdr, energy, avg_delay, throughput))
         logging.info(
             f"Run {i + 1}/{args.runs} : PDR={pdr:.2f}% , Paquets livrés={delivered}, Collisions={collisions}, "
-            f"Énergie consommée={energy:.1f} unités, Délai moyen={avg_delay:.2f} unités de temps, "
+            f"Énergie consommée={energy:.3f} J, Délai moyen={avg_delay:.2f} unités de temps, "
             f"Débit moyen={throughput:.2f} bps"
         )
 
@@ -350,7 +396,7 @@ def main(argv=None):
     ]
     logging.info(
         f"Moyenne : PDR={averages[2]:.2f}% , Paquets livrés={averages[0]:.2f}, Collisions={averages[1]:.2f}, "
-        f"Énergie consommée={averages[3]:.1f} unités, Délai moyen={averages[4]:.2f} unités de temps, "
+        f"Énergie consommée={averages[3]:.3f} J, Délai moyen={averages[4]:.2f} unités de temps, "
         f"Débit moyen={averages[5]:.2f} bps"
     )
 
@@ -369,7 +415,7 @@ def main(argv=None):
                     "delivered",
                     "collisions",
                     "PDR(%)",
-                    "energy",
+                    "energy_J",
                     "avg_delay",
                     "throughput_bps",
                 ]
@@ -387,7 +433,7 @@ def main(argv=None):
                         d,
                         c,
                         f"{p:.2f}",
-                        f"{e:.1f}",
+                        f"{e:.3f}",
                         f"{ad:.2f}",
                         f"{th:.2f}",
                     ]
