@@ -736,7 +736,14 @@ class Simulator:
             # Énergie consommée par la transmission (E = I * V * t)
             current_a = node.profile.get_tx_current(tx_power)
             energy_J = current_a * node.profile.voltage_v * duration
-            self.total_energy_J += energy_J
+            preamble_J = (
+                node.profile.preamble_current_a
+                * node.profile.voltage_v
+                * node.profile.preamble_time_s
+            )
+            self.total_energy_J += energy_J + preamble_J
+            if preamble_J > 0.0:
+                node.add_energy(preamble_J, "preamble")
             node.add_energy(energy_J, "tx")
             if not node.alive:
                 return True
@@ -1010,11 +1017,17 @@ class Simulator:
         elif priority == EventType.RX_WINDOW:
             # Fenêtre de réception RX1/RX2 pour un nœud
             if node.class_type.upper() != "C":
+                current = (
+                    node.profile.listen_current_a
+                    if node.profile.listen_current_a > 0.0
+                    else node.profile.rx_current_a
+                )
+                state = "listen" if node.profile.listen_current_a > 0.0 else "rx"
                 node.add_energy(
-                    node.profile.rx_current_a
+                    current
                     * node.profile.voltage_v
                     * node.profile.rx_window_duration,
-                    "rx",
+                    state,
                 )
             if not node.alive:
                 return True
@@ -1111,11 +1124,17 @@ class Simulator:
         elif priority == EventType.PING_SLOT:
             if node.class_type.upper() != "B":
                 return True
+            current = (
+                node.profile.listen_current_a
+                if node.profile.listen_current_a > 0.0
+                else node.profile.rx_current_a
+            )
+            state = "listen" if node.profile.listen_current_a > 0.0 else "rx"
             node.add_energy(
-                node.profile.rx_current_a
+                current
                 * node.profile.voltage_v
                 * node.profile.rx_window_duration,
-                "rx",
+                state,
             )
             if not node.alive:
                 return True
