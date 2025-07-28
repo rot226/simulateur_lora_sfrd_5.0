@@ -128,6 +128,8 @@ Plusieurs schémas supplémentaires peuvent être utilisés :
   pour ignorer les transitions dépassant une inclinaison donnée.
 - `GaussMarkov` et les traces GPS restent disponibles pour modéliser des
   mouvements plus spécifiques.
+- `Trace3DMobility` lit une trace temporelle et suit le relief 3D en bloquant
+  les passages au-dessus d'une hauteur maximale.
 
 ## Multi-canaux
 
@@ -369,6 +371,8 @@ Une ``obstacle_map`` peut désormais contenir des identifiants (par
 exemple ``wall`` ou ``building``) associés à des pertes définies via le
 paramètre ``obstacle_losses`` pour modéliser précisément les obstacles
 traversés.
+Un paramètre ``obstacle_variability_std_dB`` ajoute une variation
+temporelle corrélée de cette absorption pour simuler un canal évolutif.
 Il est désormais possible de modéliser la sélectivité du filtre RF grâce aux
 paramètres ``frontend_filter_order`` et ``frontend_filter_bw``. Une valeur non
 nulle applique une atténuation dépendante du décalage fréquentiel, permettant de
