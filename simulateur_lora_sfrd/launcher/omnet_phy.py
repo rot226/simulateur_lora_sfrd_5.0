@@ -294,16 +294,47 @@ class OmnetPHY:
         phase_factor = abs(math.sin(phase_offset_rad / 2.0))
         return 10 * math.log10(1.0 + freq_factor ** 2 + time_factor ** 2 + phase_factor ** 2)
 
-    def capture(self, rssi_list: list[float]) -> list[bool]:
-        """Return list of booleans indicating which signals are captured."""
+    def capture(
+        self,
+        rssi_list: list[float],
+        start_list: list[float] | None = None,
+        end_list: list[float] | None = None,
+    ) -> list[bool]:
+        """Return capture decision with optional partial overlap weighting."""
         if not rssi_list:
             return []
-        order = sorted(range(len(rssi_list)), key=lambda i: rssi_list[i], reverse=True)
-        winners = [False] * len(rssi_list)
-        if len(order) == 1:
-            winners[order[0]] = True
+
+        n = len(rssi_list)
+        winners = [False] * n
+
+        if start_list is None or end_list is None:
+            order = sorted(range(n), key=lambda i: rssi_list[i], reverse=True)
+            if n == 1:
+                winners[order[0]] = True
+                return winners
+            if rssi_list[order[0]] - rssi_list[order[1]] >= self.channel.capture_threshold_dB:
+                winners[order[0]] = True
             return winners
-        if rssi_list[order[0]] - rssi_list[order[1]] >= self.channel.capture_threshold_dB:
+
+        noise = self.noise_floor()
+        powers = [10 ** (r / 10.0) for r in rssi_list]
+        snrs: list[float] = []
+        for i in range(n):
+            total = 10 ** (noise / 10.0)
+            dur_i = max(end_list[i] - start_list[i], 1e-9)
+            for j in range(n):
+                if j == i:
+                    continue
+                overlap = min(end_list[i], end_list[j]) - max(start_list[i], start_list[j])
+                if overlap <= 0.0:
+                    continue
+                total += (overlap / dur_i) * powers[j]
+            snrs.append(10 * math.log10(powers[i] / total))
+
+        order = sorted(range(n), key=lambda i: snrs[i], reverse=True)
+        if n == 1:
+            winners[order[0]] = True
+        elif snrs[order[0]] - snrs[order[1]] >= self.channel.capture_threshold_dB:
             winners[order[0]] = True
         return winners
 
