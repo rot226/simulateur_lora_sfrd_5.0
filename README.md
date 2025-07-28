@@ -259,7 +259,7 @@ réception :
   `(freq, bw, dB)` appliqués au calcul du bruit.
 - `environment` : preset rapide pour le modèle de propagation
   (`urban`, `urban_dense`, `suburban`, `rural`, `indoor` ou `flora`).
-- `phy_model` : "omnet", "flora", "flora_full" ou "flora_cpp" pour utiliser un modèle physique avancé reprenant les formules de FLoRa. Le mode `flora_cpp` charge la bibliothèque C++ compilée depuis FLoRa pour une précision accrue.
+- `phy_model` : "omnet", `"omnet_full"`, "flora", "flora_full" ou `"flora_cpp"` pour utiliser un modèle physique avancé reprenant les formules de FLoRa. Le mode `omnet_full` applique directement les équations du `LoRaAnalogModel` d'OMNeT++ avec bruit variable et filtre RF. Le mode `flora_cpp` charge la bibliothèque C++ compilée depuis FLoRa pour une précision accrue.
 - `use_flora_curves` : applique directement les équations FLoRa pour la
   puissance reçue et le taux d'erreur.
 
@@ -416,6 +416,9 @@ PER = 1 / (1 + exp(2 * (snr - (th + 2))))
 où `th` est le seuil SNR par Spreading Factor ({7: -7.5, 8: -10, 9: -12.5,
 10: -15, 11: -17.5, 12: -20} dB). Ces équations sont activées en passant
 `phy_model="flora", "flora_full" ou "flora_cpp"` ou `use_flora_curves=True` au constructeur du `Channel`.
+Pour le mode OMNeT++, le taux d'erreur binaire est déterminé grâce à la
+fonction `calculateBER` de `LoRaModulation` transposée telle quelle en
+Python afin de reproduire fidèlement les performances de décodage.
 
 Le paramètre ``flora_loss_model`` permet de choisir parmi plusieurs modèles
 d'atténuation : ``"lognorm"`` (par défaut), ``"oulu"`` correspondant à

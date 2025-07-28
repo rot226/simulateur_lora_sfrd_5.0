@@ -162,6 +162,9 @@ class Channel:
         :param variable_noise_std: Variation lente du bruit thermique en dB.
         :param advanced_capture: Active un mode de capture inspiré de FLoRa.
         :param phy_model: "omnet" (par défaut) pour utiliser le module OMNeT++.
+            Le mode "omnet_full" reprend les équations complètes de
+            ``LoRaAnalogModel`` afin de calculer RSSI et SNR avec les mêmes
+            variations temporelles et la sélectivité de canal.
         :param flora_loss_model: Variante d'atténuation FLoRa à utiliser
             ("lognorm", "oulu" ou "hata").
         :param system_loss_dB: Pertes fixes supplémentaires (par ex. pertes
@@ -330,7 +333,7 @@ class Channel:
         self.last_noise_dBm = 0.0
         self.last_filter_att_dB = 0.0
 
-        if self.phy_model == "omnet":
+        if self.phy_model in ("omnet", "omnet_full"):
             from .omnet_phy import OmnetPHY
             self.omnet_phy = OmnetPHY(
                 self,
@@ -481,6 +484,8 @@ class Channel:
 
         if self.phy_model == "flora_full" and sf is not None:
             noise = self._flora_noise_dBm(sf)
+        elif self.phy_model == "omnet_full" and sf is not None:
+            noise = self._omnet_noise_dBm(sf, freq_offset_hz)
         else:
             noise = self.noise_floor_dBm(freq_offset_hz)
         snr = rssi - noise + self.snr_offset_dB
@@ -588,6 +593,13 @@ class Channel:
 
     def _flora_noise_dBm(self, sf: int) -> float:
         return self.FLORA_SENSITIVITY.get(sf, {}).get(int(self.bandwidth), -126.5)
+
+    def _omnet_noise_dBm(self, sf: int, freq_offset_hz: float = 0.0) -> float:
+        """Return noise level similar to LoRaAnalogModel with variations."""
+        base = self._flora_noise_dBm(sf)
+        thermal = -174 + 10 * math.log10(self.bandwidth) + self.noise_figure_dB
+        delta = self.noise_floor_dBm(freq_offset_hz) - thermal
+        return base + delta
 
 
     def _update_sensitivity(self) -> None:
