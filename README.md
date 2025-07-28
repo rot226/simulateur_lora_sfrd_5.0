@@ -207,6 +207,7 @@ scénarios FLoRa. Voici la liste complète des options :
   analyser la planification finale et vérifier empiriquement la loi exponentielle.
 - `phase_noise_std_dB` : bruit de phase appliqué au SNR.
 - `clock_jitter_std_s` : gigue d'horloge ajoutée à chaque calcul.
+- `tx_start_delay_s` / `rx_start_delay_s` : délai d'activation de l'émetteur ou du récepteur.
 - `pa_ramp_up_s` / `pa_ramp_down_s` : temps de montée et de descente du PA.
 
 ## Paramètres radio avancés
@@ -351,9 +352,12 @@ tableau de bord. Les modèles ``rayleigh`` et ``rician`` utilisent
 désormais une corrélation temporelle pour reproduire le comportement de
 FLoRa et un bruit variable peut être ajouté via ``variable_noise_std``.
 Un paramètre ``clock_jitter_std_s`` modélise la gigue d'horloge sur le
-temps de réception. Les équations d'atténuation et de PER de FLoRa
-peuvent être activées via ``use_flora_curves`` pour un rendu encore plus
-fidèle.
+temps de réception. Les dérives ``freq_drift_std_hz`` et ``clock_drift_std_s``
+sont gérées en continu, et le démarrage/arrêt du PA peut être simulé via
+``tx_start_delay_s``/``rx_start_delay_s`` et ``pa_ramp_*``. Les équations
+d'atténuation et de PER de FLoRa peuvent être activées via ``use_flora_curves``
+pour un rendu encore plus fidèle. Le capture effect reprend désormais la
+logique exacte de la version C++ lorsque ``phy_model`` vaut ``flora``.
 Une carte ``obstacle_height_map`` peut bloquer complètement un lien en
 fonction de l'altitude parcourue et les différences de hauteur sont
 prises en compte dans tous les modèles lorsque ``tx_pos`` et ``rx_pos``
@@ -378,6 +382,9 @@ L'équivalent en script consiste à passer `flora_mode=True` au constructeur `Si
 Lorsque `phy_model="flora", "flora_full" ou "flora_cpp"` est utilisé (par exemple en mode FLoRa), le preset
 `environment="flora"` est désormais appliqué automatiquement afin de conserver
 un exposant de 2,7 et un shadowing de 3,57 dB identiques au modèle d'origine.
+Le capture effect complet du code C++ est alors activé tandis que le PA démarre
+et s'arrête selon `tx_start_delay_s`/`rx_start_delay_s` et `pa_ramp_*`. Les
+dérives de fréquence ainsi que la gigue d'horloge sont incluses par défaut.
 
 ### Aligner le modèle de propagation
 
