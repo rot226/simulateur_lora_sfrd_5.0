@@ -361,18 +361,41 @@ class Node:
 
     def add_energy(self, energy_joules: float, state: str = "tx"):
         """Ajoute de l'énergie consommée pour un état donné."""
-        self.energy_consumed += energy_joules
+        extra = 0.0
         if state == "tx":
-            self.energy_tx += energy_joules
+            current = self.profile.get_tx_current(self.tx_power)
+            extra = (
+                current
+                * self.profile.voltage_v
+                * (self.profile.ramp_up_s + self.profile.ramp_down_s)
+            )
+        elif state == "rx" and (
+            self.profile.ramp_up_s > 0.0 or self.profile.ramp_down_s > 0.0
+        ):
+            current = (
+                self.profile.listen_current_a
+                if self.profile.listen_current_a > 0.0
+                else self.profile.rx_current_a
+            )
+            extra = (
+                current
+                * self.profile.voltage_v
+                * (self.profile.ramp_up_s + self.profile.ramp_down_s)
+            )
+
+        total = energy_joules + extra
+        self.energy_consumed += total
+        if state == "tx":
+            self.energy_tx += total
         elif state == "rx":
-            self.energy_rx += energy_joules
+            self.energy_rx += total
         elif state == "sleep":
-            self.energy_sleep += energy_joules
+            self.energy_sleep += total
         elif state == "processing":
-            self.energy_processing += energy_joules
+            self.energy_processing += total
 
         if self.battery_remaining_j != float("inf"):
-            self.battery_remaining_j -= energy_joules
+            self.battery_remaining_j -= total
             if self.battery_remaining_j <= 0:
                 self.battery_remaining_j = 0.0
                 self.alive = False
@@ -389,10 +412,12 @@ class Node:
                 "sleep",
             )
         elif self.state == "rx":
-            self.add_energy(
-                self.profile.rx_current_a * self.profile.voltage_v * dt,
-                "rx",
+            current = (
+                self.profile.listen_current_a
+                if self.profile.listen_current_a > 0.0
+                else self.profile.rx_current_a
             )
+            self.add_energy(current * self.profile.voltage_v * dt, "rx")
         elif self.state == "processing":
             self.add_energy(
                 self.profile.process_current_a * self.profile.voltage_v * dt,
