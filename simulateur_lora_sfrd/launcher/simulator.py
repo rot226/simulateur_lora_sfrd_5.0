@@ -699,8 +699,13 @@ class Simulator:
         node = self.node_map.get(event.node_id)
         if node is None and priority != EventType.BEACON:
             return True
-        # Avancer le temps de simulation
+        # Avancer le temps de simulation et mettre à jour l'état PHY
+        delta = time - self.current_time
         self.current_time = time
+        if delta > 0:
+            for ch in self.multichannel.channels:
+                if getattr(ch, "omnet_phy", None):
+                    ch.omnet_phy.update(delta)
         if node is not None:
             node.consume_until(time)
             if not node.alive:
@@ -713,6 +718,8 @@ class Simulator:
             if node._nb_trans_left <= 0:
                 node._nb_trans_left = max(1, node.nb_trans)
             node._nb_trans_left -= 1
+            if getattr(node.channel, "omnet_phy", None):
+                node.channel.omnet_phy.start_tx()
             sf = node.sf
             tx_power = node.tx_power
             # Durée de la transmission
@@ -857,6 +864,8 @@ class Simulator:
             # Fin d'une transmission – traitement de la réception/perte
             node_id = node.id
             # Marquer la fin de transmission du nœud
+            if getattr(node.channel, "omnet_phy", None):
+                node.channel.omnet_phy.stop_tx()
             node.in_transmission = False
             node.current_end_time = None
             node.state = "rx" if node.class_type.upper() == "C" else "processing"
