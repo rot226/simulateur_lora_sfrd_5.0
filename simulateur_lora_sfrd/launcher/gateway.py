@@ -15,6 +15,8 @@ class Gateway:
         altitude: float = 0.0,
         *,
         rx_gain_dB: float = 0.0,
+        orientation_az: float = 0.0,
+        orientation_el: float = 0.0,
     ):
         """
         Initialise une passerelle LoRa.
@@ -33,6 +35,8 @@ class Gateway:
         self.y = y
         self.altitude = altitude
         self.rx_gain_dB = rx_gain_dB
+        self.orientation_az = orientation_az
+        self.orientation_el = orientation_el
         # Transmissions en cours indexées par (sf, frequency)
         self.active_map: dict[tuple[int, float], list[dict]] = {}
         # Mapping event_id -> (key, dict) for quick removal

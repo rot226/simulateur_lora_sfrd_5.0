@@ -766,12 +766,21 @@ class Simulator:
                 kwargs = {
                     "freq_offset_hz": getattr(node, "current_freq_offset", 0.0),
                     "sync_offset_s": getattr(node, "current_sync_offset", 0.0),
+                    "tx_pos": (node.x, node.y, getattr(node, "altitude", 0.0)),
+                    "rx_pos": (gw.x, gw.y, getattr(gw, "altitude", 0.0)),
                 }
                 if hasattr(node.channel, "_obstacle_loss"):
-                    kwargs["tx_pos"] = (node.x, node.y, getattr(node, "altitude", 0.0))
-                    kwargs["rx_pos"] = (gw.x, gw.y, getattr(gw, "altitude", 0.0))
-                    kwargs["tx_angle"] = getattr(node, "direction", 0.0)
-                    kwargs["rx_angle"] = getattr(gw, "direction", 0.0)
+                    kwargs["tx_angle"] = getattr(node, "orientation_az", getattr(node, "direction", 0.0))
+                    kwargs["rx_angle"] = getattr(gw, "orientation_az", getattr(gw, "direction", 0.0))
+                else:
+                    kwargs["tx_angle"] = (
+                        getattr(node, "orientation_az", 0.0),
+                        getattr(node, "orientation_el", 0.0),
+                    )
+                    kwargs["rx_angle"] = (
+                        getattr(gw, "orientation_az", 0.0),
+                        getattr(gw, "orientation_el", 0.0),
+                    )
                 rssi, snr = node.channel.compute_rssi(
                     tx_power,
                     distance,
@@ -1046,14 +1055,24 @@ class Simulator:
                 if not frame:
                     continue
                 distance = node.distance_to(gw)
-                kwargs = {"freq_offset_hz": 0.0, "sync_offset_s": 0.0}
+                kwargs = {
+                    "freq_offset_hz": 0.0,
+                    "sync_offset_s": 0.0,
+                    "tx_pos": (gw.x, gw.y, getattr(gw, "altitude", 0.0)),
+                    "rx_pos": (node.x, node.y, getattr(node, "altitude", 0.0)),
+                }
                 if hasattr(node.channel, "_obstacle_loss"):
-                    kwargs["tx_pos"] = (gw.x, gw.y, getattr(gw, "altitude", 0.0))
-                    kwargs["rx_pos"] = (node.x, node.y, getattr(node, "altitude", 0.0))
-                    kwargs["tx_angle"] = getattr(gw, "direction", 0.0)
-                    kwargs["rx_angle"] = getattr(node, "direction", 0.0)
-                    kwargs["tx_angle"] = getattr(gw, "direction", 0.0)
-                    kwargs["rx_angle"] = getattr(node, "direction", 0.0)
+                    kwargs["tx_angle"] = getattr(gw, "orientation_az", getattr(gw, "direction", 0.0))
+                    kwargs["rx_angle"] = getattr(node, "orientation_az", getattr(node, "direction", 0.0))
+                else:
+                    kwargs["tx_angle"] = (
+                        getattr(gw, "orientation_az", 0.0),
+                        getattr(gw, "orientation_el", 0.0),
+                    )
+                    kwargs["rx_angle"] = (
+                        getattr(node, "orientation_az", 0.0),
+                        getattr(node, "orientation_el", 0.0),
+                    )
                 rssi, snr = node.channel.compute_rssi(
                     node.tx_power,
                     distance,

@@ -444,6 +444,10 @@ class Channel:
         distance: float,
         sf: int | None = None,
         *,
+        tx_pos: tuple[float, float] | tuple[float, float, float] | None = None,
+        rx_pos: tuple[float, float] | tuple[float, float, float] | None = None,
+        tx_angle: float | tuple[float, float] | None = None,
+        rx_angle: float | tuple[float, float] | None = None,
         freq_offset_hz: float | None = None,
         sync_offset_s: float | None = None,
     ) -> tuple[float, float]:
@@ -482,6 +486,45 @@ class Channel:
         if self.time_variation_std > 0:
             rssi += self.rng.normal(0, self.time_variation_std)
         rssi += self.omnet.fine_fading()
+        if (
+            tx_angle is not None
+            and rx_angle is not None
+            and tx_pos is not None
+            and rx_pos is not None
+        ):
+            def _vec(pos1, pos2):
+                dx = (pos2[0] - pos1[0])
+                dy = (pos2[1] - pos1[1])
+                dz1 = pos1[2] if len(pos1) >= 3 else 0.0
+                dz2 = pos2[2] if len(pos2) >= 3 else 0.0
+                dz = dz2 - dz1
+                return dx, dy, dz
+
+            dx, dy, dz = _vec(tx_pos, rx_pos)
+            dist = math.sqrt(dx * dx + dy * dy + dz * dz)
+            if dist > 0.0:
+                los = (dx / dist, dy / dist, dz / dist)
+
+                def _orient_vec(angle):
+                    if isinstance(angle, (tuple, list)):
+                        az, el = angle
+                    else:
+                        az = angle
+                        el = 0.0
+                    return (
+                        math.cos(el) * math.cos(az),
+                        math.cos(el) * math.sin(az),
+                        math.sin(el),
+                    )
+
+                tx_vec = _orient_vec(tx_angle)
+                rx_vec = _orient_vec(rx_angle)
+                tx_dot = max(min(sum(a * b for a, b in zip(los, tx_vec)), 1.0), -1.0)
+                rx_dot = max(min(sum(-a * b for a, b in zip(los, rx_vec)), 1.0), -1.0)
+                tx_diff = math.acos(tx_dot)
+                rx_diff = math.acos(rx_dot)
+                rssi += self._directional_gain(tx_diff)
+                rssi += self._directional_gain(rx_diff)
         rssi += self.rssi_offset_dB
         if freq_offset_hz is None:
             freq_offset_hz = self.frequency_offset_hz
@@ -566,6 +609,11 @@ class Channel:
             return float("inf")
         penalty = 1.5 * (freq_factor ** 2 + time_factor ** 2)
         return 10 * math.log10(1.0 + penalty)
+
+    def _directional_gain(self, angle_rad: float) -> float:
+        """Simple cosine-squared antenna pattern."""
+        gain = max(math.cos(angle_rad), 0.0) ** 2
+        return 10 * math.log10(max(gain, 1e-3))
 
     def airtime(self, sf: int, payload_size: int = 20) -> float:
         """Calcule l'airtime complet d'un paquet LoRa en secondes."""
