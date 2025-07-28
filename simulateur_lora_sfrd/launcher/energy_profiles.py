@@ -16,7 +16,10 @@ class EnergyProfile:
     voltage_v: float = 3.3
     sleep_current_a: float = 1e-6
     rx_current_a: float = 11e-3
+    listen_current_a: float = 0.0
     process_current_a: float = 0.0
+    ramp_up_s: float = 0.0
+    ramp_down_s: float = 0.0
     rx_window_duration: float = 0.0
     tx_current_map_a: dict[float, float] | None = None
 
