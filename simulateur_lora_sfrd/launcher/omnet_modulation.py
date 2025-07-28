@@ -29,5 +29,7 @@ def calculate_ber(snir: float, bandwidth: float, bitrate: float) -> float:
 
 
 def calculate_ser(snir: float, bandwidth: float, bitrate: float) -> float:
-    """Return SER. Not implemented in the original model."""
-    return math.nan
+    """Return SER using a simple BER-to-SER approximation."""
+    ber = calculate_ber(snir, bandwidth, bitrate)
+    ser = 1.0 - (1.0 - ber) ** 4
+    return min(max(ser, 0.0), 1.0)
