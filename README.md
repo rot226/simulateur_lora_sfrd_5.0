@@ -208,6 +208,8 @@ scénarios FLoRa. Voici la liste complète des options :
 - `phase_noise_std_dB` : bruit de phase appliqué au SNR.
 - `clock_jitter_std_s` : gigue d'horloge ajoutée à chaque calcul.
 - `pa_ramp_up_s` / `pa_ramp_down_s` : temps de montée et de descente du PA.
+- `tx_start_delay_s` / `rx_start_delay_s` : délai de mise en marche de
+  l'émetteur et du récepteur.
 
 ## Paramètres radio avancés
 
@@ -239,6 +241,8 @@ réception :
 - `pa_distortion_std_dB` : variation aléatoire due aux imperfections du PA.
 - `pa_ramp_up_s` / `pa_ramp_down_s` : temps de montée et de descente du PA
   influençant la puissance effective.
+- `tx_start_delay_s` / `rx_start_delay_s` : délai de mise en marche de
+  l'émetteur et du récepteur.
 - `impulsive_noise_prob` / `impulsive_noise_dB` : ajout de bruit impulsif selon
   une probabilité donnée.
 - `adjacent_interference_dB` : pénalité appliquée aux brouilleurs situés sur un
@@ -500,6 +504,9 @@ plus faible d'au moins 6 dB et si ce signal domine pendant **cinq symboles de
 preambule** au minimum. Lorsque `phy_model` vaut `"flora"`, `"flora_full"` ou `"flora_cpp"`, la
 décision reprend la matrice `nonOrthDelta` du simulateur FLoRa original ; la
 différence de puissance exigée dépend alors des Spreading Factors en présence.
+
+Cette logique peut aussi être activée avec ``capture_mode="flora"`` dans
+``Gateway.start_reception`` pour reproduire fidèlement le traitement C++.
 
 Pour reproduire un scénario FLoRa :
 1. Passez `flora_mode=True` et `flora_timing=True` lors de la création du

@@ -109,6 +109,8 @@ class Channel:
         frontend_filter_bw: float | None = None,
         pa_ramp_up_s: float = 0.0,
         pa_ramp_down_s: float = 0.0,
+        tx_start_delay_s: float = 0.0,
+        rx_start_delay_s: float = 0.0,
         impulsive_noise_prob: float = 0.0,
         impulsive_noise_dB: float = 0.0,
         adjacent_interference_dB: float = 0.0,
@@ -193,6 +195,8 @@ class Channel:
             la même valeur que ``bandwidth``.
         :param pa_ramp_up_s: Temps de montée du PA simulé (s).
         :param pa_ramp_down_s: Temps de descente du PA (s).
+        :param tx_start_delay_s: Délai d'activation de l'émetteur (s).
+        :param rx_start_delay_s: Délai d'activation du récepteur (s).
         :param impulsive_noise_prob: Probabilité d'ajouter du bruit impulsif à
             chaque calcul de bruit.
         :param impulsive_noise_dB: Amplitude du bruit impulsif ajouté (dB).
@@ -280,6 +284,8 @@ class Channel:
         self.frontend_filter_bw = float(frontend_filter_bw) if frontend_filter_bw is not None else bandwidth
         self.pa_ramp_up_s = float(pa_ramp_up_s)
         self.pa_ramp_down_s = float(pa_ramp_down_s)
+        self.tx_start_delay_s = float(tx_start_delay_s)
+        self.rx_start_delay_s = float(rx_start_delay_s)
         self.impulsive_noise_prob = float(impulsive_noise_prob)
         self.impulsive_noise_dB = float(impulsive_noise_dB)
         self.adjacent_interference_dB = float(adjacent_interference_dB)
@@ -330,6 +336,12 @@ class Channel:
         self.last_noise_dBm = 0.0
         self.last_filter_att_dB = 0.0
 
+        self.tx_state = "on" if self.tx_start_delay_s == 0.0 else "off"
+        self.rx_state = "on" if self.rx_start_delay_s == 0.0 else "off"
+        self._tx_timer = 0.0
+        self._rx_timer = 0.0
+        self._tx_level = 1.0 if self.tx_state == "on" else 0.0
+
         if self.phy_model == "omnet":
             from .omnet_phy import OmnetPHY
             self.omnet_phy = OmnetPHY(
@@ -342,8 +354,8 @@ class Channel:
                 pa_non_linearity_dB=pa_non_linearity_dB,
                 pa_non_linearity_std_dB=pa_non_linearity_std_dB,
                 phase_noise_std_dB=phase_noise_std_dB,
-                tx_start_delay_s=0.0,
-                rx_start_delay_s=0.0,
+                tx_start_delay_s=tx_start_delay_s,
+                rx_start_delay_s=rx_start_delay_s,
                 pa_ramp_up_s=pa_ramp_up_s,
                 pa_ramp_down_s=pa_ramp_down_s,
             )
@@ -422,6 +434,69 @@ class Channel:
         )
         return pl + self.system_loss_dB
 
+    # ------------------------------------------------------------------
+    # Transceiver state helpers
+    # ------------------------------------------------------------------
+    def start_tx(self) -> None:
+        if self.tx_start_delay_s > 0.0:
+            self.tx_state = "starting"
+            self._tx_timer = self.tx_start_delay_s
+            self._tx_level = 0.0
+        elif self.pa_ramp_up_s > 0.0:
+            self.tx_state = "ramping_up"
+            self._tx_timer = self.pa_ramp_up_s
+            self._tx_level = 0.0
+        else:
+            self.tx_state = "on"
+            self._tx_level = 1.0
+
+    def start_rx(self) -> None:
+        if self.rx_start_delay_s > 0.0:
+            self.rx_state = "starting"
+            self._rx_timer = self.rx_start_delay_s
+        else:
+            self.rx_state = "on"
+
+    def stop_tx(self) -> None:
+        if self.pa_ramp_down_s > 0.0 and self.tx_state == "on":
+            self.tx_state = "ramping_down"
+            self._tx_timer = self.pa_ramp_down_s
+            self._tx_level = 1.0
+        else:
+            self.tx_state = "off"
+            self._tx_level = 0.0
+
+    def stop_rx(self) -> None:
+        self.rx_state = "off"
+
+    def update(self, dt: float) -> None:
+        if self.tx_state == "starting":
+            self._tx_timer -= dt
+            if self._tx_timer <= 0.0:
+                if self.pa_ramp_up_s > 0.0:
+                    self.tx_state = "ramping_up"
+                    self._tx_timer = self.pa_ramp_up_s
+                    self._tx_level = 0.0
+                else:
+                    self.tx_state = "on"
+                    self._tx_level = 1.0
+        elif self.tx_state == "ramping_up":
+            self._tx_timer -= dt
+            self._tx_level = 1.0 - max(self._tx_timer, 0.0) / self.pa_ramp_up_s
+            if self._tx_timer <= 0.0:
+                self.tx_state = "on"
+                self._tx_level = 1.0
+        elif self.tx_state == "ramping_down":
+            self._tx_timer -= dt
+            self._tx_level = max(self._tx_timer, 0.0) / self.pa_ramp_down_s
+            if self._tx_timer <= 0.0:
+                self.tx_state = "off"
+                self._tx_level = 0.0
+        if self.rx_state == "starting":
+            self._rx_timer -= dt
+            if self._rx_timer <= 0.0:
+                self.rx_state = "on"
+
     def compute_rssi(
         self,
         tx_power_dBm: float,
@@ -444,6 +519,12 @@ class Channel:
                 freq_offset_hz=freq_offset_hz,
                 sync_offset_s=sync_offset_s,
             )
+
+        if self.rx_state != "on":
+            return -float("inf"), -float("inf")
+
+        if self._tx_level < 1.0:
+            tx_power_dBm += 20.0 * math.log10(max(self._tx_level, 1e-3))
         loss = self.path_loss(distance)
         if self.shadowing_std > 0 and not getattr(self, "flora_phy", None):
             loss += self.rng.normal(0, self.shadowing_std)
