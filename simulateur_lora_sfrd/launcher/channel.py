@@ -83,6 +83,7 @@ class Channel:
         fading_correlation: float = 0.9,
         variable_noise_std: float = 0.0,
         advanced_capture: bool = False,
+        flora_capture: bool = False,
         phy_model: str = "omnet",
         flora_loss_model: str = "lognorm",
         system_loss_dB: float = 0.0,
@@ -165,6 +166,8 @@ class Channel:
             fading et le bruit variable.
         :param variable_noise_std: Variation lente du bruit thermique en dB.
         :param advanced_capture: Active un mode de capture inspiré de FLoRa.
+        :param flora_capture: Utilise la logique de collision FLoRa dans
+            :class:`OmnetPHY`.
         :param phy_model: "omnet" (par défaut) pour utiliser le module OMNeT++.
             Le mode "omnet_full" reprend les équations complètes de
             ``LoRaAnalogModel`` afin de calculer RSSI et SNR avec les mêmes
@@ -320,6 +323,7 @@ class Channel:
         self.fading_correlation = fading_correlation
         self.variable_noise_std = variable_noise_std
         self.advanced_capture = advanced_capture
+        self.flora_capture = flora_capture
         self.phy_model = phy_model
         self.flora_loss_model = flora_loss_model
         self.system_loss_dB = system_loss_dB
@@ -361,6 +365,7 @@ class Channel:
                 rx_current_a=self.rx_current_a,
                 idle_current_a=self.idle_current_a,
                 voltage_v=self.voltage_v,
+                flora_capture=self.flora_capture,
             )
             self.flora_phy = None
             self.advanced_capture = True

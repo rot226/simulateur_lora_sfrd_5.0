@@ -27,6 +27,15 @@ class _CorrelatedValue:
 class OmnetPHY:
     """Replicate OMNeT++ FLoRa PHY calculations with extra impairments."""
 
+    NON_ORTH_DELTA = [
+        [1, -8, -9, -9, -9, -9],
+        [-11, 1, -11, -12, -13, -13],
+        [-15, -13, 1, -13, -14, -15],
+        [-19, -18, -17, 1, -17, -18],
+        [-22, -22, -21, -20, 1, -20],
+        [-25, -25, -25, -24, -23, 1],
+    ]
+
     def __init__(
         self,
         channel,
@@ -45,6 +54,7 @@ class OmnetPHY:
         oscillator_leakage_dB: float = 0.0,
         oscillator_leakage_std_dB: float = 0.0,
         rx_fault_std_dB: float = 0.0,
+        flora_capture: bool = False,
         tx_start_delay_s: float = 0.0,
         rx_start_delay_s: float = 0.0,
         pa_ramp_up_s: float = 0.0,
@@ -112,6 +122,7 @@ class OmnetPHY:
         self.rx_current_a = float(rx_current_a)
         self.idle_current_a = float(idle_current_a)
         self.voltage_v = float(voltage_v)
+        self.flora_capture = bool(flora_capture)
         self.tx_state = "on" if self.tx_start_delay_s == 0.0 else "off"
         self.rx_state = "on" if self.rx_start_delay_s == 0.0 else "off"
         self._tx_timer = 0.0
@@ -331,6 +342,8 @@ class OmnetPHY:
         rssi_list: list[float],
         start_list: list[float] | None = None,
         end_list: list[float] | None = None,
+        sf_list: list[int] | None = None,
+        freq_list: list[float] | None = None,
     ) -> list[bool]:
         """Return capture decision with optional partial overlap weighting."""
         if not rssi_list:
@@ -338,6 +351,48 @@ class OmnetPHY:
 
         n = len(rssi_list)
         winners = [False] * n
+
+        if self.flora_capture:
+            if (
+                start_list is None
+                or end_list is None
+                or sf_list is None
+                or freq_list is None
+            ):
+                raise ValueError("sf_list, freq_list, start_list and end_list required")
+
+            order = sorted(range(n), key=lambda i: rssi_list[i], reverse=True)
+            if len(order) == 1:
+                winners[order[0]] = True
+                return winners
+
+            idx0 = order[0]
+            sf0 = sf_list[idx0]
+            rssi0 = rssi_list[idx0]
+            freq0 = freq_list[idx0]
+            start0 = start_list[idx0]
+            end0 = end_list[idx0]
+            symbol_time = (2 ** sf0) / self.channel.bandwidth
+            cs_begin = start0 + symbol_time * (self.channel.preamble_symbols - 5)
+
+            captured = True
+            for idx in order[1:]:
+                if freq_list[idx] != freq0:
+                    continue
+                overlap = min(end0, end_list[idx]) > max(start0, start_list[idx])
+                if not overlap:
+                    continue
+                diff = rssi0 - rssi_list[idx]
+                th = self.NON_ORTH_DELTA[sf0 - 7][sf_list[idx] - 7]
+                capture_effect = diff >= th
+                timing_collision = cs_begin < end_list[idx]
+                if not capture_effect and timing_collision:
+                    captured = False
+                    break
+
+            if captured:
+                winners[idx0] = True
+            return winners
 
         if start_list is None or end_list is None:
             order = sorted(range(n), key=lambda i: rssi_list[i], reverse=True)
