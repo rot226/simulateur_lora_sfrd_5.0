@@ -55,6 +55,7 @@ class OmnetPHY:
         oscillator_leakage_std_dB: float = 0.0,
         rx_fault_std_dB: float = 0.0,
         flora_capture: bool = False,
+        capture_window_symbols: int = 5,
         tx_start_delay_s: float = 0.0,
         rx_start_delay_s: float = 0.0,
         pa_ramp_up_s: float = 0.0,
@@ -123,6 +124,7 @@ class OmnetPHY:
         self.idle_current_a = float(idle_current_a)
         self.voltage_v = float(voltage_v)
         self.flora_capture = bool(flora_capture)
+        self.capture_window_symbols = int(capture_window_symbols)
         self.tx_state = "on" if self.tx_start_delay_s == 0.0 else "off"
         self.rx_state = "on" if self.rx_start_delay_s == 0.0 else "off"
         self._tx_timer = 0.0
@@ -373,7 +375,9 @@ class OmnetPHY:
             start0 = start_list[idx0]
             end0 = end_list[idx0]
             symbol_time = (2 ** sf0) / self.channel.bandwidth
-            cs_begin = start0 + symbol_time * (self.channel.preamble_symbols - 5)
+            cs_begin = start0 + symbol_time * (
+                self.channel.preamble_symbols - self.capture_window_symbols
+            )
 
             captured = True
             for idx in order[1:]:
