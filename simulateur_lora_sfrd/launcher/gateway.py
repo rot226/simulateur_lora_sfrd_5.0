@@ -63,6 +63,7 @@ class Gateway:
         capture_mode: str = "basic",
         flora_phy=None,
         orthogonal_sf: bool = True,
+        capture_window_symbols: int = 5,
     ):
         """
         Tente de démarrer la réception d'une nouvelle transmission sur cette passerelle.
@@ -84,6 +85,8 @@ class Gateway:
             "flora".
         :param orthogonal_sf: Si ``True``, les transmissions de SF différents
             sont ignorées pour la détection de collision.
+        :param capture_window_symbols: Nombre de symboles de préambule exigés
+            avant qu'un paquet puisse capturer la réception.
         """
         key = (sf, frequency)
         symbol_duration = (2 ** sf) / bandwidth
@@ -154,9 +157,9 @@ class Gateway:
 
         def _enough_preamble(winner, others) -> bool:
             """Return ``True`` if ``winner`` may capture according to the
-            5-symbol preamble rule."""
+            configurable preamble rule."""
             sym_time = (2 ** winner.get('sf', sf)) / bandwidth
-            limit = 5 * sym_time
+            limit = capture_window_symbols * sym_time
             for other in others:
                 if other is winner:
                     continue
@@ -261,12 +264,12 @@ class Gateway:
                 capture = True
 
         if capture:
-            # Apply 5-symbol rule: the winning packet must have
-            # started at least 5 symbols before the new one.
+            # Apply preamble rule: the winning packet must have started
+            # at least ``capture_window_symbols`` symbols before the new one.
             capture_allowed = False
             if strongest is not new_transmission:
                 elapsed = current_time - strongest.get('start_time', current_time)
-                if elapsed >= 5 * symbol_duration:
+                if elapsed >= capture_window_symbols * symbol_duration:
                     capture_allowed = True
             if not capture_allowed:
                 capture = False

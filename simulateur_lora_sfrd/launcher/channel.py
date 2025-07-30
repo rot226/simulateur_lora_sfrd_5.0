@@ -122,6 +122,7 @@ class Channel:
         bandwidth: float = 125e3,
         coding_rate: int = 1,
         capture_threshold_dB: float = 6.0,
+        capture_window_symbols: int = 5,
         tx_power_std: float = 0.0,
         interference_dB: float = 0.0,
         detection_threshold_dBm: float = -float("inf"),
@@ -153,6 +154,8 @@ class Channel:
         :param bandwidth: Largeur de bande LoRa (Hz).
         :param coding_rate: Index de code (0=4/5 … 4=4/8).
         :param capture_threshold_dB: Seuil de capture pour le décodage simultané.
+        :param capture_window_symbols: Nombre de symboles de préambule requis
+            avant qu'un paquet plus fort puisse capturer la réception.
         :param tx_power_std: Écart-type de la variation aléatoire de puissance TX.
         :param interference_dB: Bruit supplémentaire moyen dû aux interférences.
         :param detection_threshold_dBm: RSSI minimal détectable (dBm). Les
@@ -340,6 +343,7 @@ class Channel:
         self._update_sensitivity()
         # Seuil de capture (différence de RSSI en dB pour qu'un signal plus fort capture la réception)
         self.capture_threshold_dB = capture_threshold_dB
+        self.capture_window_symbols = int(capture_window_symbols)
         self.orthogonal_sf = orthogonal_sf
         self.last_rssi_dBm = 0.0
         self.last_noise_dBm = 0.0
@@ -366,6 +370,7 @@ class Channel:
                 idle_current_a=self.idle_current_a,
                 voltage_v=self.voltage_v,
                 flora_capture=self.flora_capture,
+                capture_window_symbols=self.capture_window_symbols,
             )
             self.flora_phy = None
             self.advanced_capture = True
