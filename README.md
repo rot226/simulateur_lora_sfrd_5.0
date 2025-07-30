@@ -383,8 +383,8 @@ Un paramètre ``obstacle_variability_std_dB`` ajoute une variation
 temporelle corrélée de cette absorption pour simuler un canal évolutif.
 Il est désormais possible de modéliser la sélectivité du filtre RF grâce aux
 paramètres ``frontend_filter_order`` et ``frontend_filter_bw``. Une valeur non
-nulle applique une atténuation dépendante du décalage fréquentiel, permettant de
-reproduire les effets observés dans OMNeT++.
+nulle applique une atténuation dépendante du décalage fréquentiel via un filtre
+Butterworth de même ordre que celui employé dans la pile FLoRa d'OMNeT++.
 La sensibilité calculée utilise désormais la largeur de bande du filtre,
 si bien qu'un filtre plus étroit réduit le bruit thermique et améliore
 automatiquement la portée.
