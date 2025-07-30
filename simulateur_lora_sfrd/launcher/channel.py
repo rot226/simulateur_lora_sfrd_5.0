@@ -1,4 +1,6 @@
 import math
+import os
+import re
 import numpy as np
 from .omnet_model import OmnetModel
 
@@ -62,6 +64,26 @@ class Channel:
         12: {125000: -137, 250000: -135, 500000: -129},
     }
 
+    @staticmethod
+    def parse_flora_noise_table(path: str | os.PathLike) -> dict[int, dict[int, float]]:
+        """Parse LoRaAnalogModel.cc to load exact noise values."""
+        text = open(path, "r").read()
+        table: dict[int, dict[int, float]] = {}
+        current_sf: int | None = None
+        for line in text.splitlines():
+            m_sf = re.search(r"getLoRaSF\(\) == (\d+)", line)
+            if m_sf:
+                current_sf = int(m_sf.group(1))
+                table[current_sf] = {}
+                continue
+            if current_sf is not None:
+                m_bw = re.search(r"getLoRaBW\(\) == Hz\((\d+)\).*dBmW2mW\((-?\d+)\)", line)
+                if m_bw:
+                    bw = int(m_bw.group(1))
+                    val = int(m_bw.group(2))
+                    table[current_sf][bw] = val
+        return table
+
     def __init__(
         self,
         frequency_hz: float = 868e6,
@@ -118,6 +140,7 @@ class Channel:
         rx_current_a: float = 0.0,
         idle_current_a: float = 0.0,
         voltage_v: float = 3.3,
+        flora_noise_path: str | os.PathLike | None = None,
         *,
         bandwidth: float = 125e3,
         coding_rate: int = 1,
@@ -217,6 +240,8 @@ class Channel:
             région choisie.
         :param orthogonal_sf: Si ``True``, les transmissions de SF différents
             n'interfèrent pas entre elles.
+        :param flora_noise_path: Chemin vers un fichier ``LoRaAnalogModel.cc``
+            pour charger la table de bruit FLoRa.
         """
 
         if environment is not None:
@@ -298,6 +323,10 @@ class Channel:
         self.rx_current_a = float(rx_current_a)
         self.idle_current_a = float(idle_current_a)
         self.voltage_v = float(voltage_v)
+        if flora_noise_path:
+            self.flora_noise_table = self.parse_flora_noise_table(flora_noise_path)
+        else:
+            self.flora_noise_table = self.FLORA_SENSITIVITY
         self.omnet = OmnetModel(
             fine_fading_std,
             fading_correlation,
@@ -659,7 +688,7 @@ class Channel:
     SNR_THRESHOLDS = {7: -7.5, 8: -10.0, 9: -12.5, 10: -15.0, 11: -17.5, 12: -20.0}
 
     def _flora_noise_dBm(self, sf: int) -> float:
-        return self.FLORA_SENSITIVITY.get(sf, {}).get(int(self.bandwidth), -126.5)
+        return self.flora_noise_table.get(sf, {}).get(int(self.bandwidth), -126.5)
 
     def _omnet_noise_dBm(self, sf: int, freq_offset_hz: float = 0.0) -> float:
         """Return noise level similar to LoRaAnalogModel with variations."""

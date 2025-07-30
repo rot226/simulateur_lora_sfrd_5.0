@@ -27,3 +27,9 @@ def parse_flora_sensitivity():
 def test_flora_sensitivity_table_matches():
     expected = parse_flora_sensitivity()
     assert Channel.FLORA_SENSITIVITY == expected
+
+
+def test_flora_noise_path_loading():
+    path = Path('flora-master/src/LoRaPhy/LoRaAnalogModel.cc')
+    ch = Channel(flora_noise_path=path)
+    assert ch.flora_noise_table == parse_flora_sensitivity()
