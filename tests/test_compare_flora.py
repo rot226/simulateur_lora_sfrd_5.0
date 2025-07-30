@@ -131,6 +131,31 @@ def test_energy_consumption_match(tmp_path):
     assert diff / energy <= 0.05
 
 
+def test_average_delay_match(tmp_path):
+    """Average delay parsed from a .sca file should match simulator metrics."""
+    pytest.importorskip('pandas')
+    sim = Simulator(
+        num_nodes=1,
+        num_gateways=1,
+        transmission_mode="Periodic",
+        packet_interval=1.0,
+        packets_to_send=1,
+        mobility=False,
+        fixed_sf=7,
+        seed=0,
+    )
+    sim.run()
+    metrics = sim.get_metrics()
+    avg_delay = metrics["avg_delay_s"]
+    sca = tmp_path / "run.sca"
+    sca.write_text(
+        f"scalar sim sent 1\nscalar sim received 1\nscalar sim sf7 1\nscalar sim avg_delay_s {avg_delay}\n"
+    )
+    flora_metrics = load_flora_metrics(sca)
+    diff = abs(flora_metrics["avg_delay_s"] - avg_delay)
+    assert diff / avg_delay <= 0.05 if avg_delay else diff == 0
+
+
 def test_flora_full_mode(tmp_path):
     """PDR and SF distribution should match FLoRa within 1%."""
     pytest.importorskip('pandas')
