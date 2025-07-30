@@ -631,7 +631,9 @@ class Channel:
         ratio = abs(freq_offset_hz) / fc
         if ratio <= 0.0:
             return 0.0
-        return 10 * self.frontend_filter_order * math.log10(1.0 + ratio ** 2)
+        # |H(jw)|^2 = 1 / (1 + (w/wc)^(2n)) for an n-th order Butterworth filter
+        # Attenuation in dB is -10 log10(|H|^2) = 10 log10(1 + ratio^(2n))
+        return 10 * math.log10(1.0 + ratio ** (2 * self.frontend_filter_order))
 
     def _alignment_penalty_db(
         self, freq_offset_hz: float, sync_offset_s: float, sf: int | None
