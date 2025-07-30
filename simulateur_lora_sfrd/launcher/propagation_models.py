@@ -62,6 +62,16 @@ class CompletePropagation(LogDistanceShadowing):
     """More detailed propagation model including fast fading and calibrated noise."""
 
     SNR_THRESHOLDS = {7: -7.5, 8: -10.0, 9: -12.5, 10: -15.0, 11: -17.5, 12: -20.0}
+    # Sensitivity values from the Semtech SX1272/73 datasheet (also used by FLoRa)
+    SEMTECH_SENSITIVITY = {
+        6: {125000: -121, 250000: -118, 500000: -111},
+        7: {125000: -124, 250000: -122, 500000: -116},
+        8: {125000: -127, 250000: -125, 500000: -119},
+        9: {125000: -130, 250000: -128, 500000: -122},
+        10: {125000: -133, 250000: -130, 500000: -125},
+        11: {125000: -135, 250000: -132, 500000: -128},
+        12: {125000: -137, 250000: -135, 500000: -129},
+    }
 
     def __init__(
         self,
@@ -108,5 +118,8 @@ class CompletePropagation(LogDistanceShadowing):
         return rssi
 
     def sensitivity_table(self, bandwidth: float) -> dict[int, float]:
+        bw = int(bandwidth)
+        if bw in (125000, 250000, 500000):
+            return {sf: vals[bw] for sf, vals in self.SEMTECH_SENSITIVITY.items()}
         floor = self.noise_floor_dBm(bandwidth)
         return {sf: floor + snr for sf, snr in self.SNR_THRESHOLDS.items()}
