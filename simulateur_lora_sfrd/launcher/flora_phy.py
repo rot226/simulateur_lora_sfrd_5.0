@@ -36,9 +36,10 @@ class FloraPHY:
     HATA_K2 = 35.2
     SNR_THRESHOLDS = {7: -7.5, 8: -10.0, 9: -12.5, 10: -15.0, 11: -17.5, 12: -20.0}
 
-    def __init__(self, channel, loss_model: str = "lognorm") -> None:
+    def __init__(self, channel, loss_model: str = "lognorm", *, use_exact_ber: bool = False) -> None:
         self.channel = channel
         self.loss_model = loss_model
+        self.use_exact_ber = bool(use_exact_ber)
 
     def path_loss(self, distance: float) -> float:
         if distance <= 0:
@@ -127,6 +128,27 @@ class FloraPHY:
         return winners
 
     def packet_error_rate(self, snr: float, sf: int, payload_bytes: int = 20) -> float:
-        """Return PER based on a logistic approximation of FLoRa curves."""
+        """Return PER for the given SNR and spreading factor.
+
+        When ``use_exact_ber`` is ``True`` this uses the BER formula from
+        ``LoRaModulation::calculateBER`` and converts it to PER for the provided
+        payload length.  Otherwise a logistic approximation of the curves
+        produced by FLoRa is used.
+        """
+
+        if self.use_exact_ber:
+            from .omnet_modulation import calculate_ber
+
+            bitrate = (
+                sf
+                * self.channel.bandwidth
+                * 4.0
+                / ((1 << sf) * (self.channel.coding_rate + 4))
+            )
+            snir = 10 ** (snr / 10.0)
+            ber = calculate_ber(snir, self.channel.bandwidth, bitrate)
+            per = 1.0 - (1.0 - ber) ** (payload_bytes * 8)
+            return min(max(per, 0.0), 1.0)
+
         th = self.SNR_THRESHOLDS.get(sf, -10.0) + 2.0
         return 1.0 / (1.0 + math.exp(2.0 * (snr - th)))
