@@ -239,7 +239,7 @@ réception :
   supplémentaire proportionnel à l'humidité relative. La variation temporelle
   peut être définie via `humidity_std_percent`.
 - `pa_non_linearity_dB` / `pa_non_linearity_std_dB` : modélisent la
-  non‑linéarité de l'amplificateur de puissance.
+  non‑linéarité de l'amplificateur de puissance (par défaut `-1` dB ± 0,5 dB).
 - `pa_non_linearity_curve` : triplet de coefficients polynomiaux pour
   définir une non‑linéarité personnalisée.
 - `pa_distortion_std_dB` : variation aléatoire due aux imperfections du PA.
@@ -251,6 +251,9 @@ réception :
   une probabilité donnée.
 - Ces phénomènes sont désormais pris en compte par le modèle OMNeT++ complet
   afin d'obtenir un PER très proche des simulations FLoRa.
+- Les collisions partielles sont évaluées en fonction du recouvrement réel
+  lorsque `phy_model="omnet_full"`, ce qui permet de reproduire le
+  comportement observé dans FLoRa.
 - `adjacent_interference_dB` : pénalité appliquée aux brouilleurs situés sur un
   canal adjacent.
 - `phase_noise_std_dB` : bruit de phase ajouté au SNR.
@@ -385,6 +388,9 @@ Il est désormais possible de modéliser la sélectivité du filtre RF grâce au
 paramètres ``frontend_filter_order`` et ``frontend_filter_bw``. Une valeur non
 nulle applique une atténuation dépendante du décalage fréquentiel via un filtre
 Butterworth de même ordre que celui employé dans la pile FLoRa d'OMNeT++.
+Un filtre d'ordre 2 est activé par défaut pour reproduire la sélectivité
+matérielle ; ``frontend_filter_bw`` vaut la bande LoRa si aucune valeur
+supplémentaire n'est fournie.
 La sensibilité calculée utilise désormais la largeur de bande du filtre,
 si bien qu'un filtre plus étroit réduit le bruit thermique et améliore
 automatiquement la portée.
