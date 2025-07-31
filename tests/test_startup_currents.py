@@ -35,3 +35,26 @@ def test_startup_current_energy():
 
     assert phy.radio_state == "IDLE"
 
+
+def test_pa_ramp_current_energy():
+    ch = Channel(
+        phy_model="omnet",
+        tx_current_a=1.0,
+        idle_current_a=0.0,
+        voltage_v=1.0,
+        pa_ramp_up_s=1.0,
+        pa_ramp_down_s=1.0,
+        pa_ramp_current_a=2.0,
+    )
+    phy = ch.omnet_phy
+    phy.tx_state = "off"
+    phy.start_tx()
+    phy.update(0.5)
+    assert phy.energy_tx == pytest.approx(1.0)
+    phy.update(0.5)
+    assert phy.tx_state == "on"
+    assert phy.energy_tx == pytest.approx(2.0)
+    phy.stop_tx()
+    phy.update(1.0)
+    assert phy.energy_tx == pytest.approx(4.0)
+

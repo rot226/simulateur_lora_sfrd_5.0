@@ -1,5 +1,7 @@
 """Event-driven LoRa simulator."""
 
+from __future__ import annotations
+
 import heapq
 import logging
 import random
@@ -117,6 +119,8 @@ class Simulator:
         clock_jitter_std_s: float = 0.0,
         pa_ramp_up_s: float = 0.0,
         pa_ramp_down_s: float = 0.0,
+        pa_ramp_current_a: float = 0.0,
+        antenna_model: str | callable = "cos2",
     ):
         """
         Initialise la simulation LoRa avec les entités et paramètres donnés.
@@ -199,6 +203,8 @@ class Simulator:
         :param clock_jitter_std_s: Gigue d'horloge ajoutée à chaque calcul (s).
         :param pa_ramp_up_s: Temps de montée du PA (s).
         :param pa_ramp_down_s: Temps de descente du PA (s).
+        :param pa_ramp_current_a: Courant utilisé pendant les rampes PA (A).
+        :param antenna_model: Modèle d'antenne pour le calcul directionnel.
         """
         # Paramètres de simulation
         if flora_mode and packet_interval == 60.0 and first_packet_interval is None:
@@ -254,6 +260,8 @@ class Simulator:
         self.clock_jitter_std_s = clock_jitter_std_s
         self.pa_ramp_up_s = pa_ramp_up_s
         self.pa_ramp_down_s = pa_ramp_down_s
+        self.pa_ramp_current_a = pa_ramp_current_a
+        self.antenna_model = antenna_model
         # Activation ou non de la mobilité des nœuds
         self.mobility_enabled = mobility
         if mobility_model is not None:
@@ -331,12 +339,16 @@ class Simulator:
                 ch.clock_jitter_std_s = clock_jitter_std_s
                 ch.pa_ramp_up_s = pa_ramp_up_s
                 ch.pa_ramp_down_s = pa_ramp_down_s
+                ch.pa_ramp_current_a = pa_ramp_current_a
+                ch.antenna_model = antenna_model
                 if hasattr(ch, "_phase_noise"):
                     ch._phase_noise.std = phase_noise_std_dB
                 if getattr(ch, "omnet_phy", None):
                     ch.omnet_phy.clock_jitter_std_s = clock_jitter_std_s
                     ch.omnet_phy.pa_ramp_up_s = pa_ramp_up_s
                     ch.omnet_phy.pa_ramp_down_s = pa_ramp_down_s
+                    ch.omnet_phy.pa_ramp_current_a = pa_ramp_current_a
+                    ch.omnet_phy.antenna_model = antenna_model
                     ch.omnet_phy._phase_noise.std = phase_noise_std_dB
         else:
             if channels is None:
@@ -353,6 +365,8 @@ class Simulator:
                         clock_jitter_std_s=clock_jitter_std_s,
                         pa_ramp_up_s=pa_ramp_up_s,
                         pa_ramp_down_s=pa_ramp_down_s,
+                        pa_ramp_current_a=pa_ramp_current_a,
+                        antenna_model=antenna_model,
                     )
                 ]
             else:
@@ -377,15 +391,19 @@ class Simulator:
                             ch.multipath_taps = 3
                         ch.phase_noise_std_dB = phase_noise_std_dB
                         ch.clock_jitter_std_s = clock_jitter_std_s
-                        ch.pa_ramp_up_s = pa_ramp_up_s
-                        ch.pa_ramp_down_s = pa_ramp_down_s
-                        if hasattr(ch, "_phase_noise"):
-                            ch._phase_noise.std = phase_noise_std_dB
-                        if getattr(ch, "omnet_phy", None):
-                            ch.omnet_phy.clock_jitter_std_s = clock_jitter_std_s
-                            ch.omnet_phy.pa_ramp_up_s = pa_ramp_up_s
-                            ch.omnet_phy.pa_ramp_down_s = pa_ramp_down_s
-                            ch.omnet_phy._phase_noise.std = phase_noise_std_dB
+                    ch.pa_ramp_up_s = pa_ramp_up_s
+                    ch.pa_ramp_down_s = pa_ramp_down_s
+                    ch.pa_ramp_current_a = pa_ramp_current_a
+                    ch.antenna_model = antenna_model
+                    if hasattr(ch, "_phase_noise"):
+                        ch._phase_noise.std = phase_noise_std_dB
+                    if getattr(ch, "omnet_phy", None):
+                        ch.omnet_phy.clock_jitter_std_s = clock_jitter_std_s
+                        ch.omnet_phy.pa_ramp_up_s = pa_ramp_up_s
+                        ch.omnet_phy.pa_ramp_down_s = pa_ramp_down_s
+                        ch.omnet_phy.pa_ramp_current_a = pa_ramp_current_a
+                        ch.omnet_phy.antenna_model = antenna_model
+                        ch.omnet_phy._phase_noise.std = phase_noise_std_dB
                         ch_list.append(ch)
                     else:
                         ch_list.append(
@@ -404,6 +422,8 @@ class Simulator:
                                 clock_jitter_std_s=clock_jitter_std_s,
                                 pa_ramp_up_s=pa_ramp_up_s,
                                 pa_ramp_down_s=pa_ramp_down_s,
+                                pa_ramp_current_a=pa_ramp_current_a,
+                                antenna_model=antenna_model,
                             )
                         )
             self.multichannel = MultiChannel(ch_list, method=channel_distribution)

@@ -60,6 +60,8 @@ class OmnetPHY:
         rx_start_delay_s: float = 0.0,
         pa_ramp_up_s: float = 0.0,
         pa_ramp_down_s: float = 0.0,
+        pa_ramp_current_a: float = 0.0,
+        antenna_model: str | callable = "cos2",
         tx_current_a: float = 0.0,
         rx_current_a: float = 0.0,
         idle_current_a: float = 0.0,
@@ -71,6 +73,9 @@ class OmnetPHY:
 
         The ``tx_start_current_a`` and ``rx_start_current_a`` parameters model
         additional current draw during ``start_tx`` and ``start_rx`` delays.
+        ``pa_ramp_current_a`` specifies the current drawn while the PA is
+        ramping up or down. ``antenna_model`` selects the pattern used when
+        applying orientation gains.
         """
         self.channel = channel
         self.model = OmnetModel(
@@ -125,6 +130,8 @@ class OmnetPHY:
         self.rx_start_delay_s = float(rx_start_delay_s)
         self.pa_ramp_up_s = float(pa_ramp_up_s)
         self.pa_ramp_down_s = float(pa_ramp_down_s)
+        self.pa_ramp_current_a = float(pa_ramp_current_a)
+        self.antenna_model = antenna_model
         self.tx_current_a = float(tx_current_a)
         self.rx_current_a = float(rx_current_a)
         self.idle_current_a = float(idle_current_a)
@@ -181,6 +188,9 @@ class OmnetPHY:
         # Accumulate energy consumption based on current state
         if self.tx_state == "starting":
             current = self.tx_start_current_a or self.tx_current_a
+            self.energy_tx += self.voltage_v * current * dt
+        elif self.tx_state in ("ramping_up", "ramping_down"):
+            current = self.pa_ramp_current_a or self.tx_current_a
             self.energy_tx += self.voltage_v * current * dt
         elif self.tx_state != "off":
             self.energy_tx += (
@@ -282,6 +292,10 @@ class OmnetPHY:
         distance: float,
         sf: int | None = None,
         *,
+        tx_pos: tuple[float, float] | tuple[float, float, float] | None = None,
+        rx_pos: tuple[float, float] | tuple[float, float, float] | None = None,
+        tx_angle: float | tuple[float, float] | None = None,
+        rx_angle: float | tuple[float, float] | None = None,
         freq_offset_hz: float | None = None,
         sync_offset_s: float | None = None,
     ) -> tuple[float, float]:
@@ -316,6 +330,41 @@ class OmnetPHY:
             - loss
             - ch.cable_loss_dB
         )
+        if (
+            tx_angle is not None
+            and rx_angle is not None
+            and tx_pos is not None
+            and rx_pos is not None
+        ):
+            dx = rx_pos[0] - tx_pos[0]
+            dy = rx_pos[1] - tx_pos[1]
+            dz1 = tx_pos[2] if len(tx_pos) >= 3 else 0.0
+            dz2 = rx_pos[2] if len(rx_pos) >= 3 else 0.0
+            dz = dz2 - dz1
+            dist = math.sqrt(dx * dx + dy * dy + dz * dz)
+            if dist > 0.0:
+                los = (dx / dist, dy / dist, dz / dist)
+
+                def _vec(angle):
+                    if isinstance(angle, (tuple, list)):
+                        az, el = angle
+                    else:
+                        az = angle
+                        el = 0.0
+                    return (
+                        math.cos(el) * math.cos(az),
+                        math.cos(el) * math.sin(az),
+                        math.sin(el),
+                    )
+
+                tx_vec = _vec(tx_angle)
+                rx_vec = _vec(rx_angle)
+                tx_dot = max(min(sum(a * b for a, b in zip(los, tx_vec)), 1.0), -1.0)
+                rx_dot = max(min(sum(-a * b for a, b in zip(los, rx_vec)), 1.0), -1.0)
+                tx_diff = math.acos(tx_dot)
+                rx_diff = math.acos(rx_dot)
+                rssi += self._directional_gain(tx_diff)
+                rssi += self._directional_gain(rx_diff)
         if ch.tx_power_std > 0:
             rssi += random.gauss(0.0, ch.tx_power_std)
         if ch.fast_fading_std > 0:
@@ -453,4 +502,17 @@ class OmnetPHY:
         q = sum(random.gauss(0.0, 1.0) for _ in range(taps))
         amp = math.sqrt(i * i + q * q) / math.sqrt(taps)
         return 20 * math.log10(max(amp, 1e-12))
+
+    def _directional_gain(self, angle_rad: float) -> float:
+        """Return antenna gain for the given angle."""
+        if callable(self.antenna_model):
+            return float(self.antenna_model(angle_rad))
+        model = str(self.antenna_model).lower()
+        if model == "isotropic":
+            return 0.0
+        if model in ("cos", "cosine"):
+            gain = max(math.cos(angle_rad), 0.0)
+        else:
+            gain = max(math.cos(angle_rad), 0.0) ** 2
+        return 10 * math.log10(max(gain, 1e-3))
 

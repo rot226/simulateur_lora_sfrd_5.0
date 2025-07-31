@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import math
 import os
 import re
@@ -132,6 +134,8 @@ class Channel:
         frontend_filter_bw: float | None = None,
         pa_ramp_up_s: float = 0.0,
         pa_ramp_down_s: float = 0.0,
+        pa_ramp_current_a: float = 0.0,
+        antenna_model: str | callable = "cos2",
         impulsive_noise_prob: float = 0.0,
         impulsive_noise_dB: float = 0.0,
         adjacent_interference_dB: float = 0.0,
@@ -229,6 +233,8 @@ class Channel:
             la même valeur que ``bandwidth``.
         :param pa_ramp_up_s: Temps de montée du PA simulé (s).
         :param pa_ramp_down_s: Temps de descente du PA (s).
+        :param pa_ramp_current_a: Courant utilisé durant les rampes PA (A).
+        :param antenna_model: Modèle d'antenne directionnelle à appliquer.
         :param impulsive_noise_prob: Probabilité d'ajouter du bruit impulsif à
             chaque calcul de bruit.
         :param impulsive_noise_dB: Amplitude du bruit impulsif ajouté (dB).
@@ -318,6 +324,8 @@ class Channel:
         self.frontend_filter_bw = float(frontend_filter_bw) if frontend_filter_bw is not None else bandwidth
         self.pa_ramp_up_s = float(pa_ramp_up_s)
         self.pa_ramp_down_s = float(pa_ramp_down_s)
+        self.pa_ramp_current_a = float(pa_ramp_current_a)
+        self.antenna_model = antenna_model
         self.impulsive_noise_prob = float(impulsive_noise_prob)
         self.impulsive_noise_dB = float(impulsive_noise_dB)
         self.adjacent_interference_dB = float(adjacent_interference_dB)
@@ -394,6 +402,8 @@ class Channel:
                 rx_start_delay_s=0.0,
                 pa_ramp_up_s=pa_ramp_up_s,
                 pa_ramp_down_s=pa_ramp_down_s,
+                pa_ramp_current_a=self.pa_ramp_current_a,
+                antenna_model=self.antenna_model,
                 tx_current_a=self.tx_current_a,
                 rx_current_a=self.rx_current_a,
                 idle_current_a=self.idle_current_a,
@@ -500,6 +510,10 @@ class Channel:
                 tx_power_dBm,
                 distance,
                 sf,
+                tx_pos=tx_pos,
+                rx_pos=rx_pos,
+                tx_angle=tx_angle,
+                rx_angle=rx_angle,
                 freq_offset_hz=freq_offset_hz,
                 sync_offset_s=sync_offset_s,
             )
@@ -652,8 +666,16 @@ class Channel:
         return 10 * math.log10(1.0 + penalty)
 
     def _directional_gain(self, angle_rad: float) -> float:
-        """Simple cosine-squared antenna pattern."""
-        gain = max(math.cos(angle_rad), 0.0) ** 2
+        """Return antenna gain for the given angle."""
+        if callable(self.antenna_model):
+            return float(self.antenna_model(angle_rad))
+        model = str(self.antenna_model).lower()
+        if model == "isotropic":
+            return 0.0
+        if model in ("cos", "cosine"):
+            gain = max(math.cos(angle_rad), 0.0)
+        else:  # default "cos2"
+            gain = max(math.cos(angle_rad), 0.0) ** 2
         return 10 * math.log10(max(gain, 1e-3))
 
     def airtime(self, sf: int, payload_size: int = 20) -> float:
