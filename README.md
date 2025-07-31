@@ -445,6 +445,12 @@ Pour le mode OMNeT++, le taux d'erreur binaire est déterminé grâce à la
 fonction `calculateBER` de `LoRaModulation` transposée telle quelle en
 Python afin de reproduire fidèlement les performances de décodage.
 
+> **Remarque :** cette approche logistique reste une approximation des courbes
+> PER de FLoRa. La version C++ calcule la probabilité d'erreur binaire par
+> intégration dans `calculateBER`. Pour un réalisme maximal, compilez
+> `libflora_phy.so` et lancez le simulateur avec `phy_model="flora_cpp"` afin
+> d'utiliser ces routines natives.
+
 Le paramètre ``flora_loss_model`` permet de choisir parmi plusieurs modèles
 d'atténuation : ``"lognorm"`` (par défaut), ``"oulu"`` correspondant à
 ``LoRaPathLossOulu`` (B = 128.95 dB, n = 2.32, d0 = 1000 m) ou ``"hata"`` pour
