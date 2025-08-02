@@ -149,7 +149,7 @@ class Channel:
         bandwidth: float = 125e3,
         coding_rate: int = 1,
         capture_threshold_dB: float = 6.0,
-        capture_window_symbols: int = 5,
+        capture_window_symbols: int = 6,
         tx_power_std: float = 0.0,
         interference_dB: float = 0.0,
         detection_threshold_dBm: float = -float("inf"),
@@ -182,7 +182,8 @@ class Channel:
         :param coding_rate: Index de code (0=4/5 … 4=4/8).
         :param capture_threshold_dB: Seuil de capture pour le décodage simultané.
         :param capture_window_symbols: Nombre de symboles de préambule requis
-            avant qu'un paquet plus fort puisse capturer la réception.
+            avant qu'un paquet plus fort puisse capturer la réception (par
+            défaut 6).
         :param tx_power_std: Écart-type de la variation aléatoire de puissance TX.
         :param interference_dB: Bruit supplémentaire moyen dû aux interférences.
         :param detection_threshold_dBm: RSSI minimal détectable (dBm). Les

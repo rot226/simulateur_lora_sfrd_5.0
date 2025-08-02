@@ -77,7 +77,7 @@ class FloraPHY:
         The algorithm follows the same logic as ``LoRaReceiver`` in FLoRa:
         the strongest packet wins only if the power difference with each
         interferer is above the ``NON_ORTH_DELTA`` threshold *and* the
-        interferer overlaps past the ``preamble - 5`` symbols window.
+        interferer overlaps past the ``preamble - 6`` symbols window.
         """
 
         if not rssi_list:
