@@ -36,7 +36,7 @@ class FloraPHY:
     HATA_K2 = 35.2
     SNR_THRESHOLDS = {7: -7.5, 8: -10.0, 9: -12.5, 10: -15.0, 11: -17.5, 12: -20.0}
 
-    def __init__(self, channel, loss_model: str = "lognorm", *, use_exact_ber: bool = False) -> None:
+    def __init__(self, channel, loss_model: str = "lognorm", *, use_exact_ber: bool = True) -> None:
         self.channel = channel
         self.loss_model = loss_model
         self.use_exact_ber = bool(use_exact_ber)

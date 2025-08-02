@@ -451,6 +451,10 @@ Pour le mode OMNeT++, le taux d'erreur binaire est déterminé grâce à la
 fonction `calculateBER` de `LoRaModulation` transposée telle quelle en
 Python afin de reproduire fidèlement les performances de décodage.
 
+Le calcul BER exact est désormais **activé par défaut** dans `FloraPHY`. Passez
+`use_exact_ber=False` lors de sa construction pour revenir à l'approximation
+logistique si vous souhaitez accélérer les simulations.
+
 > **Remarque :** cette approche logistique reste une approximation des courbes
 > PER de FLoRa. La version C++ calcule la probabilité d'erreur binaire par
 > intégration dans `calculateBER`. Pour un réalisme maximal, compilez
