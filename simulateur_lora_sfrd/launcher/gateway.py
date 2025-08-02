@@ -63,7 +63,7 @@ class Gateway:
         capture_mode: str = "basic",
         flora_phy=None,
         orthogonal_sf: bool = True,
-        capture_window_symbols: int = 5,
+        capture_window_symbols: int = 6,
     ):
         """
         Tente de démarrer la réception d'une nouvelle transmission sur cette passerelle.
@@ -86,7 +86,7 @@ class Gateway:
         :param orthogonal_sf: Si ``True``, les transmissions de SF différents
             sont ignorées pour la détection de collision.
         :param capture_window_symbols: Nombre de symboles de préambule exigés
-            avant qu'un paquet puisse capturer la réception.
+            avant qu'un paquet puisse capturer la réception (par défaut 6).
         """
         key = (sf, frequency)
         symbol_duration = (2 ** sf) / bandwidth
