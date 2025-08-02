@@ -13,7 +13,7 @@ def test_multipath_fading_mean():
 
 
 def test_sensitivity_matches_theory():
-    ch = Channel()
+    ch = Channel(sensitivity_mode="theoretical")
     bw = ch.bandwidth
     nf = ch.noise_figure_dB
     snr_req = {7: -7.5, 8: -10.0, 9: -12.5, 10: -15.0, 11: -17.5, 12: -20.0}

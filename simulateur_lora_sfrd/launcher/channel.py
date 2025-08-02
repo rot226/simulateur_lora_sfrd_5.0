@@ -145,6 +145,7 @@ class Channel:
         idle_current_a: float = 0.0,
         voltage_v: float = 3.3,
         flora_noise_path: str | os.PathLike | None = None,
+        sensitivity_mode: str = "flora",
         *,
         bandwidth: float = 125e3,
         coding_rate: int = 1,
@@ -252,6 +253,8 @@ class Channel:
             n'interfèrent pas entre elles.
         :param flora_noise_path: Chemin vers un fichier ``LoRaAnalogModel.cc``
             pour charger la table de bruit FLoRa.
+        :param sensitivity_mode: "flora" pour utiliser les valeurs de bruit
+            issues de FLoRa, "theoretical" pour un calcul thermique.
         """
 
         if environment is not None:
@@ -331,6 +334,7 @@ class Channel:
         self.impulsive_noise_dB = float(impulsive_noise_dB)
         self.adjacent_interference_dB = float(adjacent_interference_dB)
         self.use_flora_curves = use_flora_curves
+        self.sensitivity_mode = sensitivity_mode
         self.tx_current_a = float(tx_current_a)
         self.rx_current_a = float(rx_current_a)
         self.idle_current_a = float(idle_current_a)
@@ -729,8 +733,13 @@ class Channel:
 
 
     def _update_sensitivity(self) -> None:
-        bw = min(self.bandwidth, self.frontend_filter_bw)
-        noise = -174 + 10 * math.log10(bw) + self.noise_figure_dB
-        self.sensitivity_dBm = {
-            sf: noise + snr for sf, snr in self.SNR_THRESHOLDS.items()
-        }
+        if self.sensitivity_mode == "theoretical":
+            bw = min(self.bandwidth, self.frontend_filter_bw)
+            noise = -174 + 10 * math.log10(bw) + self.noise_figure_dB
+            self.sensitivity_dBm = {
+                sf: noise + snr for sf, snr in self.SNR_THRESHOLDS.items()
+            }
+        else:
+            self.sensitivity_dBm = {
+                sf: self._flora_noise_dBm(sf) for sf in self.flora_noise_table
+            }
