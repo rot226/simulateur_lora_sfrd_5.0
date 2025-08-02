@@ -73,3 +73,75 @@ ser = 1.0 - (1.0 - ber) ** 4
 return min(max(ser, 0.0), 1.0)
 ```
 【F:simulateur_lora_sfrd/launcher/omnet_modulation.py†L8-L35】
+
+## Bruit de fond
+
+Le bruit thermique moyen pour une bande passante ``BW`` (Hz) est calculé par :
+
+```python
+thermal = -174 + 10 * math.log10(BW) + noise_figure_dB  # dBm
+```
+
+Cette équation suppose une température de référence de 290 K et ajoute le
+facteur de bruit du récepteur ``noise_figure_dB``【F:simulateur_lora_sfrd/launcher/omnet_model.py†L65-L69】【F:simulateur_lora_sfrd/launcher/channel.py†L448-L451】.
+
+Pour reproduire exactement FLoRa, les sensibilités de chaque couple
+spreading factor/largeur de bande sont chargées depuis la table Semtech
+codée dans ``LoRaAnalogModel.cc``【F:flora-master/src/LoRaPhy/LoRaAnalogModel.cc†L36-L80】
+et exposée via ``Channel._flora_noise_dBm``【F:simulateur_lora_sfrd/launcher/channel.py†L719-L726】.
+
+| SF | 125 kHz | 250 kHz | 500 kHz |
+|----|---------|---------|---------|
+| 6  | −121 dBm | −118 dBm | −111 dBm |
+| 7  | −124 dBm | −122 dBm | −116 dBm |
+| 8  | −127 dBm | −125 dBm | −119 dBm |
+| 9  | −130 dBm | −128 dBm | −122 dBm |
+| 10 | −133 dBm | −130 dBm | −125 dBm |
+| 11 | −135 dBm | −132 dBm | −128 dBm |
+| 12 | −137 dBm | −135 dBm | −129 dBm |
+
+> **Hypothèses :** valeurs données pour un récepteur idéal sans interférence
+externe. Les unités sont en dBm.
+
+## Effet de capture
+
+Deux transmissions sur la même fréquence entrent en collision si elles se
+chevauchent après ``capture_window_symbols`` symboles de préambule et que
+la différence de puissance n'atteint pas le seuil ``NON_ORTH_DELTA`` (dB)
+:
+
+```python
+diff = rssi0 - rssi_i  # dB
+th = NON_ORTH_DELTA[sf0 - 7][sf_i - 7]  # dB
+capture = diff >= th
+```
+
+La fenêtre critique commence à
+``t_cs = start0 + (preamble_symbols - capture_window_symbols) * T_sym``
+où ``T_sym = 2**sf0 / BW`` est le temps symbole en secondes. Si l'interférence
+se poursuit au-delà de ``t_cs`` et que ``capture`` est faux, le paquet est
+perdu【F:simulateur_lora_sfrd/launcher/flora_phy.py†L20-L26】【F:simulateur_lora_sfrd/launcher/flora_phy.py†L99-L125】【F:flora-master/src/LoRaPhy/LoRaReceiver.cc†L163-L185】.
+
+> **Hypothèses :** les puissances sont exprimées en dBm. Seules les
+transmissions sur la même fréquence sont considérées.
+
+## Modèle énergétique
+
+L'énergie consommée dans un état radio se calcule par
+``E = V * I * t`` (Joules) où ``V`` est la tension d'alimentation (V), ``I`` le
+courant de l'état (A) et ``t`` la durée (s). Par exemple, pour l'état
+transmission :
+
+```python
+I_tx = profile.get_tx_current(tx_power)  # A
+E_tx = V * I_tx * airtime
+E_ramp = V * I_tx * (ramp_up_s + ramp_down_s)
+```
+
+Cette logique est appliquée par ``Node.add_energy`` et
+``Node.consume_until`` pour accumuler l'énergie par état【F:simulateur_lora_sfrd/launcher/node.py†L378-L386】【F:simulateur_lora_sfrd/launcher/node.py†L449-L461】
+et reflète le modèle OMNeT++ où l'énergie est l'intégrale de la puissance
+instantanée【F:flora-master/src/LoRaEnergyModules/LoRaEnergyConsumer.cc†L153-L154】.
+
+> **Hypothèses :** la tension est constante et les courants par état proviennent
+du profil énergétique configuré.
