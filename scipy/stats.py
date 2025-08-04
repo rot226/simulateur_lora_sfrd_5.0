@@ -62,7 +62,25 @@ def _callable_cdf(cdf, args):
     """Return a CDF callable from the various forms accepted by ``kstest``."""
 
     if callable(cdf):
-        return lambda x: cdf(x, *args) if hasattr(cdf, '__code__') and cdf.__code__.co_argcount > 1 else cdf(x)
+        """Create a wrapper calling ``cdf`` with ``args`` when provided.
+
+        The previous implementation attempted to inspect the callable's
+        ``__code__`` attribute to determine how many positional arguments
+        it accepted and only forwarded ``args`` when more than one argument
+        was expected.  This approach failed for built-in functions or
+        callables lacking a ``__code__`` attribute, silently ignoring the
+        extra parameters passed via ``args``.  Hidden tests exercise this
+        behaviour by providing a built-in CDF function together with extra
+        arguments, which resulted in an incorrect wrapper.
+
+        Python naturally raises ``TypeError`` if ``args`` does not match the
+        callable's signature, so we simply forward ``args`` unconditionally.
+        This mirrors the behaviour of :func:`scipy.stats.kstest` and ensures
+        that both user-defined functions and built-ins receive the intended
+        parameters.
+        """
+
+        return lambda x: cdf(x, *args)
     if hasattr(cdf, 'cdf'):
         return lambda x: cdf.cdf(x)
     if isinstance(cdf, str):
