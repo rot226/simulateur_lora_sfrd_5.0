@@ -77,3 +77,16 @@ class FloraCppPHY:
 
     def packet_error_rate(self, snr: float, sf: int, payload_bytes: int = 20) -> float:
         return float(self.lib.flora_per(ctypes.c_double(snr), ctypes.c_int(sf), ctypes.c_int(payload_bytes)))
+
+    def bit_error_rate(self, snr: float, sf: int) -> float:
+        """Return BER by delegating to ``flora_per`` with a one-byte payload.
+
+        The native library only exposes a PER computation.  For a payload of
+        one byte the relation ``PER = 1 - (1 - BER)^8`` holds, allowing the BER
+        to be recovered analytically.
+        """
+
+        per = self.lib.flora_per(
+            ctypes.c_double(snr), ctypes.c_int(sf), ctypes.c_int(1)
+        )
+        return float(1.0 - (1.0 - per) ** (1.0 / 8.0))

@@ -583,8 +583,9 @@ make makefiles
 make -j$(nproc)
 ```
 
-Pour interfacer le simulateur Python avec la couche physique C++, construisez
-la bibliothèque partagée `libflora_phy.so` :
+Pour interfacer le simulateur Python avec la couche physique C++ et calculer la
+BER exacte via ``ctypes``, construisez la bibliothèque partagée
+``libflora_phy.so`` :
 
 ```bash
 cd ../flora-master
@@ -592,10 +593,12 @@ make libflora_phy.so
 ```
 
 Vous pouvez également exécuter directement `./scripts/build_flora_cpp.sh` depuis
-la racine du dépôt pour automatiser cette compilation.
+la racine du dépôt pour automatiser cette compilation.  Le fichier généré est
+automatiquement détecté par ``FloraPHY`` pour calculer la BER ; en son absence
+une implémentation Python de secours est utilisée.
 
-Placez ce fichier à la racine du projet ou dans `flora-master` puis lancez le
-simulateur avec `phy_model="flora_cpp"` pour utiliser ces routines natives.
+Placez ce fichier à la racine du projet ou dans ``flora-master`` puis lancez le
+simulateur avec ``phy_model="flora_cpp"`` pour utiliser ces routines natives.
 
 Exécutez enfin le scénario d'exemple pour générer un fichier `.sca` dans
 `flora-master/results` :
