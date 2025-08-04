@@ -466,6 +466,10 @@ d'atténuation : ``"lognorm"`` (par défaut), ``"oulu"`` correspondant à
 ``LoRaPathLossOulu`` (B = 128.95 dB, n = 2.32, d0 = 1000 m) ou ``"hata"`` pour
 ``LoRaHataOkumura`` (K1 = 127.5, K2 = 35.2).
 
+Lorsque ``"oulu"`` est sélectionné, un shadowing gaussien de variance ``sigma``
+est ajouté à l'atténuation. Cette valeur vaut ``7.8`` dB par défaut et peut être
+ajustée via le paramètre ``Channel.shadowing_std``.
+
 
 ## SF et puissance initiaux
 

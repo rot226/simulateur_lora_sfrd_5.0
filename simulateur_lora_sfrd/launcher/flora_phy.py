@@ -32,6 +32,7 @@ class FloraPHY:
     OULU_N = 2.32
     OULU_B = 128.95
     OULU_ANTENNA_GAIN = 2.0
+    OULU_SIGMA = 7.8  # shadowing std (sigma) from LoRaPathLossOulu
     HATA_K1 = 127.5
     HATA_K2 = 35.2
     SNR_THRESHOLDS = {7: -7.5, 8: -10.0, 9: -12.5, 10: -15.0, 11: -17.5, 12: -20.0}
@@ -51,17 +52,23 @@ class FloraPHY:
                 + 10 * self.OULU_N * math.log10(d / self.OULU_D0)
                 - self.OULU_ANTENNA_GAIN
             )
+            sigma = (
+                self.channel.shadowing_std
+                if self.channel.shadowing_std > 0
+                else self.OULU_SIGMA
+            )
+            loss += random.gauss(0.0, sigma)
         elif self.loss_model == "hata":
             loss = self.HATA_K1 + self.HATA_K2 * math.log10(d / 1000.0)
+            if self.channel.shadowing_std > 0:
+                loss += random.gauss(0.0, self.channel.shadowing_std)
         else:
             loss = (
                 self.PATH_LOSS_D0
-                + 10
-                * self.channel.path_loss_exp
-                * math.log10(d / self.REFERENCE_DISTANCE)
+                + 10 * self.channel.path_loss_exp * math.log10(d / self.REFERENCE_DISTANCE)
             )
-        if self.channel.shadowing_std > 0:
-            loss += random.gauss(0.0, self.channel.shadowing_std)
+            if self.channel.shadowing_std > 0:
+                loss += random.gauss(0.0, self.channel.shadowing_std)
         return loss + self.channel.system_loss_dB
 
     def capture(
