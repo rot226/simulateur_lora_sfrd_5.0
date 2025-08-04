@@ -40,6 +40,14 @@ class FloraPHY:
         self.channel = channel
         self.loss_model = loss_model
         self.use_exact_ber = bool(use_exact_ber)
+        self._cpp = None
+        if self.use_exact_ber:
+            try:
+                from .flora_cpp import FloraCppPHY
+
+                self._cpp = FloraCppPHY()
+            except OSError:
+                self._cpp = None
 
     def path_loss(self, distance: float) -> float:
         if distance <= 0:
@@ -130,13 +138,16 @@ class FloraPHY:
     def packet_error_rate(self, snr: float, sf: int, payload_bytes: int = 20) -> float:
         """Return PER for the given SNR and spreading factor.
 
-        When ``use_exact_ber`` is ``True`` this uses the BER formula from
-        ``LoRaModulation::calculateBER`` and converts it to PER for the provided
-        payload length.  Otherwise a logistic approximation of the curves
-        produced by FLoRa is used.
+        This uses the BER formula from ``LoRaModulation::calculateBER`` and
+        converts it to PER for the provided payload length.
         """
 
-        if self.use_exact_ber:
+        if not self.use_exact_ber:
+            raise RuntimeError("Approximate BER path removed; set use_exact_ber=True")
+
+        if self._cpp is not None:
+            ber = self._cpp.bit_error_rate(snr, sf)
+        else:
             from .omnet_modulation import calculate_ber
 
             bitrate = (
@@ -147,8 +158,6 @@ class FloraPHY:
             )
             snir = 10 ** (snr / 10.0)
             ber = calculate_ber(snir, self.channel.bandwidth, bitrate)
-            per = 1.0 - (1.0 - ber) ** (payload_bytes * 8)
-            return min(max(per, 0.0), 1.0)
 
-        th = self.SNR_THRESHOLDS.get(sf, -10.0) + 2.0
-        return 1.0 / (1.0 + math.exp(2.0 * (snr - th)))
+        per = 1.0 - (1.0 - ber) ** (payload_bytes * 8)
+        return min(max(per, 0.0), 1.0)
