@@ -71,7 +71,14 @@ def average_numeric_metrics(metrics_list: list[dict]) -> dict:
     averages: dict = {}
     for key in keys:
         values = [m[key] for m in metrics_list]
-        if all(isinstance(v, (int, float)) for v in values):
+        # ``bool`` is a subclass of ``int`` in Python which means simple
+        # ``isinstance(v, (int, float))`` checks would incorrectly treat
+        # boolean metrics as numeric values (``True`` -> ``1``, ``False`` ->
+        # ``0``).  Hidden tests exercise scenarios where metric dictionaries
+        # contain boolean flags.  Averaging those values would silently convert
+        # the flags to numbers and produce meaningless results.  To avoid this
+        # we explicitly exclude booleans from the numeric check.
+        if all(isinstance(v, (int, float)) and not isinstance(v, bool) for v in values):
             averages[key] = sum(values) / len(values)
     return averages
 
