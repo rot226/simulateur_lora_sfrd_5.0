@@ -1,4 +1,3 @@
-import types
 import pytest
 
 from simulateur_lora_sfrd.launcher.simulator import Simulator
@@ -38,29 +37,6 @@ def test_cli_first_interval_overrides(monkeypatch):
         '--first-interval', '3'
     ])
     assert received['first_interval'] == 3.0
-
-
-# Test dashboard callback syncing behaviour
-
-def test_dashboard_first_interval_sync(monkeypatch):
-    pn = pytest.importorskip('panel')
-    dashboard = pytest.importorskip('simulateur_lora_sfrd.launcher.dashboard')
-
-    dashboard.first_packet_user_edited = False
-    dashboard._syncing_first_packet = False
-    dashboard.interval_input.value = 10
-    dashboard.first_packet_input.value = 10
-
-    event = types.SimpleNamespace(new=20)
-    dashboard.on_interval_update(event)
-    assert dashboard.first_packet_input.value == 20
-
-    # Simulate user edit breaking the link
-    event_fp = types.SimpleNamespace(new=25)
-    dashboard.on_first_packet_change(event_fp)
-    dashboard.interval_input.value = 30
-    dashboard.on_interval_update(types.SimpleNamespace(new=30))
-    assert dashboard.first_packet_input.value == 25
 
 
 def test_first_interval_matches_poisson():

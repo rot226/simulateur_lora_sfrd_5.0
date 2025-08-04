@@ -116,12 +116,6 @@ mode_select = pn.widgets.RadioButtonGroup(
     name="Mode d'émission", options=["Aléatoire", "Périodique"], value="Aléatoire"
 )
 interval_input = pn.widgets.FloatInput(name="Intervalle moyen (s)", value=100.0, step=1.0, start=0.1)
-first_packet_input = pn.widgets.FloatInput(
-    name="Intervalle premier paquet (s)",
-    value=100.0,
-    step=1.0,
-    start=0.1,
-)
 packets_input = pn.widgets.IntInput(
     name="Nombre de paquets par nœud (0=infin)", value=80, step=1, start=0
 )
@@ -509,31 +503,6 @@ def on_mode_change(event):
 
 
 mode_select.param.watch(on_mode_change, "value")
-
-
-# --- Synchronisation de l'intervalle du premier paquet ---
-first_packet_user_edited = False
-_syncing_first_packet = False
-
-
-def on_interval_update(event):
-    global _syncing_first_packet
-    if not first_packet_user_edited:
-        _syncing_first_packet = True
-        first_packet_input.value = event.new
-        _syncing_first_packet = False
-
-
-def on_first_packet_change(event):
-    global first_packet_user_edited
-    if not _syncing_first_packet:
-        first_packet_user_edited = True
-
-
-interval_input.param.watch(on_interval_update, "value")
-first_packet_input.param.watch(on_first_packet_change, "value")
-
-
 # --- Sélection du profil ADR ---
 def _update_adr_badge(name: str) -> None:
     adr_active_badge.object = (
@@ -701,7 +670,6 @@ def setup_simulation(seed_offset: int = 0):
         area_size=float(area_input.value),
         transmission_mode="Random" if mode_select.value == "Aléatoire" else "Periodic",
         packet_interval=float(interval_input.value),
-        first_packet_interval=float(first_packet_input.value),
         packets_to_send=int(packets_input.value),
         adr_node=adr_node_checkbox.value,
         adr_server=adr_server_checkbox.value,
@@ -1266,7 +1234,6 @@ controls = pn.WidgetBox(
     area_input,
     mode_select,
     interval_input,
-    first_packet_input,
     packets_input,
     seed_input,
     num_runs_input,
