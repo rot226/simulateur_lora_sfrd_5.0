@@ -62,10 +62,11 @@ class FloraPHY:
             )
             sigma = (
                 self.channel.shadowing_std
-                if self.channel.shadowing_std > 0
+                if self.channel.shadowing_std >= 0
                 else self.OULU_SIGMA
             )
-            loss += random.gauss(0.0, sigma)
+            if sigma > 0:
+                loss += random.gauss(0.0, sigma)
         elif self.loss_model == "hata":
             loss = self.HATA_K1 + self.HATA_K2 * math.log10(d / 1000.0)
             if self.channel.shadowing_std > 0:

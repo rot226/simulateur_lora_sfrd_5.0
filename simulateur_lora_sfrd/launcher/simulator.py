@@ -391,19 +391,19 @@ class Simulator:
                             ch.multipath_taps = 3
                         ch.phase_noise_std_dB = phase_noise_std_dB
                         ch.clock_jitter_std_s = clock_jitter_std_s
-                    ch.pa_ramp_up_s = pa_ramp_up_s
-                    ch.pa_ramp_down_s = pa_ramp_down_s
-                    ch.pa_ramp_current_a = pa_ramp_current_a
-                    ch.antenna_model = antenna_model
-                    if hasattr(ch, "_phase_noise"):
-                        ch._phase_noise.std = phase_noise_std_dB
-                    if getattr(ch, "omnet_phy", None):
-                        ch.omnet_phy.clock_jitter_std_s = clock_jitter_std_s
-                        ch.omnet_phy.pa_ramp_up_s = pa_ramp_up_s
-                        ch.omnet_phy.pa_ramp_down_s = pa_ramp_down_s
-                        ch.omnet_phy.pa_ramp_current_a = pa_ramp_current_a
-                        ch.omnet_phy.antenna_model = antenna_model
-                        ch.omnet_phy._phase_noise.std = phase_noise_std_dB
+                        ch.pa_ramp_up_s = pa_ramp_up_s
+                        ch.pa_ramp_down_s = pa_ramp_down_s
+                        ch.pa_ramp_current_a = pa_ramp_current_a
+                        ch.antenna_model = antenna_model
+                        if hasattr(ch, "_phase_noise"):
+                            ch._phase_noise.std = phase_noise_std_dB
+                        if getattr(ch, "omnet_phy", None):
+                            ch.omnet_phy.clock_jitter_std_s = clock_jitter_std_s
+                            ch.omnet_phy.pa_ramp_up_s = pa_ramp_up_s
+                            ch.omnet_phy.pa_ramp_down_s = pa_ramp_down_s
+                            ch.omnet_phy.pa_ramp_current_a = pa_ramp_current_a
+                            ch.omnet_phy.antenna_model = antenna_model
+                            ch.omnet_phy._phase_noise.std = phase_noise_std_dB
                         ch_list.append(ch)
                     else:
                         ch_list.append(
