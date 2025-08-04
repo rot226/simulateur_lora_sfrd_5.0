@@ -12,6 +12,7 @@ __all__ = [
     "isscalar",
     "asarray",
     "ndarray",
+    "dtype",
 ]
 
 
@@ -78,3 +79,47 @@ def isscalar(obj) -> bool:
 
 # Alias used by ``pytest`` when checking for numpy booleans.
 bool_ = bool
+uint8 = int
+int8 = int
+int16 = int
+uint16 = int
+int32 = int
+uint32 = int
+int64 = int
+uint64 = int
+float16 = float
+float32 = float
+float64 = float
+__version__ = "0"
+class datetime64:
+    def __init__(self, value=0, unit="ms"):
+        self.value = value
+        self.unit = unit
+
+
+class timedelta64:
+    def __init__(self, value=0, unit="ms"):
+        self.value = value
+        self.unit = unit
+
+
+class integer(int):
+    """Proxy for ``numpy.integer`` scalars."""
+
+
+
+class _DType:
+    """Minimal stand-in for ``numpy.dtype`` objects."""
+
+    def __init__(self, pytype):
+        self.type = pytype
+
+
+def dtype(obj):
+    """Return a very small proxy mimicking :func:`numpy.dtype`.
+
+    Only the ``type`` attribute is provided which is sufficient for the parts
+    of ``bokeh`` exercised in the test-suite.
+    """
+
+    return _DType(obj)

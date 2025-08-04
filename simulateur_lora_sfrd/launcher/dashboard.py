@@ -3,12 +3,15 @@ import sys
 import math
 import subprocess
 
-import panel as pn
-import plotly.graph_objects as go
-import numpy as np
-import time
-import threading
-import pandas as pd
+try:  # Les dépendances lourdes sont optionnelles pour pouvoir exécuter les tests sans elles
+    import panel as pn
+    import plotly.graph_objects as go
+    import numpy as np
+    import time
+    import threading
+    import pandas as pd
+except Exception as exc:  # pragma: no cover - utilisé uniquement lorsque dépendances manquantes
+    raise ImportError("dashboard dependencies not available") from exc
 
 # Assurer la résolution correcte des imports quel que soit le répertoire
 # depuis lequel ce fichier est exécuté. On ajoute le dossier parent
