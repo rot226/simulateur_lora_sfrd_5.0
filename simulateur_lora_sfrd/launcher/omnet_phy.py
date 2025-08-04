@@ -292,6 +292,7 @@ class OmnetPHY:
         distance: float,
         sf: int | None = None,
         *,
+        obstacle_loss_dB: float = 0.0,
         tx_pos: tuple[float, float] | tuple[float, float, float] | None = None,
         rx_pos: tuple[float, float] | tuple[float, float, float] | None = None,
         tx_angle: float | tuple[float, float] | None = None,
@@ -375,6 +376,7 @@ class OmnetPHY:
             rssi += random.gauss(0.0, ch.time_variation_std)
         rssi += self.model.fine_fading()
         rssi += ch.rssi_offset_dB
+        rssi -= obstacle_loss_dB
         rssi -= ch._filter_attenuation_db(freq_offset_hz)
 
         snr = rssi - self.noise_floor() + ch.snr_offset_dB

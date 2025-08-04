@@ -89,7 +89,7 @@ class Channel:
     def __init__(
         self,
         frequency_hz: float = 868e6,
-        path_loss_exp: float = 2.7,
+        path_loss_exp: float = 2.0,
         shadowing_std: float = 6.0,
         path_loss_d0: float | None = None,
         reference_distance: float = 1.0,
@@ -150,7 +150,7 @@ class Channel:
         bandwidth: float = 125e3,
         coding_rate: int = 1,
         capture_threshold_dB: float = 6.0,
-        capture_window_symbols: int = 6,
+        capture_window_symbols: int = 5,
         tx_power_std: float = 0.0,
         interference_dB: float = 0.0,
         detection_threshold_dBm: float = -float("inf"),
@@ -184,7 +184,7 @@ class Channel:
         :param capture_threshold_dB: Seuil de capture pour le décodage simultané.
         :param capture_window_symbols: Nombre de symboles de préambule requis
             avant qu'un paquet plus fort puisse capturer la réception (par
-            défaut 6).
+            défaut 5).
         :param tx_power_std: Écart-type de la variation aléatoire de puissance TX.
         :param interference_dB: Bruit supplémentaire moyen dû aux interférences.
         :param detection_threshold_dBm: RSSI minimal détectable (dBm). Les
@@ -498,6 +498,7 @@ class Channel:
         distance: float,
         sf: int | None = None,
         *,
+        obstacle_loss_dB: float = 0.0,
         tx_pos: tuple[float, float] | tuple[float, float, float] | None = None,
         rx_pos: tuple[float, float] | tuple[float, float, float] | None = None,
         tx_angle: float | tuple[float, float] | None = None,
@@ -508,13 +509,16 @@ class Channel:
         """Calcule le RSSI et le SNR attendus à une certaine distance.
 
         Un gain additionnel peut être appliqué si ``sf`` est renseigné pour
-        représenter l'effet d'étalement de spectre LoRa.
+        représenter l'effet d'étalement de spectre LoRa. ``obstacle_loss_dB``
+        permet d'appliquer une atténuation supplémentaire liée à l'environnement
+        (bâtiments, relief, etc.).
         """
         if self.omnet_phy:
             return self.omnet_phy.compute_rssi(
                 tx_power_dBm,
                 distance,
                 sf,
+                obstacle_loss_dB=obstacle_loss_dB,
                 tx_pos=tx_pos,
                 rx_pos=rx_pos,
                 tx_angle=tx_angle,
@@ -584,6 +588,7 @@ class Channel:
                 rssi += self._directional_gain(tx_diff)
                 rssi += self._directional_gain(rx_diff)
         rssi += self.rssi_offset_dB
+        rssi -= obstacle_loss_dB
         if freq_offset_hz is None:
             freq_offset_hz = self.frequency_offset_hz
         freq_offset_hz += self.omnet.frequency_drift()

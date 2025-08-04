@@ -16,6 +16,7 @@ from .gauss_markov import GaussMarkov
 from .gps_mobility import GPSTraceMobility, MultiGPSTraceMobility
 from .trace3d_mobility import Trace3DMobility
 from .map_loader import load_map
+from .environment import compute_obstacle_loss_dB
 from .lorawan import LoRaWANFrame, compute_rx1, compute_rx2
 from .downlink_scheduler import DownlinkScheduler
 from .omnet_model import OmnetModel
@@ -42,6 +43,7 @@ __all__ = [
     "GPSTraceMobility",
     "MultiGPSTraceMobility",
     "load_map",
+    "compute_obstacle_loss_dB",
     "LoRaWANFrame",
     "compute_rx1",
     "compute_rx2",
