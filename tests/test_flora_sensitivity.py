@@ -28,14 +28,20 @@ def parse_flora_sensitivity():
     return table
 
 
-def test_flora_sensitivity_table_matches():
+def test_flora_json_matches_cc():
     expected = parse_flora_sensitivity()
-    assert Channel.FLORA_SENSITIVITY == expected
+    json_path = Path('simulateur_lora_sfrd/launcher/flora_noise_table.json')
+    assert Channel.parse_flora_noise_table(json_path) == expected
 
 
 def test_flora_noise_path_loading():
     path = Path('flora-master/src/LoRaPhy/LoRaAnalogModel.cc')
     ch = Channel(flora_noise_path=path)
+    assert ch.flora_noise_table == parse_flora_sensitivity()
+
+
+def test_channel_loads_default_json():
+    ch = Channel()
     assert ch.flora_noise_table == parse_flora_sensitivity()
 
 

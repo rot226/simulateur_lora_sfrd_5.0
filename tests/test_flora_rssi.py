@@ -17,7 +17,7 @@ def flora_equations(tx_power: float, distance: float, sf: int, ch: Channel):
         - ch.cable_loss_dB
         + ch.rssi_offset_dB
     )
-    noise = ch.FLORA_SENSITIVITY[sf][int(ch.bandwidth)]
+    noise = ch.flora_noise_table[sf][int(ch.bandwidth)]
     snr = rssi - noise + ch.snr_offset_dB + 10 * math.log10(2 ** sf)
     return rssi, snr
 
@@ -37,7 +37,7 @@ def oulu_equations(tx_power: float, distance: float, sf: int, ch: Channel):
         - ch.cable_loss_dB
         + ch.rssi_offset_dB
     )
-    noise = ch.FLORA_SENSITIVITY[sf][int(ch.bandwidth)]
+    noise = ch.flora_noise_table[sf][int(ch.bandwidth)]
     snr = rssi - noise + ch.snr_offset_dB + 10 * math.log10(2 ** sf)
     return rssi, snr
 
