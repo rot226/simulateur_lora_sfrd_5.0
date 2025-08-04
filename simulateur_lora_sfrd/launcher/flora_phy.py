@@ -60,12 +60,16 @@ class FloraPHY:
                 + 10 * self.OULU_N * math.log10(d / self.OULU_D0)
                 - self.OULU_ANTENNA_GAIN
             )
-            sigma = (
-                self.channel.shadowing_std
-                if self.channel.shadowing_std > 0
-                else self.OULU_SIGMA
-            )
-            loss += random.gauss(0.0, sigma)
+            sigma = self.channel.shadowing_std
+            # If ``shadowing_std`` is set to zero we expect a deterministic
+            # model.  The previous implementation always fell back to the
+            # default Oulu sigma (7.8 dB) and injected random variation even
+            # when ``shadowing_std`` was explicitly set to ``0`` in the
+            # ``Channel``.  This made unit tests non-deterministic and produced
+            # incorrect RSSI values.  Only add the random shadowing component
+            # when a strictly positive standard deviation is requested.
+            if sigma > 0:
+                loss += random.gauss(0.0, sigma)
         elif self.loss_model == "hata":
             loss = self.HATA_K1 + self.HATA_K2 * math.log10(d / 1000.0)
             if self.channel.shadowing_std > 0:
