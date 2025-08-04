@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import math
+import json
 import os
 import re
 import numpy as np
@@ -56,20 +57,22 @@ class Channel:
         "KR920": [920.9e6, 921.1e6, 921.3e6],
     }
 
-    FLORA_SENSITIVITY = {
-        6: {125000: -121, 250000: -118, 500000: -111},
-        7: {125000: -124, 250000: -122, 500000: -116},
-        8: {125000: -127, 250000: -125, 500000: -119},
-        9: {125000: -130, 250000: -128, 500000: -122},
-        10: {125000: -133, 250000: -130, 500000: -125},
-        11: {125000: -135, 250000: -132, 500000: -128},
-        12: {125000: -137, 250000: -135, 500000: -129},
-    }
+    """Path to default noise table matching FLoRa thresholds."""
+    DEFAULT_FLORA_NOISE_JSON = os.path.join(
+        os.path.dirname(__file__), "flora_noise_table.json"
+    )
 
     @staticmethod
     def parse_flora_noise_table(path: str | os.PathLike) -> dict[int, dict[int, float]]:
-        """Parse LoRaAnalogModel.cc to load exact noise values."""
-        text = open(path, "r").read()
+        """Parse a FLoRa noise table from JSON or LoRaAnalogModel.cc."""
+        path = os.fspath(path)
+        if path.endswith(".json"):
+            data = json.loads(open(path, "r", encoding="utf-8").read())
+            return {
+                int(sf): {int(bw): val for bw, val in tbl.items()}
+                for sf, tbl in data.items()
+            }
+        text = open(path, "r", encoding="utf-8").read()
         table: dict[int, dict[int, float]] = {}
         current_sf: int | None = None
         for line in text.splitlines():
@@ -79,7 +82,10 @@ class Channel:
                 table[current_sf] = {}
                 continue
             if current_sf is not None:
-                m_bw = re.search(r"getLoRaBW\(\) == Hz\((\d+)\).*dBmW2mW\((-?\d+)\)", line)
+                m_bw = re.search(
+                    r"getLoRaBW\(\) == Hz\((\d+)\).*dBmW2mW\((-?\d+)\)",
+                    line,
+                )
                 if m_bw:
                     bw = int(m_bw.group(1))
                     val = int(m_bw.group(2))
@@ -251,8 +257,8 @@ class Channel:
             région choisie.
         :param orthogonal_sf: Si ``True``, les transmissions de SF différents
             n'interfèrent pas entre elles.
-        :param flora_noise_path: Chemin vers un fichier ``LoRaAnalogModel.cc``
-            pour charger la table de bruit FLoRa.
+        :param flora_noise_path: Chemin vers ``flora_noise_table.json`` ou vers
+            ``LoRaAnalogModel.cc`` pour charger la table de bruit FLoRa.
         :param sensitivity_mode: "flora" pour utiliser les valeurs de bruit
             issues de FLoRa, "theoretical" pour un calcul thermique.
         """
@@ -339,10 +345,9 @@ class Channel:
         self.rx_current_a = float(rx_current_a)
         self.idle_current_a = float(idle_current_a)
         self.voltage_v = float(voltage_v)
-        if flora_noise_path:
-            self.flora_noise_table = self.parse_flora_noise_table(flora_noise_path)
-        else:
-            self.flora_noise_table = self.FLORA_SENSITIVITY
+        if flora_noise_path is None:
+            flora_noise_path = self.DEFAULT_FLORA_NOISE_JSON
+        self.flora_noise_table = self.parse_flora_noise_table(flora_noise_path)
         self.omnet = OmnetModel(
             fine_fading_std,
             fading_correlation,
