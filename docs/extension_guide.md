@@ -7,13 +7,15 @@ nouvelles fonctionnalités au simulateur.
 
 Le tableau de bord repose sur [Panel](https://panel.holoviz.org/) pour
 l'affichage et sur `plotly` pour les graphiques. Les options utilisateur sont
-définies dans la classe `SimulatorUI`.
+désormais déclarées via des widgets Panel au début de
+`launcher/dashboard.py`.
 
 ## Ajouter un paramètre au tableau de bord
 
-1. Déclarez le nouveau champ dans `SimulatorUI.__init__`.
-2. Passez la valeur au constructeur de `Simulator` dans `launch_sim`.
-3. Mettez à jour `update_metrics` pour afficher la métrique associée.
+1. Créez un nouveau widget `pn.widgets.*` dans `launcher/dashboard.py`.
+2. Passez sa valeur au constructeur de `Simulator` dans `setup_simulation`.
+3. Mettez à jour les fonctions d'affichage (par exemple `metrics_col` ou
+   `update_histogram`) pour afficher la métrique associée.
 
 Les fonctions existantes illustrent chaque étape en détail.
 
