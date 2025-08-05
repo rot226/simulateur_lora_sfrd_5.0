@@ -1,6 +1,7 @@
 import argparse
 import configparser
 import csv
+from collections import defaultdict
 
 from traffic.exponential import sample_interval
 from traffic.rng_manager import RngManager
@@ -116,86 +117,101 @@ def simulate(
                 t += sample_interval(interval, rng)
 
 
-    # Simulation pas à pas
-    events: dict[float, list[int]] = {}
+    # Simulation pas à pas avec détection d'intervalles qui se chevauchent
+    events: list[tuple[float, int, int, int]] = []
     for node, times in send_times.items():
+        gw = node_gateways[node]
+        ch = node_channels[node]
         for t in times:
-            events.setdefault(t, []).append(node)
+            events.append((t, node, gw, ch))
 
-    for t in sorted(events.keys()):
-        nodes_ready = events[t]
-        for gw in range(max(1, gateways)):
-            gw_nodes = [n for n in nodes_ready if node_gateways[n] == gw]
-            for ch in range(channels):
-                nodes_on_ch = [n for n in gw_nodes if node_channels[n] == ch]
-                nb_tx = len(nodes_on_ch)
-                if nb_tx == 0:
-                    continue
-                total_transmissions += nb_tx
-                energy_consumed += nb_tx * (tx_energy + rx_energy)
-                if nb_tx == 1:
-                    n = nodes_on_ch[0]
-                    rng = rng_manager.get_stream("traffic", n)
-                    success = True
-                    if (
-                        fine_fading_std > 0.0
-                        and rng.normal(0.0, fine_fading_std) < -3.0
-                    ):
-                        success = False
-                    if noise_std > 0.0 and rng.normal(0.0, noise_std) > 3.0:
-                        success = False
-                    if success:
-                        delivered += 1
-                        delays.append(0)
-                        if debug_rx:
-                            logging.debug(f"t={t:.3f} Node {n} GW {gw} CH {ch} reçu")
-                    else:
-                        collisions += 1
-                        if debug_rx:
-                            logging.debug(
-                                f"t={t:.3f} Node {n} GW {gw} CH {ch} rejeté (bruit)"
-                            )
-                            diag_logger.info(
-                                f"t={t:.3f} gw={gw} ch={ch} collision=[{n}] cause=noise"
-                            )
+    events_by_gw_ch: dict[tuple[int, int], list[tuple[float, int]]] = defaultdict(list)
+    for t, node, gw, ch in events:
+        events_by_gw_ch[(gw, ch)].append((t, node))
+
+    for (gw, ch), evs in events_by_gw_ch.items():
+        evs.sort()
+        i = 0
+        while i < len(evs):
+            t, node = evs[i]
+            group = [(t, node)]
+            end = t + airtime
+            j = i + 1
+            while j < len(evs) and evs[j][0] < end:
+                group.append(evs[j])
+                end = max(end, evs[j][0] + airtime)
+                j += 1
+
+            nb_tx = len(group)
+            total_transmissions += nb_tx
+            energy_consumed += nb_tx * (tx_energy + rx_energy)
+
+            if nb_tx == 1:
+                n = group[0][1]
+                rng = rng_manager.get_stream("traffic", n)
+                success = True
+                if (
+                    fine_fading_std > 0.0
+                    and rng.normal(0.0, fine_fading_std) < -3.0
+                ):
+                    success = False
+                if noise_std > 0.0 and rng.normal(0.0, noise_std) > 3.0:
+                    success = False
+                if success:
+                    delivered += 1
+                    delays.append(0)
+                    if debug_rx:
+                        logging.debug(f"t={t:.3f} Node {n} GW {gw} CH {ch} reçu")
                 else:
-                    rng = rng_manager.get_stream("traffic", nodes_on_ch[0])
+                    collisions += 1
+                    if debug_rx:
+                        logging.debug(
+                            f"t={t:.3f} Node {n} GW {gw} CH {ch} rejeté (bruit)"
+                        )
+                        diag_logger.info(
+                            f"t={t:.3f} gw={gw} ch={ch} collision=[{n}] cause=noise"
+                        )
+            else:
+                rng = rng_manager.get_stream("traffic", group[0][1])
+                success = True
+                if (
+                    fine_fading_std > 0.0
+                    and rng.normal(0.0, fine_fading_std) < -3.0
+                ):
+                    success = False
+                if noise_std > 0.0 and rng.normal(0.0, noise_std) > 3.0:
+                    success = False
+                nodes_on_ch = [n for _, n in group]
+                if success:
                     winner = rng.choice(nodes_on_ch)
-                    success = True
-                    if (
-                        fine_fading_std > 0.0
-                        and rng.normal(0.0, fine_fading_std) < -3.0
-                    ):
-                        success = False
-                    if noise_std > 0.0 and rng.normal(0.0, noise_std) > 3.0:
-                        success = False
-                    if success:
-                        collisions += nb_tx - 1
-                        delivered += 1
-                        delays.append(0)
-                        if debug_rx:
-                            for n in nodes_on_ch:
-                                if n == winner:
-                                    logging.debug(
-                                        f"t={t:.3f} Node {n} GW {gw} CH {ch} reçu après collision"
-                                    )
-                                else:
-                                    logging.debug(
-                                        f"t={t:.3f} Node {n} GW {gw} CH {ch} perdu (collision)"
-                                    )
-                        diag_logger.info(
-                            f"t={t:.3f} gw={gw} ch={ch} collision={nodes_on_ch} winner={winner}"
-                        )
-                    else:
-                        collisions += nb_tx
-                        if debug_rx:
-                            for n in nodes_on_ch:
+                    collisions += nb_tx - 1
+                    delivered += 1
+                    delays.append(0)
+                    if debug_rx:
+                        for n in nodes_on_ch:
+                            if n == winner:
                                 logging.debug(
-                                    f"t={t:.3f} Node {n} GW {gw} CH {ch} perdu (collision/bruit)"
+                                    f"t={t:.3f} Node {n} GW {gw} CH {ch} reçu après collision"
                                 )
-                        diag_logger.info(
-                            f"t={t:.3f} gw={gw} ch={ch} collision={nodes_on_ch} none"
-                        )
+                            else:
+                                logging.debug(
+                                    f"t={t:.3f} Node {n} GW {gw} CH {ch} perdu (collision)"
+                                )
+                    diag_logger.info(
+                        f"t={t:.3f} gw={gw} ch={ch} collision={nodes_on_ch} winner={winner}"
+                    )
+                else:
+                    collisions += nb_tx
+                    if debug_rx:
+                        for n in nodes_on_ch:
+                            logging.debug(
+                                f"t={t:.3f} Node {n} GW {gw} CH {ch} perdu (collision/bruit)"
+                            )
+                    diag_logger.info(
+                        f"t={t:.3f} gw={gw} ch={ch} collision={nodes_on_ch} none"
+                    )
+
+            i = j
 
     # Calcul des métriques finales
     pdr = (delivered / total_transmissions) * 100 if total_transmissions > 0 else 0
