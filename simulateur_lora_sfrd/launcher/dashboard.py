@@ -591,8 +591,10 @@ def step_simulation():
             })
         flora_compare_table.object = pd.DataFrame(rows)
     update_histogram(metrics)
-    update_map()
-    update_timeline()
+    # La mise à jour de la carte et de la timeline est coûteuse. Elle est
+    # désormais gérée par un callback dédié (`map_anim_callback`) afin de ne pas
+    # bloquer la boucle principale de simulation et de laisser les autres
+    # indicateurs se rafraîchir correctement.
     if not cont:
         on_stop(None)
         return
@@ -848,6 +850,9 @@ def on_stop(event):
     sim.running = False
     if event is not None:
         auto_fast_forward = False
+    # Afficher l'état final avant l'arrêt des callbacks
+    update_map()
+    update_timeline()
     if sim_callback:
         sim_callback.stop()
         sim_callback = None
