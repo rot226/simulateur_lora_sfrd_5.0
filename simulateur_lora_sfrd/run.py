@@ -8,6 +8,7 @@ from traffic.rng_manager import RngManager
 import logging
 import sys
 from pathlib import Path
+import numbers
 
 PAYLOAD_SIZE = 20  # octets simulés par paquet
 
@@ -55,10 +56,12 @@ def simulate(
         raise ValueError("gateways must be >= 1")
     if channels < 1:
         raise ValueError("channels must be >= 1")
-    if not isinstance(interval, float) or interval <= 0:
+    if not isinstance(interval, numbers.Real) or isinstance(interval, numbers.Integral) or interval <= 0:
         raise ValueError("mean_interval must be positive float")
     if first_interval is not None and (
-        not isinstance(first_interval, float) or first_interval <= 0
+        not isinstance(first_interval, numbers.Real)
+        or isinstance(first_interval, numbers.Integral)
+        or first_interval <= 0
     ):
         raise ValueError("first_interval must be positive float")
     if steps <= 0:

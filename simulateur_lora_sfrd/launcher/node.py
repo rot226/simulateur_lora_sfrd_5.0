@@ -495,15 +495,23 @@ class Node:
         assert isinstance(rng, np.random.Generator) and isinstance(
             rng.bit_generator, np.random.MT19937
         ), "rng must be numpy.random.Generator using MT19937"
-        assert isinstance(mean_interval, float) and mean_interval > 0, (
-            "mean_interval must be positive float"
-        )
-        assert isinstance(min_interval, float) and min_interval >= 0.0, (
-            "min_interval must be non-negative float"
-        )
-        assert isinstance(variation, float) and variation >= 0.0, (
-            "variation must be non-negative float"
-        )
+        import numbers
+
+        assert (
+            isinstance(mean_interval, numbers.Real)
+            and not isinstance(mean_interval, numbers.Integral)
+            and mean_interval > 0
+        ), "mean_interval must be positive float"
+        assert (
+            isinstance(min_interval, numbers.Real)
+            and not isinstance(min_interval, numbers.Integral)
+            and min_interval >= 0.0
+        ), "min_interval must be non-negative float"
+        assert (
+            isinstance(variation, numbers.Real)
+            and not isinstance(variation, numbers.Integral)
+            and variation >= 0.0
+        ), "variation must be non-negative float"
         last = self.arrival_queue[-1] if self.arrival_queue else self._last_arrival_time
         while (not self.arrival_queue or last <= up_to) and (
             limit is None or self.arrival_interval_count < limit
