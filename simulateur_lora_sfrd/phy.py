@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import random
 import numpy as np
 
 from .loranode import Node
@@ -52,8 +51,12 @@ class LoRaPHY:
             freq_offset_hz=self.node.current_freq_offset,
             sync_offset_s=self.node.current_sync_offset,
         )
-        per = self.channel.packet_error_rate(snr, self.node.sf, payload_bytes=payload_size)
-        rand = rng.random() if rng is not None else random.random()
+        per = self.channel.packet_error_rate(
+            snr, self.node.sf, payload_bytes=payload_size
+        )
+        if rng is None:
+            raise ValueError("rng must be a numpy.random.Generator")
+        rand = rng.random()
         success = rand > per
         return rssi, snr, self.airtime(payload_size), success
 
