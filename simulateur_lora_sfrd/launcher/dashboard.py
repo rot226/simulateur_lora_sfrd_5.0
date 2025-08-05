@@ -57,6 +57,18 @@ pause_prev_disabled = False
 flora_metrics = None
 node_paths: dict[int, list[tuple[float, float]]] = {}
 
+# --- Tracking for histogram updates ---
+# ``delay_samples`` accumule les durées des transmissions terminées pour
+# construire l'histogramme des délais.  ``hist_event_index`` mémorise le dernier
+# indice d'événement traité afin d'ajouter uniquement les nouveaux éléments à
+# chaque mise à jour.  ``last_hist_update`` permet de limiter la fréquence de
+# recalcul de l'histogramme afin d'éviter de figer l'interface lorsque le log
+# d'événements devient volumineux.
+delay_samples: list[float] = []
+hist_event_index = 0
+last_hist_update = 0.0
+HIST_UPDATE_PERIOD = 1.0  # seconds
+
 
 def average_numeric_metrics(metrics_list: list[dict]) -> dict:
     """Return the average of numeric metrics across runs.
@@ -91,6 +103,7 @@ def session_alive() -> bool:
 def _cleanup_callbacks() -> None:
     """Stop all periodic callbacks safely."""
     global sim_callback, chrono_callback, map_anim_callback
+    global delay_samples, hist_event_index, last_hist_update
     for cb_name in ("sim_callback", "chrono_callback", "map_anim_callback"):
         cb = globals().get(cb_name)
         if cb is not None:
@@ -99,6 +112,10 @@ def _cleanup_callbacks() -> None:
             except Exception:
                 pass
             globals()[cb_name] = None
+    # Reset histogram tracking when cleaning up callbacks
+    delay_samples.clear()
+    hist_event_index = 0
+    last_hist_update = 0.0
 
 
 def _validate_positive_inputs() -> bool:
@@ -420,6 +437,7 @@ def update_timeline():
 
 def update_histogram(metrics: dict | None = None) -> None:
     """Mettre à jour l'histogramme interactif selon l'option sélectionnée."""
+    global delay_samples, hist_event_index
     if sim is None:
         sf_hist_pane.object = go.Figure()
         return
@@ -435,11 +453,16 @@ def update_histogram(metrics: dict | None = None) -> None:
             yaxis_range=[0, sim.num_nodes],
         )
     else:
-        delays = [ev["end_time"] - ev["start_time"] for ev in sim.events_log if ev.get("result")]
-        if not delays:
+        # Only process new events since the last update to avoid scanning the
+        # full log repeatedly when it grows large.
+        for ev in sim.events_log[hist_event_index:]:
+            if ev.get("result"):
+                delay_samples.append(ev["end_time"] - ev["start_time"])
+        hist_event_index = len(sim.events_log)
+        if not delay_samples:
             fig = go.Figure()
         else:
-            hist, edges = np.histogram(delays, bins=20)
+            hist, edges = np.histogram(delay_samples, bins=20)
             centers = 0.5 * (edges[:-1] + edges[1:])
             fig = go.Figure(data=[go.Bar(x=centers, y=hist, width=np.diff(edges))])
             fig.update_layout(
@@ -555,6 +578,7 @@ def periodic_chrono_update():
 
 # --- Callback étape de simulation ---
 def step_simulation():
+    global last_hist_update
     if sim is None or not session_alive():
         if not session_alive():
             _cleanup_callbacks()
@@ -593,7 +617,11 @@ def step_simulation():
                 "Diff": sim_val - flora_val,
             })
         flora_compare_table.object = pd.DataFrame(rows)
-    update_histogram(metrics)
+    # Limit histogram updates to avoid blocking the simulation loop
+    now = time.time()
+    if now - last_hist_update >= HIST_UPDATE_PERIOD:
+        update_histogram(metrics)
+        last_hist_update = now
     # La mise à jour de la carte et de la timeline est coûteuse. Elle est
     # désormais gérée par un callback dédié (`map_anim_callback`) afin de ne pas
     # bloquer la boucle principale de simulation et de laisser les autres
@@ -606,7 +634,9 @@ def step_simulation():
 # --- Préparation de la simulation ---
 def setup_simulation(seed_offset: int = 0):
     """Crée et démarre un simulateur avec les paramètres du tableau de bord."""
-    global sim, sim_callback, map_anim_callback, start_time, chrono_callback, elapsed_time, max_real_time, paused
+    global sim, sim_callback, map_anim_callback, start_time, chrono_callback
+    global elapsed_time, max_real_time, paused
+    global delay_samples, hist_event_index, last_hist_update
 
     # Empêcher de relancer si une simulation est déjà en cours
     if sim is not None and getattr(sim, "running", False):
@@ -624,6 +654,10 @@ def setup_simulation(seed_offset: int = 0):
         return
 
     elapsed_time = 0
+    # Reset histogram tracking for a fresh simulation run
+    delay_samples.clear()
+    hist_event_index = 0
+    last_hist_update = 0.0
 
     if sim_callback:
         sim_callback.stop()
