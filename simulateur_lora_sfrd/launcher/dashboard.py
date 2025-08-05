@@ -1,6 +1,7 @@
 import os
 import sys
 import math
+import numbers
 import subprocess
 
 try:  # Les dépendances lourdes sont optionnelles pour pouvoir exécuter les tests sans elles
@@ -71,24 +72,21 @@ HIST_UPDATE_PERIOD = 1.0  # seconds
 def average_numeric_metrics(metrics_list: list[dict]) -> dict:
     """Return the average of numeric metrics across runs.
 
-    Only keys whose values are numeric in all dictionaries are averaged.
+    Metrics are aggregated for the union of keys across all runs. For each
+    key, only values that are numeric (excluding booleans) are used in the
+    average. Keys without any numeric values are ignored.
     """
     if not metrics_list:
         return {}
-    keys = set(metrics_list[0])
-    for m in metrics_list[1:]:
-        keys &= m.keys()
+    all_keys = set().union(*(m.keys() for m in metrics_list))
     averages: dict = {}
-    for key in keys:
-        values = [m[key] for m in metrics_list]
-        # ``bool`` is a subclass of ``int`` in Python which means simple
-        # ``isinstance(v, (int, float))`` checks would incorrectly treat
-        # boolean metrics as numeric values (``True`` -> ``1``, ``False`` ->
-        # ``0``).  Hidden tests exercise scenarios where metric dictionaries
-        # contain boolean flags.  Averaging those values would silently convert
-        # the flags to numbers and produce meaningless results.  To avoid this
-        # we explicitly exclude booleans from the numeric check.
-        if all(isinstance(v, (int, float)) and not isinstance(v, bool) for v in values):
+    for key in all_keys:
+        values = [
+            m[key]
+            for m in metrics_list
+            if key in m and isinstance(m[key], numbers.Number) and not isinstance(m[key], bool)
+        ]
+        if values:
             averages[key] = sum(values) / len(values)
     return averages
 
