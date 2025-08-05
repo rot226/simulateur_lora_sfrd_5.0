@@ -729,6 +729,7 @@ def setup_simulation(seed_offset: int = 0):
         detection_threshold_dBm=float(detection_threshold_input.value),
         min_interference_time=float(min_interference_input.value),
         config_file=config_path,
+        # Pass the selected mobility model instance to the simulator
         mobility_model=mobility_instance,
         seed=seed,
         phy_model="flora" if flora_mode_toggle.value else "omnet",
