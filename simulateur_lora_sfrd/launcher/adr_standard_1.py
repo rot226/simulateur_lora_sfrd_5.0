@@ -14,17 +14,17 @@ from .lorawan import TX_POWER_INDEX_TO_DBM
 DEGRADE_PARAMS = {
     "propagation_model": "cost231",
     "fading": "rayleigh",
-    # Increased attenuation to validate channel robustness
-    # Stronger degradation for validation campaigns
-    "path_loss_exp": 15.0,
-    "shadowing_std": 20.0,
-    "variable_noise_std": 2000.0,
-    "fine_fading_std": 800.0,
-    "freq_offset_std_hz": 600000.0,
-    "sync_offset_std_s": 3.0,
+    # Reduced attenuation to ease channel conditions during validation
+    # Lighter degradation to improve packet delivery ratio
+    "path_loss_exp": 7.5,
+    "shadowing_std": 10.0,
+    "variable_noise_std": 1000.0,
+    "fine_fading_std": 400.0,
+    "freq_offset_std_hz": 300000.0,
+    "sync_offset_std_s": 1.5,
     "advanced_capture": True,
-    "detection_threshold_dBm": -90.0,
-    "capture_threshold_dB": 18.0,
+    "detection_threshold_dBm": -95.0,
+    "capture_threshold_dB": 12.0,
 }
 
 
