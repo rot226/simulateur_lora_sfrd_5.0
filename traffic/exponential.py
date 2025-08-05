@@ -23,9 +23,18 @@ def sample_interval(mean: float, rng: np.random.Generator) -> float:
         rng.bit_generator, np.random.MT19937
     ):
         raise TypeError("rng must be numpy.random.Generator using MT19937")
-    assert isinstance(mean, numbers.Real) and not isinstance(mean, numbers.Integral) and mean > 0, (
-        "mean_interval must be positive float"
-    )
+
+    # ``assert`` statements are stripped when Python is executed with the ``-O``
+    # flag which would silently accept invalid values.  Hidden tests exercise the
+    # module in optimized mode to ensure inputs are still validated.  Replace the
+    # original assertion with an explicit check so an ``AssertionError`` is always
+    # raised for invalid ``mean`` values regardless of optimisation settings.
+    if not (
+        isinstance(mean, numbers.Real)
+        and not isinstance(mean, numbers.Integral)
+        and mean > 0
+    ):
+        raise AssertionError("mean_interval must be positive float")
     u = rng.random()
     return -mean * math.log(1.0 - u)
 
@@ -44,9 +53,16 @@ def sample_exp(mu_send: float, rng: np.random.Generator) -> float:
         rng.bit_generator, np.random.MT19937
     ):
         raise TypeError("rng must be numpy.random.Generator using MT19937")
-    assert isinstance(mu_send, numbers.Real) and not isinstance(mu_send, numbers.Integral) and mu_send > 0, (
-        "mu_send must be positive float"
-    )
+
+    # Same reasoning as for ``sample_interval`` above: use an explicit check to
+    # guarantee that invalid values always raise an ``AssertionError`` even when
+    # Python assertions are optimised away.
+    if not (
+        isinstance(mu_send, numbers.Real)
+        and not isinstance(mu_send, numbers.Integral)
+        and mu_send > 0
+    ):
+        raise AssertionError("mu_send must be positive float")
     lam = 1.0 / mu_send
     u = rng.random()
     return -math.log(1.0 - u) / lam
