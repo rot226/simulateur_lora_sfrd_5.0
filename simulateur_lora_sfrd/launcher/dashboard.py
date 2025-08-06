@@ -43,6 +43,7 @@ sim_callback = None
 chrono_callback = None
 map_anim_callback = None
 hist_callback = None
+metrics_callback = None
 start_time = None
 elapsed_time = 0
 max_real_time = None
@@ -58,6 +59,11 @@ last_event_index = 0
 pause_prev_disabled = False
 flora_metrics = None
 node_paths: dict[int, list[tuple[float, float]]] = {}
+
+# Cache for heavy metric computations and callback timing
+latest_metrics: dict | None = None
+last_step_ts: float | None = None
+SIM_STEP_PERIOD_MS = 100
 
 # --- Tracking for histogram updates ---
 # ``delay_samples`` accumule les durées des transmissions terminées pour
@@ -98,9 +104,15 @@ def session_alive() -> bool:
 
 def _cleanup_callbacks() -> None:
     """Stop all periodic callbacks safely."""
-    global sim_callback, chrono_callback, map_anim_callback, hist_callback
-    global delay_samples, hist_event_index
-    for cb_name in ("sim_callback", "chrono_callback", "map_anim_callback", "hist_callback"):
+    global sim_callback, chrono_callback, map_anim_callback, hist_callback, metrics_callback
+    global delay_samples, hist_event_index, last_step_ts, latest_metrics
+    for cb_name in (
+        "sim_callback",
+        "chrono_callback",
+        "map_anim_callback",
+        "hist_callback",
+        "metrics_callback",
+    ):
         cb = globals().get(cb_name)
         if cb is not None:
             try:
@@ -111,6 +123,8 @@ def _cleanup_callbacks() -> None:
     # Reset histogram tracking when cleaning up callbacks
     delay_samples.clear()
     hist_event_index = 0
+    last_step_ts = None
+    latest_metrics = None
 
 
 def _validate_positive_inputs() -> bool:
@@ -247,6 +261,11 @@ collisions_indicator = pn.indicators.Number(
 energy_indicator = pn.indicators.Number(name="Énergie Tx (J)", value=0.0, format="{value:.3f}")
 delay_indicator = pn.indicators.Number(name="Délai moyen (s)", value=0.0, format="{value:.3f}")
 throughput_indicator = pn.indicators.Number(name="Débit (bps)", value=0.0, format="{value:.2f}")
+
+# Surveiller la fréquence réelle d'exécution du callback principal
+callback_interval_indicator = pn.indicators.Number(
+    name="Δt callback (ms)", value=0.0, format="{value:.0f}"
+)
 
 # Indicateur de retransmissions
 # Same for retransmissions which may also be averaged across runs
@@ -570,18 +589,42 @@ def periodic_chrono_update():
 
 # --- Callback étape de simulation ---
 def step_simulation():
+    global last_step_ts, latest_metrics
     if sim is None or not session_alive():
         if not session_alive():
             _cleanup_callbacks()
         return
+    now = time.time()
+    if last_step_ts is not None:
+        interval_ms = (now - last_step_ts) * 1000.0
+        callback_interval_indicator.value = interval_ms
+        if interval_ms > SIM_STEP_PERIOD_MS * 1.5:
+            # Simple warning in console when the callback drifts too much
+            print(f"⚠️ Callback lent: {interval_ms:.1f} ms")
+    last_step_ts = now
+
     cont = sim.step()
     metrics = sim.get_metrics()
+    latest_metrics = metrics
     pdr_indicator.value = metrics["PDR"]
     collisions_indicator.value = metrics["collisions"]
     energy_indicator.value = metrics["energy_J"]
     delay_indicator.value = metrics["avg_delay_s"]
     throughput_indicator.value = metrics["throughput_bps"]
     retrans_indicator.value = metrics["retransmissions"]
+
+    # Les traitements coûteux (construction des tableaux) sont délégués
+    # à un callback dédié pour ne pas ralentir la boucle principale.
+    if not cont:
+        on_stop(None)
+        return
+
+
+# --- Callback dédié pour les tableaux de métriques lourds ---
+def update_metrics_tables():
+    if not session_alive() or latest_metrics is None:
+        return
+    metrics = latest_metrics
     table_df = pd.DataFrame(
         {
             "Node": list(metrics["pdr_by_node"].keys()),
@@ -601,30 +644,23 @@ def step_simulation():
         for key in metrics_keys:
             flora_val = flora_metrics.get(key, 0)
             sim_val = metrics.get(key, 0)
-            rows.append({
-                "Metric": key,
-                "FLoRa": flora_val,
-                "SFRD": sim_val,
-                "Diff": sim_val - flora_val,
-            })
+            rows.append(
+                {
+                    "Metric": key,
+                    "FLoRa": flora_val,
+                    "SFRD": sim_val,
+                    "Diff": sim_val - flora_val,
+                }
+            )
         flora_compare_table.object = pd.DataFrame(rows)
-    # La mise à jour de l'histogramme est désormais gérée par un callback
-    # dédié afin de ne pas bloquer la boucle de simulation.
-    # La mise à jour de la carte et de la timeline est coûteuse. Elle est
-    # désormais gérée par un callback dédié (`map_anim_callback`) afin de ne pas
-    # bloquer la boucle principale de simulation et de laisser les autres
-    # indicateurs se rafraîchir correctement.
-    if not cont:
-        on_stop(None)
-        return
 
 
 # --- Préparation de la simulation ---
 def setup_simulation(seed_offset: int = 0):
     """Crée et démarre un simulateur avec les paramètres du tableau de bord."""
-    global sim, sim_callback, map_anim_callback, hist_callback, start_time, chrono_callback
+    global sim, sim_callback, map_anim_callback, hist_callback, start_time, chrono_callback, metrics_callback
     global elapsed_time, max_real_time, paused
-    global delay_samples, hist_event_index
+    global delay_samples, hist_event_index, last_step_ts, latest_metrics
 
     # Empêcher de relancer si une simulation est déjà en cours
     if sim is not None and getattr(sim, "running", False):
@@ -642,9 +678,11 @@ def setup_simulation(seed_offset: int = 0):
         return
 
     elapsed_time = 0
-    # Reset histogram tracking for a fresh simulation run
+    # Reset tracking for a fresh simulation run
     delay_samples.clear()
     hist_event_index = 0
+    last_step_ts = None
+    latest_metrics = None
 
     if sim_callback:
         sim_callback.stop()
@@ -658,6 +696,12 @@ def setup_simulation(seed_offset: int = 0):
     if chrono_callback:
         chrono_callback.stop()
         chrono_callback = None
+    if metrics_callback:
+        metrics_callback.stop()
+        metrics_callback = None
+    last_step_ts = None
+    latest_metrics = None
+    callback_interval_indicator.value = 0
 
     seed_val = int(seed_input.value)
     seed = seed_val + seed_offset if seed_val != 0 else None
@@ -784,6 +828,7 @@ def setup_simulation(seed_offset: int = 0):
     collisions_indicator.value = 0
     energy_indicator.value = 0
     delay_indicator.value = 0
+    callback_interval_indicator.value = 0
     chrono_indicator.value = 0
     global node_paths
     node_paths = {n.id: [(n.x, n.y)] for n in sim.nodes}
@@ -827,7 +872,7 @@ def setup_simulation(seed_offset: int = 0):
     export_message.object = "Cliquez sur Exporter pour générer le fichier CSV après la simulation."
 
     sim.running = True
-    sim_callback = pn.state.add_periodic_callback(step_simulation, period=100, timeout=None)
+    sim_callback = pn.state.add_periodic_callback(step_simulation, period=SIM_STEP_PERIOD_MS, timeout=None)
     def anim():
         if not session_alive():
             _cleanup_callbacks()
@@ -836,6 +881,7 @@ def setup_simulation(seed_offset: int = 0):
         update_timeline()
     map_anim_callback = pn.state.add_periodic_callback(anim, period=200, timeout=None)
     hist_callback = pn.state.add_periodic_callback(update_histogram, period=int(HIST_UPDATE_PERIOD * 1000), timeout=None)
+    metrics_callback = pn.state.add_periodic_callback(update_metrics_tables, period=500, timeout=None)
 
 
 # --- Bouton "Lancer la simulation" ---
@@ -866,7 +912,7 @@ def on_start(event):
 
 # --- Bouton "Arrêter la simulation" ---
 def on_stop(event):
-    global sim, sim_callback, chrono_callback, map_anim_callback, hist_callback, start_time, max_real_time, paused
+    global sim, sim_callback, chrono_callback, map_anim_callback, hist_callback, metrics_callback, start_time, max_real_time, paused, last_step_ts, latest_metrics
     global current_run, total_runs, runs_events, auto_fast_forward
     # If called programmatically (e.g. after fast_forward), allow cleanup even
     # if the simulation has already stopped.
@@ -894,6 +940,9 @@ def on_stop(event):
     if chrono_callback:
         chrono_callback.stop()
         chrono_callback = None
+    if metrics_callback:
+        metrics_callback.stop()
+        metrics_callback = None
 
     try:
         df = sim.get_events_dataframe()
@@ -1041,7 +1090,7 @@ export_button.on_click(exporter_csv)
 
 # --- Bouton d'accélération ---
 def fast_forward(event=None):
-    global sim, sim_callback, chrono_callback, map_anim_callback, hist_callback
+    global sim, sim_callback, chrono_callback, map_anim_callback, hist_callback, metrics_callback
     global start_time, max_real_time, auto_fast_forward
     doc = pn.state.curdoc
     if sim and sim.running:
@@ -1087,6 +1136,9 @@ def fast_forward(event=None):
         if chrono_callback:
             chrono_callback.stop()
             chrono_callback = None
+        if metrics_callback:
+            metrics_callback.stop()
+            metrics_callback = None
 
         # Pause chrono so time does not keep increasing during fast forward
         start_time = None
@@ -1124,6 +1176,10 @@ def fast_forward(event=None):
                 delay_indicator.value = metrics["avg_delay_s"]
                 throughput_indicator.value = metrics["throughput_bps"]
                 retrans_indicator.value = metrics["retransmissions"]
+                global latest_metrics
+                latest_metrics = metrics
+                update_metrics_tables()
+                callback_interval_indicator.value = 0
                 # Les détails de PDR ne sont pas affichés en direct
                 sf_dist = metrics["sf_distribution"]
                 sf_fig = go.Figure(
@@ -1163,7 +1219,7 @@ fast_forward_button.on_click(fast_forward)
 # --- Bouton "Pause/Reprendre" ---
 def on_pause(event=None):
     """Toggle simulation pause state safely."""
-    global sim_callback, chrono_callback, hist_callback, start_time, elapsed_time, paused
+    global sim_callback, chrono_callback, hist_callback, metrics_callback, start_time, elapsed_time, paused, last_step_ts
     if sim is None or not sim.running:
         return
 
@@ -1178,9 +1234,14 @@ def on_pause(event=None):
         if hist_callback:
             hist_callback.stop()
             hist_callback = None
+        if metrics_callback:
+            metrics_callback.stop()
+            metrics_callback = None
         if start_time is not None:
             elapsed_time = time.time() - start_time
         start_time = None  # Freeze chrono while paused
+        last_step_ts = None
+        callback_interval_indicator.value = 0
         pause_button.name = "▶ Reprendre"
         pause_button.button_type = "success"
         fast_forward_button.disabled = True
@@ -1190,11 +1251,15 @@ def on_pause(event=None):
         if start_time is None:
             start_time = time.time() - elapsed_time
         if sim_callback is None:
-            sim_callback = pn.state.add_periodic_callback(step_simulation, period=100, timeout=None)
+            sim_callback = pn.state.add_periodic_callback(step_simulation, period=SIM_STEP_PERIOD_MS, timeout=None)
         if chrono_callback is None:
             chrono_callback = pn.state.add_periodic_callback(periodic_chrono_update, period=100, timeout=None)
         if hist_callback is None:
             hist_callback = pn.state.add_periodic_callback(update_histogram, period=int(HIST_UPDATE_PERIOD * 1000), timeout=None)
+        if metrics_callback is None:
+            metrics_callback = pn.state.add_periodic_callback(update_metrics_tables, period=500, timeout=None)
+        last_step_ts = None
+        callback_interval_indicator.value = 0
         pause_button.name = "⏸ Pause"
         pause_button.button_type = "primary"
         fast_forward_button.disabled = False
@@ -1318,6 +1383,7 @@ metrics_col = pn.Column(
     energy_indicator,
     delay_indicator,
     throughput_indicator,
+    callback_interval_indicator,
     retrans_indicator,
     pdr_table,
     flora_compare_table,
