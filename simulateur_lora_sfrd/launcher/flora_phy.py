@@ -87,6 +87,8 @@ class FloraPHY:
         start_list: list[float],
         end_list: list[float],
         freq_list: list[float],
+        *,
+        aloha_channel_model: bool = False,
     ) -> list[bool]:
         """Return the capture decision for each concurrent signal.
 
@@ -94,6 +96,8 @@ class FloraPHY:
         the strongest packet wins only if the power difference with each
         interferer is above the ``NON_ORTH_DELTA`` threshold *and* the
         interferer overlaps past the ``preamble - 6`` symbols window.
+        When ``aloha_channel_model`` is ``True`` the matrix check is skipped
+        and any overlap immediately causes a collision.
         """
 
         if not rssi_list:
@@ -127,6 +131,10 @@ class FloraPHY:
             overlap = min(end0, end_list[idx]) > max(start0, start_list[idx])
             if not overlap:
                 continue
+
+            if aloha_channel_model:
+                captured = False
+                break
 
             diff = rssi0 - rssi_list[idx]
             th = self.NON_ORTH_DELTA[sf0 - 7][sf_list[idx] - 7]

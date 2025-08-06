@@ -101,6 +101,7 @@ class Simulator:
         seed: int | None = None,
         class_c_rx_interval: float = 1.0,
         phy_model: str = "",
+        aloha_channel_model: bool = False,
         flora_loss_model: str = "lognorm",
         terrain_map: str | list[list[float]] | None = None,
         path_map: str | list[list[float]] | None = None,
@@ -176,6 +177,9 @@ class Simulator:
             downlink pour les nœuds de classe C (s).
         :param phy_model: "omnet" ou "flora" pour activer un modèle physique
             inspiré de FLoRa.
+        :param aloha_channel_model: Si ``True``, toute superposition de
+            transmissions entraîne une collision immédiate (modèle Aloha
+            comme dans FLoRa).
         :param flora_loss_model: Variante d'atténuation FLoRa ("lognorm",
             "oulu" ou "hata").
         :param terrain_map: Carte de terrain utilisée pour la mobilité
@@ -361,6 +365,7 @@ class Simulator:
                         phy_model=ch_phy_model,
                         environment=env,
                         flora_loss_model=flora_loss_model,
+                        aloha_channel_model=aloha_channel_model,
                         multipath_taps=3 if flora_mode else 1,
                         phase_noise_std_dB=phase_noise_std_dB,
                         clock_jitter_std_s=clock_jitter_std_s,
@@ -390,6 +395,7 @@ class Simulator:
                             ) = Channel.ENV_PRESETS["flora"]
                         if flora_mode and ch.multipath_taps <= 1:
                             ch.multipath_taps = 3
+                        ch.aloha_channel_model = aloha_channel_model
                         ch.phase_noise_std_dB = phase_noise_std_dB
                         ch.clock_jitter_std_s = clock_jitter_std_s
                         ch.pa_ramp_up_s = pa_ramp_up_s
@@ -418,6 +424,7 @@ class Simulator:
                                     else None
                                 ),
                                 flora_loss_model=flora_loss_model,
+                                aloha_channel_model=aloha_channel_model,
                                 multipath_taps=3 if flora_mode else 1,
                                 phase_noise_std_dB=phase_noise_std_dB,
                                 clock_jitter_std_s=clock_jitter_std_s,
@@ -877,6 +884,7 @@ class Simulator:
                         else None
                     ),
                     orthogonal_sf=node.channel.orthogonal_sf,
+                    aloha_channel_model=node.channel.aloha_channel_model,
                     capture_window_symbols=node.channel.capture_window_symbols,  # default: 6
                 )
 

@@ -37,6 +37,7 @@ def simulate(
     noise_std=0.0,
     debug_rx=False,
     phy_model="omnet",
+    aloha_channel_model: bool = False,
     voltage=3.3,
     tx_current=0.06,
     rx_current=0.011,
@@ -84,6 +85,7 @@ def simulate(
         rx_current_a=rx_current,
         idle_current_a=idle_current,
         voltage_v=voltage,
+        aloha_channel_model=aloha_channel_model,
     )
     airtime = channel.airtime(7, payload_size=PAYLOAD_SIZE)
     tx_energy = (tx_current - idle_current) * voltage * airtime
@@ -310,6 +312,11 @@ def main(argv=None):
         help="Modèle physique à utiliser (omnet, flora ou flora_cpp)",
     )
     parser.add_argument(
+        "--aloha-channel",
+        action="store_true",
+        help="Utilise le modèle de canal Aloha (collisions immédiates)",
+    )
+    parser.add_argument(
         "--voltage",
         type=float,
         default=3.3,
@@ -400,6 +407,7 @@ def main(argv=None):
             rx_current=args.rx_current,
             idle_current=args.idle_current,
             rng_manager=rng_manager,
+            aloha_channel_model=args.aloha_channel,
         )
         results.append((delivered, collisions, pdr, energy, avg_delay, throughput))
         logging.info(
