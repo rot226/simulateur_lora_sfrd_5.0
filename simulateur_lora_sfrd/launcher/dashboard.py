@@ -302,13 +302,6 @@ pdr_table = pn.pane.DataFrame(
     width=220,
 )
 
-# Tableau de comparaison avec FLoRa
-flora_compare_table = pn.pane.DataFrame(
-    pd.DataFrame(columns=["Metric", "FLoRa", "SFRD", "Diff"]),
-    height=180,
-    width=220,
-)
-
 # --- Chronomètre ---
 chrono_indicator = pn.indicators.Number(name="Durée simulation (s)", value=0, format="{value:.1f}")
 
@@ -637,21 +630,6 @@ def step_simulation():
         }
     )
     pdr_table.object = table_df
-    if flora_metrics:
-        metrics_keys = ["PDR", "collisions", "throughput_bps", "energy_J"]
-        rows = []
-        for key in metrics_keys:
-            flora_val = flora_metrics.get(key, 0)
-            sim_val = metrics.get(key, 0)
-            rows.append(
-                {
-                    "Metric": key,
-                    "FLoRa": flora_val,
-                    "SFRD": sim_val,
-                    "Diff": sim_val - flora_val,
-                }
-            )
-        flora_compare_table.object = pd.DataFrame(rows)
 
     if not cont:
         on_stop(None)
@@ -1171,26 +1149,6 @@ def fast_forward(event=None):
                     }
                 )
                 pdr_table.object = table_df
-                if flora_metrics:
-                    metrics_keys = [
-                        "PDR",
-                        "collisions",
-                        "throughput_bps",
-                        "energy_J",
-                    ]
-                    rows = []
-                    for key in metrics_keys:
-                        flora_val = flora_metrics.get(key, 0)
-                        sim_val = metrics.get(key, 0)
-                        rows.append(
-                            {
-                                "Metric": key,
-                                "FLoRa": flora_val,
-                                "SFRD": sim_val,
-                                "Diff": sim_val - flora_val,
-                            }
-                        )
-                    flora_compare_table.object = pd.DataFrame(rows)
                 callback_interval_indicator.value = 0
                 # Les détails de PDR ne sont pas affichés en direct
                 sf_dist = metrics["sf_distribution"]
@@ -1391,7 +1349,6 @@ metrics_col = pn.Column(
     throughput_indicator,
     callback_interval_indicator,
     pdr_table,
-    flora_compare_table,
 )
 metrics_col.width = 220
 
