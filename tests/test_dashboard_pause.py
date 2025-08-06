@@ -1,7 +1,10 @@
 import pytest
 
-
-dashboard = pytest.importorskip('simulateur_lora_sfrd.launcher.dashboard')
+dashboard = pytest.importorskip(
+    "simulateur_lora_sfrd.launcher.dashboard",
+    reason="dashboard dependencies not available",
+    exc_type=ImportError,
+)
 
 
 def test_pause_then_finish_resets_buttons():
@@ -28,3 +31,4 @@ def test_pause_then_finish_resets_buttons():
 
     # cleanup
     dashboard._cleanup_callbacks()
+

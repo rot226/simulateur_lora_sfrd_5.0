@@ -14,7 +14,9 @@ CONFIG = "flora-master/simulations/examples/n100-gw1.ini"
 
 @pytest.mark.slow
 def test_flora_sca_compare():
-    pytest.importorskip("pandas")
+    pytest.importorskip(
+        "pandas", reason="pandas is required for flora comparison", exc_type=ImportError
+    )
     sca = Path(__file__).parent / "data" / "n100_gw1_expected.sca"
     sim = Simulator(flora_mode=True, config_file=CONFIG, seed=1, adr_method="avg")
     adr1(sim)

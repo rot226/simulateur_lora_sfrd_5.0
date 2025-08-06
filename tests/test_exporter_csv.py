@@ -1,7 +1,9 @@
 import subprocess
 import pytest
 
-pn = pytest.importorskip("panel")
+pn = pytest.importorskip(
+    "panel", reason="panel is required for dashboard tests", exc_type=ImportError
+)
 pd = pytest.importorskip("pandas")
 
 from simulateur_lora_sfrd.launcher import dashboard  # noqa: E402

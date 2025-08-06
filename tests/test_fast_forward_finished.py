@@ -1,7 +1,9 @@
 import pytest
 
 from simulateur_lora_sfrd.launcher.simulator import Simulator
-pn = pytest.importorskip("panel")
+pn = pytest.importorskip(
+    "panel", reason="panel is required for dashboard tests", exc_type=ImportError
+)
 import simulateur_lora_sfrd.launcher.dashboard as dashboard  # noqa: E402
 
 
