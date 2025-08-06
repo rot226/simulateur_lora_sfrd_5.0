@@ -56,14 +56,12 @@ def simulate(
         raise ValueError("gateways must be >= 1")
     if channels < 1:
         raise ValueError("channels must be >= 1")
-    if not isinstance(interval, numbers.Real) or isinstance(interval, numbers.Integral) or interval <= 0:
-        raise ValueError("mean_interval must be positive float")
+    if not isinstance(interval, numbers.Real) or interval <= 0:
+        raise ValueError("interval must be positive real number")
     if first_interval is not None and (
-        not isinstance(first_interval, numbers.Real)
-        or isinstance(first_interval, numbers.Integral)
-        or first_interval <= 0
+        not isinstance(first_interval, numbers.Real) or first_interval <= 0
     ):
-        raise ValueError("first_interval must be positive float")
+        raise ValueError("first_interval must be positive real number")
     if steps <= 0:
         raise ValueError("steps must be > 0")
 

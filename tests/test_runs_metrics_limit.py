@@ -1,7 +1,9 @@
 import pytest
 
 # Skip test if dashboard or panel not available
-pn = pytest.importorskip("panel")
+pn = pytest.importorskip(
+    "panel", reason="panel is required for dashboard tests", exc_type=ImportError
+)
 from simulateur_lora_sfrd.launcher import dashboard
 
 class DummyIndicator:

@@ -7,7 +7,9 @@ from simulateur_lora_sfrd.launcher.compare_flora import load_flora_metrics
 
 
 def test_omnet_phy_flora_capture_matches_sca():
-    pytest.importorskip('pandas')
+    pytest.importorskip(
+        "pandas", reason="pandas is required for FLoRa capture", exc_type=ImportError
+    )
     ch = Channel(phy_model="omnet", flora_capture=True, shadowing_std=0.0, fast_fading_std=0.0)
     phy: OmnetPHY = ch.omnet_phy
     rssi_list = [-50.0, -55.0]
