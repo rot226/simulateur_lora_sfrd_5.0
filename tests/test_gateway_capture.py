@@ -8,10 +8,10 @@ def test_orthogonal_sf_no_collision():
     server.gateways = [gw]
 
     gw.start_reception(
-        1, 1, 7, -60, 1.0, 6.0, 0.0, 868e6, orthogonal_sf=True
+        1, 1, 7, -60, 1.0, 6.0, 0.0, 868e6, orthogonal_sf=True, aloha_channel_model=False
     )
     gw.start_reception(
-        2, 2, 9, -60, 1.0, 6.0, 0.0, 868e6, orthogonal_sf=True
+        2, 2, 9, -60, 1.0, 6.0, 0.0, 868e6, orthogonal_sf=True, aloha_channel_model=False
     )
     gw.end_reception(1, server, 1)
     gw.end_reception(2, server, 2)
@@ -25,9 +25,9 @@ def test_capture_requires_five_symbols():
     server.gateways = [gw]
 
     # Strong signal starts first
-    gw.start_reception(1, 1, 7, -50, 1.0, 6.0, 0.0, 868e6)
+    gw.start_reception(1, 1, 7, -50, 1.0, 6.0, 0.0, 868e6, aloha_channel_model=False)
     # Weaker packet starts after more than 5 symbols
-    gw.start_reception(2, 2, 7, -60, 1.0, 6.0, 0.006, 868e6)
+    gw.start_reception(2, 2, 7, -60, 1.0, 6.0, 0.006, 868e6, aloha_channel_model=False)
     gw.end_reception(1, server, 1)
     gw.end_reception(2, server, 2)
 
@@ -40,8 +40,8 @@ def test_no_capture_before_five_symbols():
     server.gateways = [gw]
 
     # Strong signal starts first but second arrives too soon
-    gw.start_reception(1, 1, 7, -50, 1.0, 6.0, 0.0, 868e6)
-    gw.start_reception(2, 2, 7, -60, 1.0, 6.0, 0.003, 868e6)
+    gw.start_reception(1, 1, 7, -50, 1.0, 6.0, 0.0, 868e6, aloha_channel_model=False)
+    gw.start_reception(2, 2, 7, -60, 1.0, 6.0, 0.003, 868e6, aloha_channel_model=False)
     gw.end_reception(1, server, 1)
     gw.end_reception(2, server, 2)
 
@@ -54,9 +54,9 @@ def test_strong_signal_arrives_late():
     server.gateways = [gw]
 
     # Weak packet first
-    gw.start_reception(1, 1, 7, -60, 1.0, 6.0, 0.0, 868e6)
+    gw.start_reception(1, 1, 7, -60, 1.0, 6.0, 0.0, 868e6, aloha_channel_model=False)
     # Strong packet after 5 symbols should not capture
-    gw.start_reception(2, 2, 7, -50, 1.0, 6.0, 0.006, 868e6)
+    gw.start_reception(2, 2, 7, -50, 1.0, 6.0, 0.006, 868e6, aloha_channel_model=False)
     gw.end_reception(1, server, 1)
     gw.end_reception(2, server, 2)
 
@@ -69,8 +69,30 @@ def test_cross_sf_collision():
     server.gateways = [gw]
 
     # Two packets on the same frequency with different SF collide
-    gw.start_reception(1, 1, 7, -60, 1.0, 6.0, 0.0, 868e6, orthogonal_sf=False)
-    gw.start_reception(2, 2, 9, -60, 1.0, 6.0, 0.0, 868e6, orthogonal_sf=False)
+    gw.start_reception(
+        1,
+        1,
+        7,
+        -60,
+        1.0,
+        6.0,
+        0.0,
+        868e6,
+        orthogonal_sf=False,
+        aloha_channel_model=False,
+    )
+    gw.start_reception(
+        2,
+        2,
+        9,
+        -60,
+        1.0,
+        6.0,
+        0.0,
+        868e6,
+        orthogonal_sf=False,
+        aloha_channel_model=False,
+    )
     gw.end_reception(1, server, 1)
     gw.end_reception(2, server, 2)
 
@@ -83,9 +105,31 @@ def test_cross_sf_capture_after_delay():
     server.gateways = [gw]
 
     # Strong signal starts first and should capture the weaker one
-    gw.start_reception(1, 1, 7, -50, 1.0, 6.0, 0.0, 868e6, orthogonal_sf=False)
+    gw.start_reception(
+        1,
+        1,
+        7,
+        -50,
+        1.0,
+        6.0,
+        0.0,
+        868e6,
+        orthogonal_sf=False,
+        aloha_channel_model=False,
+    )
     # Weaker packet with higher SF starts after more than 5 of its symbols
-    gw.start_reception(2, 2, 9, -60, 1.0, 6.0, 0.03, 868e6, orthogonal_sf=False)
+    gw.start_reception(
+        2,
+        2,
+        9,
+        -60,
+        1.0,
+        6.0,
+        0.03,
+        868e6,
+        orthogonal_sf=False,
+        aloha_channel_model=False,
+    )
     gw.end_reception(1, server, 1)
     gw.end_reception(2, server, 2)
 

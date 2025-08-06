@@ -101,7 +101,7 @@ class Simulator:
         seed: int | None = None,
         class_c_rx_interval: float = 1.0,
         phy_model: str = "",
-        aloha_channel_model: bool = False,
+        aloha_channel_model: bool = True,
         flora_loss_model: str = "lognorm",
         terrain_map: str | list[list[float]] | None = None,
         path_map: str | list[list[float]] | None = None,

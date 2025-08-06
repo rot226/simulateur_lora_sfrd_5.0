@@ -63,7 +63,7 @@ class Gateway:
         capture_mode: str = "basic",
         flora_phy=None,
         orthogonal_sf: bool = True,
-        aloha_channel_model: bool = False,
+        aloha_channel_model: bool = True,
         capture_window_symbols: int = 5,
     ):
         """

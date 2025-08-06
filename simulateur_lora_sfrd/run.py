@@ -37,7 +37,7 @@ def simulate(
     noise_std=0.0,
     debug_rx=False,
     phy_model="omnet",
-    aloha_channel_model: bool = False,
+    aloha_channel_model: bool = True,
     voltage=3.3,
     tx_current=0.06,
     rx_current=0.011,
@@ -313,7 +313,8 @@ def main(argv=None):
     )
     parser.add_argument(
         "--aloha-channel",
-        action="store_true",
+        action=argparse.BooleanOptionalAction,
+        default=True,
         help="Utilise le modèle de canal Aloha (collisions immédiates)",
     )
     parser.add_argument(
