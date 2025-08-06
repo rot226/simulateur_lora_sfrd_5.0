@@ -3,6 +3,7 @@ import sys
 import math
 import numbers
 import subprocess
+import logging
 
 try:  # Les dépendances lourdes sont optionnelles pour pouvoir exécuter les tests sans elles
     import panel as pn
@@ -13,6 +14,9 @@ try:  # Les dépendances lourdes sont optionnelles pour pouvoir exécuter les te
     import pandas as pd
 except Exception as exc:  # pragma: no cover - utilisé uniquement lorsque dépendances manquantes
     raise ImportError("dashboard dependencies not available") from exc
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Assurer la résolution correcte des imports quel que soit le répertoire
 # depuis lequel ce fichier est exécuté. On ajoute le dossier parent
@@ -92,7 +96,10 @@ def average_numeric_metrics(metrics_list: list[dict]) -> dict:
 
 def session_alive() -> bool:
     """Return True if the Bokeh session is still active."""
-    doc = pn.state.curdoc
+    try:
+        doc = pn.state.curdoc
+    except Exception:
+        return False
     sc = getattr(doc, "session_context", None)
     return bool(sc and getattr(sc, "session", None))
 
@@ -105,8 +112,8 @@ def _cleanup_callbacks() -> None:
         if cb is not None:
             try:
                 cb.stop()
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.exception("Failed to stop %s callback", cb_name)
             globals()[cb_name] = None
     # Reset histogram tracking when cleaning up callbacks
     delay_samples.clear()
@@ -433,6 +440,9 @@ def update_timeline():
 def update_histogram(metrics: dict | None = None) -> None:
     """Mettre à jour l'histogramme interactif selon l'option sélectionnée."""
     global delay_samples, hist_event_index
+    if not session_alive():
+        _cleanup_callbacks()
+        return
     if sim is None:
         sf_hist_pane.object = go.Figure()
         return
@@ -574,8 +584,13 @@ def step_simulation():
         if not session_alive():
             _cleanup_callbacks()
         return
-    cont = sim.step()
-    metrics = sim.get_metrics()
+    try:
+        cont = sim.step()
+        metrics = sim.get_metrics()
+    except Exception as exc:
+        logger.exception("Exception during simulation step")
+        _cleanup_callbacks()
+        raise
     pdr_indicator.value = metrics["PDR"]
     collisions_indicator.value = metrics["collisions"]
     energy_indicator.value = metrics["energy_J"]
