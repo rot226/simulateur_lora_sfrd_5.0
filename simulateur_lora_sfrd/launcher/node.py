@@ -94,9 +94,9 @@ class Node:
         self.orientation_az = orientation_az
         self.orientation_el = orientation_el
         self.initial_sf = sf
-        self.sf = sf
+        self._sf = sf
         self.initial_tx_power = tx_power
-        self.tx_power = tx_power
+        self._tx_power = tx_power
         # Canal radio attribué (peut être modifié par le simulateur)
         # Utiliser un canal par défaut si aucun n'est fourni pour éviter
         # des erreurs lors des calculs d'airtime ou de RSSI.
@@ -260,6 +260,38 @@ class Node:
         else:
             self.state = "rx" if self.class_type.upper() == "C" else "sleep"
             self._startup_end = 0.0
+
+    @property
+    def sf(self) -> int:
+        return self._sf
+
+    @sf.setter
+    def sf(self, value: int) -> None:
+        if value == self._sf:
+            return
+        sim = getattr(self, "simulator", None)
+        if sim is not None:
+            sim.sf_distribution[self._sf] -= 1
+            if sim.sf_distribution[self._sf] <= 0:
+                del sim.sf_distribution[self._sf]
+            sim.sf_distribution[value] += 1
+        self._sf = value
+
+    @property
+    def tx_power(self) -> float:
+        return self._tx_power
+
+    @tx_power.setter
+    def tx_power(self, value: float) -> None:
+        if value == self._tx_power:
+            return
+        sim = getattr(self, "simulator", None)
+        if sim is not None:
+            sim.tx_power_distribution[self._tx_power] -= 1
+            if sim.tx_power_distribution[self._tx_power] <= 0:
+                del sim.tx_power_distribution[self._tx_power]
+            sim.tx_power_distribution[value] += 1
+        self._tx_power = value
 
     @property
     def battery_level(self) -> float:

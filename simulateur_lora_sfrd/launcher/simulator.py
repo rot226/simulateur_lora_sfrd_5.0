@@ -6,6 +6,7 @@ import heapq
 import logging
 import random
 import numpy as np
+from collections import Counter
 
 from traffic.exponential import sample_interval
 from traffic.rng_manager import RngManager
@@ -563,7 +564,24 @@ class Simulator:
             if self.mobility_enabled:
                 self.mobility_model.assign(node)
             node.rng = self.rng_manager.get_stream("traffic", node_id)
+            node.simulator = self
             self.nodes.append(node)
+
+        # Distributions statiques mises à jour via les setters de Node
+        self.sf_distribution: Counter[int] = Counter(n.sf for n in self.nodes)
+        self.tx_power_distribution: Counter[float] = Counter(
+            n.tx_power for n in self.nodes
+        )
+        self.class_types = {n.class_type for n in self.nodes}
+        # Compteurs incrémentaux
+        self.sent_by_sf: Counter[int] = Counter()
+        self.delivered_by_sf: Counter[int] = Counter()
+        self.sent_by_class: Counter[str] = Counter()
+        self.delivered_by_class: Counter[str] = Counter()
+        self.delivered_by_gateway: Counter[int] = Counter()
+        self.total_payload_bits_delivered = 0
+        self.event_sf: dict[int, int] = {}
+        self.event_class: dict[int, str] = {}
 
         # Configurer le serveur réseau avec les références pour ADR
         self.network_server.adr_enabled = self.adr_server
@@ -753,6 +771,10 @@ class Simulator:
             self.packets_sent += 1
             self.tx_attempted += 1
             node.increment_sent()
+            self.sent_by_sf[sf] += 1
+            self.sent_by_class[node.class_type] += 1
+            self.event_sf[event_id] = sf
+            self.event_class[event_id] = node.class_type
             # Énergie consommée par la transmission (E = I * V * t)
             current_a = node.profile.get_tx_current(tx_power)
             energy_J = current_a * node.profile.voltage_v * duration
@@ -913,10 +935,20 @@ class Simulator:
                 gw.end_reception(event_id, self.network_server, node_id)
             # Vérifier si le paquet a été reçu par au moins une passerelle
             delivered = event_id in self.network_server.received_events
+            sf = self.event_sf.pop(event_id, node.sf)
+            cls = self.event_class.pop(event_id, node.class_type)
             if delivered:
                 self.packets_delivered += 1
                 self.rx_delivered += 1
                 node.increment_success()
+                self.delivered_by_sf[sf] += 1
+                self.delivered_by_class[cls] += 1
+                gw_id = self.network_server.event_gateway.get(event_id, None)
+                if gw_id is not None:
+                    self.delivered_by_gateway[gw_id] += 1
+                self.total_payload_bits_delivered += (
+                    self.payload_size_bytes * 8
+                )
                 # Délai = temps de fin - temps de début de l'émission
                 start_time = next(
                     item for item in self.events_log if item["event_id"] == event_id
@@ -1298,41 +1330,38 @@ class Simulator:
         )
         sim_time = self.current_time
         throughput_bps = (
-            self.packets_delivered * self.payload_size_bytes * 8 / sim_time
-            if sim_time > 0
-            else 0.0
+            self.total_payload_bits_delivered / sim_time if sim_time > 0 else 0.0
         )
         pdr_by_node = {node.id: node.pdr for node in self.nodes}
         recent_pdr_by_node = {node.id: node.recent_pdr for node in self.nodes}
-        pdr_by_sf: dict[int, float] = {}
-        for sf in range(7, 13):
-            nodes_sf = [n for n in self.nodes if n.sf == sf]
-            sent_sf = sum(n.tx_attempted for n in nodes_sf)
-            delivered_sf = sum(n.rx_delivered for n in nodes_sf)
-            pdr_by_sf[sf] = delivered_sf / sent_sf if sent_sf > 0 else 0.0
-
-        gateway_counts = {gw.id: 0 for gw in self.gateways}
-        for gw_id in self.network_server.event_gateway.values():
-            if gw_id in gateway_counts:
-                gateway_counts[gw_id] += 1
-        pdr_by_gateway = {
-            gw_id: count / total_sent if total_sent > 0 else 0.0
-            for gw_id, count in gateway_counts.items()
+        pdr_by_sf = {
+            sf: (
+                self.delivered_by_sf[sf] / self.sent_by_sf[sf]
+                if self.sent_by_sf[sf] > 0
+                else 0.0
+            )
+            for sf in range(7, 13)
         }
-
-        pdr_by_class: dict[str, float] = {}
-        class_types = {n.class_type for n in self.nodes}
-        for ct in class_types:
-            nodes_cls = [n for n in self.nodes if n.class_type == ct]
-            sent_cls = sum(n.tx_attempted for n in nodes_cls)
-            delivered_cls = sum(n.rx_delivered for n in nodes_cls)
-            pdr_by_class[ct] = delivered_cls / sent_cls if sent_cls > 0 else 0.0
-
+        pdr_by_gateway = {
+            gw.id: (
+                self.delivered_by_gateway[gw.id] / total_sent
+                if total_sent > 0
+                else 0.0
+            )
+            for gw in self.gateways
+        }
+        pdr_by_class = {
+            ct: (
+                self.delivered_by_class[ct] / self.sent_by_class[ct]
+                if self.sent_by_class[ct] > 0
+                else 0.0
+            )
+            for ct in self.class_types
+        }
         energy_by_class = {
             ct: sum(n.energy_consumed for n in self.nodes if n.class_type == ct)
-            for ct in class_types
+            for ct in self.class_types
         }
-
         energy_by_node = {n.id: n.energy_consumed for n in self.nodes}
         airtime_by_node = {n.id: n.total_airtime for n in self.nodes}
 
@@ -1354,11 +1383,6 @@ class Simulator:
             interval_sum / interval_count if interval_count > 0 else 0.0
         )
 
-        tx_power_distribution: dict[float, int] = {}
-        for node in self.nodes:
-            p = node.tx_power
-            tx_power_distribution[p] = tx_power_distribution.get(p, 0) + 1
-
         return {
             "PDR": pdr,
             "collisions": self.packets_lost_collision,
@@ -1367,11 +1391,8 @@ class Simulator:
             "avg_delay_s": avg_delay,
             "avg_arrival_interval_s": avg_arrival_interval,
             "throughput_bps": throughput_bps,
-            "sf_distribution": {
-                sf: sum(1 for node in self.nodes if node.sf == sf)
-                for sf in range(7, 13)
-            },
-            "tx_power_distribution": tx_power_distribution,
+            "sf_distribution": dict(self.sf_distribution),
+            "tx_power_distribution": dict(self.tx_power_distribution),
             "pdr_by_node": pdr_by_node,
             "recent_pdr_by_node": recent_pdr_by_node,
             "pdr_by_sf": pdr_by_sf,
