@@ -31,7 +31,7 @@ class FloraCppPHY:
         if self.lib is None:
             msg = (
                 "libflora_phy.so introuvable. "
-                "Compilez-le via scripts/build_flora_cpp.sh"
+                "Installez le paquet pour compiler automatiquement la bibliothèque"
             )
             if last_error:
                 msg += f" ({last_error})"

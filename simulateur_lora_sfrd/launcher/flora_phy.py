@@ -43,12 +43,15 @@ class FloraPHY:
         self.use_exact_ber = bool(use_exact_ber)
         self._cpp = None
         if self.use_exact_ber:
-            try:
-                from .flora_cpp import FloraCppPHY
+            from .flora_cpp import FloraCppPHY
 
+            try:
                 self._cpp = FloraCppPHY()
-            except OSError:
-                self._cpp = None
+            except OSError as exc:
+                raise OSError(
+                    "libflora_phy.so introuvable. "
+                    "Installez le paquet pour compiler automatiquement la bibliothèque"
+                ) from exc
 
     def path_loss(self, distance: float) -> float:
         if distance <= 0:

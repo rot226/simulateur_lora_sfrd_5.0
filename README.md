@@ -12,6 +12,8 @@ Les principales équations sont décrites dans docs/equations_flora.md.
    source env/bin/activate  # Sous Windows : env\Scripts\activate
    pip install -e .
    ```
+   Cette commande compile également la bibliothèque native `libflora_phy.so`
+   qui permet d'utiliser par défaut le calcul de BER exact.
 3. **Lancez le tableau de bord :**
 ```bash
 panel serve launcher/dashboard.py --show
@@ -457,9 +459,9 @@ logistique si vous souhaitez accélérer les simulations.
 
 > **Remarque :** cette approche logistique reste une approximation des courbes
 > PER de FLoRa. La version C++ calcule la probabilité d'erreur binaire par
-> intégration dans `calculateBER`. Pour un réalisme maximal, compilez
-> `libflora_phy.so` et lancez le simulateur avec `phy_model="flora_cpp"` afin
-> d'utiliser ces routines natives.
+> intégration dans `calculateBER`. Pour un réalisme maximal, lancez le
+> simulateur avec `phy_model="flora_cpp"` : la bibliothèque native est
+> compilée automatiquement lors de l'installation.
 
 Le paramètre ``flora_loss_model`` permet de choisir parmi plusieurs modèles
 d'atténuation : ``"lognorm"`` (par défaut), ``"oulu"`` correspondant à
@@ -588,18 +590,11 @@ make -j$(nproc)
 ```
 
 Pour interfacer le simulateur Python avec la couche physique C++ et calculer la
-BER exacte via ``ctypes``, construisez la bibliothèque partagée
-``libflora_phy.so`` :
-
-```bash
-cd ../flora-master
-make libflora_phy.so
-```
-
-Vous pouvez également exécuter directement `./scripts/build_flora_cpp.sh` depuis
-la racine du dépôt pour automatiser cette compilation.  Le fichier généré est
-automatiquement détecté par ``FloraPHY`` pour calculer la BER ; en son absence
-une implémentation Python de secours est utilisée.
+BER exacte via ``ctypes``, la bibliothèque partagée ``libflora_phy.so`` est
+désormais compilée automatiquement lors de l'installation (`pip install -e .`).
+Si besoin, vous pouvez toujours lancer manuellement `./scripts/build_flora_cpp.sh`
+depuis la racine du dépôt pour régénérer la bibliothèque.  Le fichier généré est
+automatiquement détecté par ``FloraPHY`` pour calculer la BER.
 
 Placez ce fichier à la racine du projet ou dans ``flora-master`` puis lancez le
 simulateur avec ``phy_model="flora_cpp"`` pour utiliser ces routines natives.

@@ -161,17 +161,20 @@ def test_flora_full_mode(tmp_path):
     flora_copy = tmp_path / 'flora_metrics.csv'
     flora_copy.write_bytes(data_path.read_bytes())
 
-    sim = Simulator(
-        num_nodes=1,
-        num_gateways=1,
-        transmission_mode='Periodic',
-        packet_interval=1.0,
-        packets_to_send=10,
-        mobility=False,
-        fixed_sf=7,
-        seed=0,
-        phy_model="flora_full",
-    )
+    try:
+        sim = Simulator(
+            num_nodes=1,
+            num_gateways=1,
+            transmission_mode='Periodic',
+            packet_interval=1.0,
+            packets_to_send=10,
+            mobility=False,
+            fixed_sf=7,
+            seed=0,
+            phy_model="flora_full",
+        )
+    except OSError:
+        pytest.skip("libflora_phy.so missing")
     sim.run()
     metrics = sim.get_metrics()
     flora = load_flora_metrics(flora_copy)

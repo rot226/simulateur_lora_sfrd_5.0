@@ -1,4 +1,5 @@
 import math
+import pytest
 from simulateur_lora_sfrd.launcher.channel import Channel
 from simulateur_lora_sfrd.launcher.flora_phy import FloraPHY
 
@@ -46,13 +47,16 @@ def test_channel_compute_rssi_matches_flora_equations():
     tx_power = 14.0
     distance = 100.0
     sf = 7
-    ch = Channel(
-        environment="flora",
-        phy_model="flora_full",
-        pa_non_linearity_dB=0.0,
-        pa_non_linearity_std_dB=0.0,
-        frontend_filter_order=0,
-    )
+    try:
+        ch = Channel(
+            environment="flora",
+            phy_model="flora_full",
+            pa_non_linearity_dB=0.0,
+            pa_non_linearity_std_dB=0.0,
+            frontend_filter_order=0,
+        )
+    except OSError:
+        pytest.skip("libflora_phy.so missing")
     ch.shadowing_std = 0.0  # deterministic
     expected_rssi, expected_snr = flora_equations(tx_power, distance, sf, ch)
     rssi, snr = ch.compute_rssi(tx_power, distance, sf=sf)
@@ -64,13 +68,16 @@ def test_oulu_path_loss_model():
     tx_power = 14.0
     distance = 500.0
     sf = 7
-    ch = Channel(
-        phy_model="flora_full",
-        flora_loss_model="oulu",
-        pa_non_linearity_dB=0.0,
-        pa_non_linearity_std_dB=0.0,
-        frontend_filter_order=0,
-    )
+    try:
+        ch = Channel(
+            phy_model="flora_full",
+            flora_loss_model="oulu",
+            pa_non_linearity_dB=0.0,
+            pa_non_linearity_std_dB=0.0,
+            frontend_filter_order=0,
+        )
+    except OSError:
+        pytest.skip("libflora_phy.so missing")
     ch.shadowing_std = 0.0
     expected_rssi, expected_snr = oulu_equations(tx_power, distance, sf, ch)
     rssi, snr = ch.compute_rssi(tx_power, distance, sf=sf)
