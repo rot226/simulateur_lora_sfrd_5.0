@@ -88,11 +88,16 @@ def average_numeric_metrics(metrics_list: list[dict]) -> dict:
     all_keys = set().union(*(m.keys() for m in metrics_list))
     averages: dict = {}
     for key in all_keys:
-        values = [
-            m[key]
-            for m in metrics_list
-            if key in m and isinstance(m[key], numbers.Number) and not isinstance(m[key], bool)
-        ]
+        values = []
+        for m in metrics_list:
+            if key not in m:
+                continue
+            val = m[key]
+            if not isinstance(val, numbers.Number) or isinstance(val, (bool, np.bool_)):
+                continue
+            if not math.isfinite(float(val)):
+                continue
+            values.append(float(val))
         if values:
             averages[key] = sum(values) / len(values)
     return averages
