@@ -59,7 +59,7 @@ class FloraCppPHY:
         end_list: list[float],
         freq_list: list[float],
         *,
-        aloha_channel_model: bool = False,
+        aloha_channel_model: bool = True,
     ) -> list[bool]:
         length = len(rssi_list)
         if aloha_channel_model and length > 1:

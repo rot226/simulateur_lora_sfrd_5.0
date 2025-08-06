@@ -88,7 +88,7 @@ class FloraPHY:
         end_list: list[float],
         freq_list: list[float],
         *,
-        aloha_channel_model: bool = False,
+        aloha_channel_model: bool = True,
     ) -> list[bool]:
         """Return the capture decision for each concurrent signal.
 

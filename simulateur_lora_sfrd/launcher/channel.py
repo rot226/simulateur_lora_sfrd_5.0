@@ -165,7 +165,7 @@ class Channel:
         region: str | None = None,
         channel_index: int = 0,
         orthogonal_sf: bool = True,
-        aloha_channel_model: bool = False,
+        aloha_channel_model: bool = True,
         rng: np.random.Generator | None = None,
     ):
         """
