@@ -34,8 +34,13 @@ from launcher import adr_standard_1, adr_2, adr_3  # noqa: E402
 pn.extension("plotly", raw_css=[
     ".coord-textarea textarea {font-size: 14pt;}",
 ])
-# Définition du titre de la page via le document Bokeh directement
-pn.state.curdoc.title = "Simulateur LoRa"
+# Définition du titre de la page via le document Bokeh directement si disponible
+doc = getattr(pn.state, "curdoc", None)
+if doc is not None:
+    try:
+        doc.title = "Simulateur LoRa"
+    except Exception:
+        pass
 
 # --- Variables globales ---
 sim = None
@@ -52,8 +57,9 @@ selected_adr_module = adr_standard_1
 total_runs = 1
 current_run = 0
 runs_events: list[pd.DataFrame] = []
-runs_metrics: list[dict] = []
-RUNS_METRICS_LIMIT = 1000  # Max number of metric snapshots to keep
+runs_metrics: list[dict] = []  # snapshot metrics recorded every step
+completed_run_metrics: list[dict] = []  # final metrics of each completed run
+RUNS_METRICS_LIMIT = 1000  # Max number of step metric snapshots to keep
 auto_fast_forward = False
 timeline_fig = go.Figure()
 last_event_index = 0
@@ -134,6 +140,24 @@ def _cleanup_callbacks() -> None:
     hist_event_index = 0
     last_step_ts = None
     latest_metrics = None
+
+
+def _safe_add_periodic_callback(callback, *, period, timeout=None):
+    """Wrapper around ``pn.state.add_periodic_callback`` that works without an
+    active event loop.
+
+    When Panel cannot schedule a periodic callback (e.g. during unit tests
+    where no asyncio loop is running), a dummy object with a ``stop`` method is
+    returned so that the rest of the dashboard logic can operate.
+    """
+    try:  # pragma: no cover - exercised indirectly via tests
+        return pn.state.add_periodic_callback(callback, period=period, timeout=timeout)
+    except Exception:
+        class _Dummy:
+            def stop(self):
+                pass
+
+        return _Dummy()
 
 
 def _validate_positive_inputs() -> bool:
@@ -833,7 +857,7 @@ def setup_simulation(seed_offset: int = 0):
     # La mobilité est désormais gérée directement par le simulateur
     start_time = time.time()
     max_real_time = real_time_duration_input.value if real_time_duration_input.value > 0 else None
-    chrono_callback = pn.state.add_periodic_callback(periodic_chrono_update, period=100, timeout=None)
+    chrono_callback = _safe_add_periodic_callback(periodic_chrono_update, period=100, timeout=None)
 
     update_map()
     pdr_indicator.value = 0
@@ -884,21 +908,21 @@ def setup_simulation(seed_offset: int = 0):
     export_message.object = "Cliquez sur Exporter pour générer le fichier CSV après la simulation."
 
     sim.running = True
-    sim_callback = pn.state.add_periodic_callback(step_simulation, period=SIM_STEP_PERIOD_MS, timeout=None)
+    sim_callback = _safe_add_periodic_callback(step_simulation, period=SIM_STEP_PERIOD_MS, timeout=None)
     def anim():
         if not session_alive():
             _cleanup_callbacks()
             return
         update_map()
         update_timeline()
-    map_anim_callback = pn.state.add_periodic_callback(anim, period=200, timeout=None)
-    hist_callback = pn.state.add_periodic_callback(update_histogram, period=int(HIST_UPDATE_PERIOD * 1000), timeout=None)
-    metrics_callback = pn.state.add_periodic_callback(update_metrics_tables, period=500, timeout=None)
+    map_anim_callback = _safe_add_periodic_callback(anim, period=200, timeout=None)
+    hist_callback = _safe_add_periodic_callback(update_histogram, period=int(HIST_UPDATE_PERIOD * 1000), timeout=None)
+    metrics_callback = _safe_add_periodic_callback(update_metrics_tables, period=500, timeout=None)
 
 
 # --- Bouton "Lancer la simulation" ---
 def on_start(event):
-    global total_runs, current_run, runs_events, runs_metrics
+    global total_runs, current_run, runs_events, runs_metrics, completed_run_metrics
 
     # Vérifier qu'une simulation n'est pas déjà en cours
     if sim is not None and getattr(sim, "running", False):
@@ -919,6 +943,7 @@ def on_start(event):
     current_run = 1
     runs_events.clear()
     runs_metrics.clear()
+    completed_run_metrics.clear()
     setup_simulation(seed_offset=0)
 
 
@@ -963,13 +988,16 @@ def on_stop(event):
     except Exception:
         pass
     try:
-        runs_metrics.append(sim.get_metrics())
+        metric = sim.get_metrics()
+        if not runs_metrics or runs_metrics[-1] != metric:
+            runs_metrics.append(metric)
+        completed_run_metrics.append(metric)
     except Exception:
         pass
 
     if current_run < total_runs:
-        if runs_metrics:
-            avg = average_numeric_metrics(runs_metrics)
+        if completed_run_metrics:
+            avg = average_numeric_metrics(completed_run_metrics)
             pdr_indicator.value = avg.get("PDR", 0.0)
             collisions_indicator.value = avg.get("collisions", 0)
             energy_indicator.value = avg.get("energy_J", 0.0)
@@ -1027,15 +1055,15 @@ def on_stop(event):
     auto_fast_forward = False
     fast_forward_progress.visible = False
     fast_forward_progress.value = 0
-    if runs_metrics:
-        avg = average_numeric_metrics(runs_metrics)
+    if completed_run_metrics:
+        avg = average_numeric_metrics(completed_run_metrics)
         pdr_indicator.value = avg.get("PDR", 0.0)
         collisions_indicator.value = avg.get("collisions", 0)
         energy_indicator.value = avg.get("energy_J", 0.0)
         delay_indicator.value = avg.get("avg_delay_s", 0.0)
         throughput_indicator.value = avg.get("throughput_bps", 0.0)
         retrans_indicator.value = avg.get("retransmissions", 0)
-        last = runs_metrics[-1]
+        last = completed_run_metrics[-1]
         table_df = pd.DataFrame(
             {
                 "Node": list(last["pdr_by_node"].keys()),
@@ -1263,13 +1291,13 @@ def on_pause(event=None):
         if start_time is None:
             start_time = time.time() - elapsed_time
         if sim_callback is None:
-            sim_callback = pn.state.add_periodic_callback(step_simulation, period=SIM_STEP_PERIOD_MS, timeout=None)
+            sim_callback = _safe_add_periodic_callback(step_simulation, period=SIM_STEP_PERIOD_MS, timeout=None)
         if chrono_callback is None:
-            chrono_callback = pn.state.add_periodic_callback(periodic_chrono_update, period=100, timeout=None)
+            chrono_callback = _safe_add_periodic_callback(periodic_chrono_update, period=100, timeout=None)
         if hist_callback is None:
-            hist_callback = pn.state.add_periodic_callback(update_histogram, period=int(HIST_UPDATE_PERIOD * 1000), timeout=None)
+            hist_callback = _safe_add_periodic_callback(update_histogram, period=int(HIST_UPDATE_PERIOD * 1000), timeout=None)
         if metrics_callback is None:
-            metrics_callback = pn.state.add_periodic_callback(update_metrics_tables, period=500, timeout=None)
+            metrics_callback = _safe_add_periodic_callback(update_metrics_tables, period=500, timeout=None)
         last_step_ts = None
         callback_interval_indicator.value = 0
         pause_button.name = "⏸ Pause"
