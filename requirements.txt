@@ -5,4 +5,5 @@ matplotlib>=3.5
 plotly>=5.4
 panel>=0.13
 fastapi>=0.88
+pydantic>=1.10
 uvicorn>=0.20
