@@ -717,13 +717,20 @@ class Channel:
         cls.REGION_CHANNELS[name.upper()] = list(frequencies)
 
     @classmethod
-    def region_channels(cls, region: str, **kwargs) -> list["Channel"]:
+    def region_channels(cls, region_name: str, **kwargs) -> list["Channel"]:
         """Return a list of ``Channel`` objects for the given region preset."""
-        reg = region.upper()
+        reg = region_name.upper()
         if reg not in cls.REGION_CHANNELS:
-            raise ValueError(f"Unknown region preset: {region}")
-        return [cls(frequency_hz=f, region=reg, channel_index=i, **kwargs)
-                for i, f in enumerate(cls.REGION_CHANNELS[reg])]
+            raise ValueError(f"Unknown region preset: {region_name}")
+        # ``region`` may accidentally be passed in ``kwargs`` which would
+        # result in ``TypeError: multiple values for argument 'region'``.
+        # Remove it so our explicit ``reg`` always takes precedence.
+        kwargs = dict(kwargs)
+        kwargs.pop("region", None)
+        return [
+            cls(frequency_hz=f, region=reg, channel_index=i, **kwargs)
+            for i, f in enumerate(cls.REGION_CHANNELS[reg])
+        ]
 
     # ------------------------------------------------------------------
     # Sensitivity computation
