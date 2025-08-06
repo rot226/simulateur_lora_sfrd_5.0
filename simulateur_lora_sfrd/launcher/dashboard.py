@@ -607,9 +607,6 @@ def step_simulation():
     if last_step_ts is not None:
         interval_ms = (now - last_step_ts) * 1000.0
         callback_interval_indicator.value = interval_ms
-        if interval_ms > SIM_STEP_PERIOD_MS * 1.5:
-            # Simple warning in console when the callback drifts too much
-            print(f"⚠️ Callback lent: {interval_ms:.1f} ms")
     last_step_ts = now
 
     cont = sim.step()
