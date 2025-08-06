@@ -592,9 +592,11 @@ make -j$(nproc)
 Pour interfacer le simulateur Python avec la couche physique C++ et calculer la
 BER exacte via ``ctypes``, la bibliothèque partagée ``libflora_phy.so`` est
 désormais compilée automatiquement lors de l'installation (`pip install -e .`).
-Si besoin, vous pouvez toujours lancer manuellement `./scripts/build_flora_cpp.sh`
-depuis la racine du dépôt pour régénérer la bibliothèque.  Le fichier généré est
-automatiquement détecté par ``FloraPHY`` pour calculer la BER.
+Si elle est absente, ``FloraPHY`` bascule automatiquement sur une implémentation
+Python (plus lente mais fonctionnelle) et émet un avertissement.  Vous pouvez
+toujours lancer manuellement `./scripts/build_flora_cpp.sh` depuis la racine du
+dépôt pour régénérer la bibliothèque ; le fichier généré est détecté
+automatiquement par ``FloraPHY``.
 
 Placez ce fichier à la racine du projet ou dans ``flora-master`` puis lancez le
 simulateur avec ``phy_model="flora_cpp"`` pour utiliser ces routines natives.
