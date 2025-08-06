@@ -60,8 +60,7 @@ pause_prev_disabled = False
 flora_metrics = None
 node_paths: dict[int, list[tuple[float, float]]] = {}
 
-# Tracking for callback timing
-last_step_ts: float | None = None
+# Period for simulation step callback in milliseconds
 SIM_STEP_PERIOD_MS = 100
 
 # --- Tracking for histogram updates ---
@@ -129,7 +128,7 @@ def session_alive() -> bool:
 def _cleanup_callbacks() -> None:
     """Stop all periodic callbacks safely."""
     global sim_callback, chrono_callback, map_anim_callback, hist_callback
-    global delay_samples, hist_event_index, last_step_ts
+    global delay_samples, hist_event_index
     for cb_name in (
         "sim_callback",
         "chrono_callback",
@@ -146,7 +145,6 @@ def _cleanup_callbacks() -> None:
     # Reset histogram tracking when cleaning up callbacks
     delay_samples.clear()
     hist_event_index = 0
-    last_step_ts = None
 
 
 def _validate_positive_inputs() -> bool:
@@ -282,11 +280,6 @@ collisions_indicator = pn.indicators.Number(
 )
 energy_indicator = pn.indicators.Number(name="Énergie Tx (J)", value=0.0, format="{value:.3f}")
 throughput_indicator = pn.indicators.Number(name="Débit (bps)", value=0.0, format="{value:.2f}")
-
-# Surveiller la fréquence réelle d'exécution du callback principal
-callback_interval_indicator = pn.indicators.Number(
-    name="Δt callback (ms)", value=0.0, format="{value:.0f}"
-)
 
 
 # Barre de progression pour l'accélération
@@ -605,16 +598,11 @@ def periodic_chrono_update():
 
 # --- Callback étape de simulation ---
 def step_simulation():
-    global last_step_ts, runs_metrics
+    global runs_metrics
     if sim is None or not session_alive():
         if not session_alive():
             _cleanup_callbacks()
         return
-    now = time.time()
-    if last_step_ts is not None:
-        interval_ms = (now - last_step_ts) * 1000.0
-        callback_interval_indicator.value = interval_ms
-    last_step_ts = now
 
     cont = sim.step()
     metrics = sim.get_metrics()
@@ -663,7 +651,7 @@ def setup_simulation(seed_offset: int = 0):
     """Crée et démarre un simulateur avec les paramètres du tableau de bord."""
     global sim, sim_callback, map_anim_callback, hist_callback, start_time, chrono_callback
     global elapsed_time, max_real_time, paused
-    global delay_samples, hist_event_index, last_step_ts
+    global delay_samples, hist_event_index
 
     # Empêcher de relancer si une simulation est déjà en cours
     if sim is not None and getattr(sim, "running", False):
@@ -684,7 +672,6 @@ def setup_simulation(seed_offset: int = 0):
     # Reset tracking for a fresh simulation run
     delay_samples.clear()
     hist_event_index = 0
-    last_step_ts = None
 
     if sim_callback:
         sim_callback.stop()
@@ -698,8 +685,6 @@ def setup_simulation(seed_offset: int = 0):
     if chrono_callback:
         chrono_callback.stop()
         chrono_callback = None
-    last_step_ts = None
-    callback_interval_indicator.value = 0
 
     seed_val = int(seed_input.value)
     seed = seed_val + seed_offset if seed_val != 0 else None
@@ -825,7 +810,6 @@ def setup_simulation(seed_offset: int = 0):
     pdr_indicator.value = 0
     collisions_indicator.value = 0
     energy_indicator.value = 0
-    callback_interval_indicator.value = 0
     chrono_indicator.value = 0
     global node_paths
     node_paths = {n.id: [(n.x, n.y)] for n in sim.nodes}
@@ -908,7 +892,7 @@ def on_start(event):
 
 # --- Bouton "Arrêter la simulation" ---
 def on_stop(event):
-    global sim, sim_callback, chrono_callback, map_anim_callback, hist_callback, start_time, max_real_time, paused, last_step_ts
+    global sim, sim_callback, chrono_callback, map_anim_callback, hist_callback, start_time, max_real_time, paused
     global current_run, total_runs, runs_events, auto_fast_forward
     # If called programmatically (e.g. after fast_forward), allow cleanup even
     # if the simulation has already stopped.
@@ -1191,7 +1175,6 @@ def fast_forward(event=None):
                             }
                         )
                     flora_compare_table.object = pd.DataFrame(rows)
-                callback_interval_indicator.value = 0
                 # Les détails de PDR ne sont pas affichés en direct
                 sf_dist = metrics["sf_distribution"]
                 sf_fig = go.Figure(
@@ -1231,7 +1214,7 @@ fast_forward_button.on_click(fast_forward)
 # --- Bouton "Pause/Reprendre" ---
 def on_pause(event=None):
     """Toggle simulation pause state safely."""
-    global sim_callback, chrono_callback, hist_callback, start_time, elapsed_time, paused, last_step_ts
+    global sim_callback, chrono_callback, hist_callback, start_time, elapsed_time, paused
     if sim is None or not sim.running:
         return
 
@@ -1249,8 +1232,6 @@ def on_pause(event=None):
         if start_time is not None:
             elapsed_time = time.time() - start_time
         start_time = None  # Freeze chrono while paused
-        last_step_ts = None
-        callback_interval_indicator.value = 0
         pause_button.name = "▶ Reprendre"
         pause_button.button_type = "success"
         fast_forward_button.disabled = True
@@ -1265,8 +1246,6 @@ def on_pause(event=None):
             chrono_callback = pn.state.add_periodic_callback(periodic_chrono_update, period=100, timeout=None)
         if hist_callback is None:
             hist_callback = pn.state.add_periodic_callback(update_histogram, period=int(HIST_UPDATE_PERIOD * 1000), timeout=None)
-        last_step_ts = None
-        callback_interval_indicator.value = 0
         pause_button.name = "⏸ Pause"
         pause_button.button_type = "primary"
         fast_forward_button.disabled = False
@@ -1389,7 +1368,6 @@ metrics_col = pn.Column(
     collisions_indicator,
     energy_indicator,
     throughput_indicator,
-    callback_interval_indicator,
     pdr_table,
     flora_compare_table,
 )
