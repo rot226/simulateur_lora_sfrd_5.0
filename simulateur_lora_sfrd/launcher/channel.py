@@ -165,6 +165,7 @@ class Channel:
         region: str | None = None,
         channel_index: int = 0,
         orthogonal_sf: bool = True,
+        aloha_channel_model: bool = False,
         rng: np.random.Generator | None = None,
     ):
         """
@@ -257,6 +258,8 @@ class Channel:
             région choisie.
         :param orthogonal_sf: Si ``True``, les transmissions de SF différents
             n'interfèrent pas entre elles.
+        :param aloha_channel_model: Active un modèle de canal Aloha où toute
+            superposition provoque une collision immédiate (sans capture).
         :param flora_noise_path: Chemin vers ``flora_noise_table.json`` ou vers
             ``LoRaAnalogModel.cc`` pour charger la table de bruit FLoRa.
         :param sensitivity_mode: "flora" pour utiliser les valeurs de bruit
@@ -392,6 +395,7 @@ class Channel:
         self.capture_threshold_dB = capture_threshold_dB
         self.capture_window_symbols = int(capture_window_symbols)
         self.orthogonal_sf = orthogonal_sf
+        self.aloha_channel_model = bool(aloha_channel_model)
         self.last_rssi_dBm = 0.0
         self.last_noise_dBm = 0.0
         self.last_filter_att_dB = 0.0

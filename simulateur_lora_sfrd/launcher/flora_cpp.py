@@ -58,8 +58,12 @@ class FloraCppPHY:
         start_list: list[float],
         end_list: list[float],
         freq_list: list[float],
+        *,
+        aloha_channel_model: bool = False,
     ) -> list[bool]:
         length = len(rssi_list)
+        if aloha_channel_model and length > 1:
+            return [False] * length
         arr_type_d = ctypes.c_double * length
         arr_type_i = ctypes.c_int * length
         res = self.lib.flora_capture(

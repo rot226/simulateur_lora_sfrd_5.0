@@ -63,6 +63,7 @@ class Gateway:
         capture_mode: str = "basic",
         flora_phy=None,
         orthogonal_sf: bool = True,
+        aloha_channel_model: bool = False,
         capture_window_symbols: int = 5,
     ):
         """
@@ -85,6 +86,8 @@ class Gateway:
             "flora".
         :param orthogonal_sf: Si ``True``, les transmissions de SF différents
             sont ignorées pour la détection de collision.
+        :param aloha_channel_model: Active un modèle Aloha avec collisions
+            immédiates (sans capture).
         :param capture_window_symbols: Nombre de symboles de préambule exigés
             avant qu'un paquet puisse capturer la réception (par défaut 5).
         """
@@ -209,7 +212,14 @@ class Gateway:
             start_list = [t['start_time'] for t in colliders]
             end_list = [t['end_time'] for t in colliders]
             freq_list = [t['frequency'] for t in colliders]
-            winners = flora_phy.capture(rssi_list, sf_list, start_list, end_list, freq_list)
+            winners = flora_phy.capture(
+                rssi_list,
+                sf_list,
+                start_list,
+                end_list,
+                freq_list,
+                aloha_channel_model=aloha_channel_model,
+            )
             capture = any(winners)
             if capture:
                 win_idx = winners.index(True)
