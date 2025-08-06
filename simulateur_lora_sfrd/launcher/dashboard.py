@@ -98,10 +98,18 @@ def average_numeric_metrics(metrics_list: list[dict]) -> dict:
     return averages
 
 def session_alive() -> bool:
-    """Return True if the Bokeh session is still active."""
+    """Return True if the Bokeh session is still active.
+
+    Logs a warning in the console when the session is missing so that
+    callback stoppages caused by a disconnected Bokeh server are visible
+    instead of failing silently.
+    """
     doc = pn.state.curdoc
     sc = getattr(doc, "session_context", None)
-    return bool(sc and getattr(sc, "session", None))
+    alive = bool(sc and getattr(sc, "session", None))
+    if not alive:
+        print("⚠️ Bokeh session inactive")
+    return alive
 
 def _cleanup_callbacks() -> None:
     """Stop all periodic callbacks safely."""

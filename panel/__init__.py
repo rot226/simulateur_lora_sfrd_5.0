@@ -17,6 +17,7 @@ _repo_path = sys.path.pop(0)
 try:  # pragma: no cover - executed only when Panel is installed
     _panel = importlib.import_module("panel")
     import pandas  # noqa: F401  -- Panel requires pandas
+    import plotly  # noqa: F401  -- dashboard relies on Plotly
 except Exception as exc:  # pragma: no cover - when Panel or deps are missing
     raise ImportError("panel is not available in this test environment") from exc
 finally:
