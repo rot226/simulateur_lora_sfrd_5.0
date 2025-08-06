@@ -268,7 +268,6 @@ collisions_indicator = pn.indicators.Number(
     name="Collisions", value=0.0, format="{value:.1f}"
 )
 energy_indicator = pn.indicators.Number(name="Énergie Tx (J)", value=0.0, format="{value:.3f}")
-delay_indicator = pn.indicators.Number(name="Délai moyen (s)", value=0.0, format="{value:.3f}")
 throughput_indicator = pn.indicators.Number(name="Débit (bps)", value=0.0, format="{value:.2f}")
 
 # Surveiller la fréquence réelle d'exécution du callback principal
@@ -276,11 +275,6 @@ callback_interval_indicator = pn.indicators.Number(
     name="Δt callback (ms)", value=0.0, format="{value:.0f}"
 )
 
-# Indicateur de retransmissions
-# Same for retransmissions which may also be averaged across runs
-retrans_indicator = pn.indicators.Number(
-    name="Retransmissions", value=0.0, format="{value:.1f}"
-)
 
 # Barre de progression pour l'accélération
 fast_forward_progress = pn.indicators.Progress(name="Avancement", value=0, width=200, visible=False)
@@ -618,9 +612,7 @@ def step_simulation():
     pdr_indicator.value = metrics["PDR"]
     collisions_indicator.value = metrics["collisions"]
     energy_indicator.value = metrics["energy_J"]
-    delay_indicator.value = metrics["avg_delay_s"]
     throughput_indicator.value = metrics["throughput_bps"]
-    retrans_indicator.value = metrics["retransmissions"]
 
     # Les traitements coûteux (construction des tableaux) sont délégués
     # à un callback dédié pour ne pas ralentir la boucle principale.
@@ -836,7 +828,6 @@ def setup_simulation(seed_offset: int = 0):
     pdr_indicator.value = 0
     collisions_indicator.value = 0
     energy_indicator.value = 0
-    delay_indicator.value = 0
     callback_interval_indicator.value = 0
     chrono_indicator.value = 0
     global node_paths
@@ -970,9 +961,7 @@ def on_stop(event):
             pdr_indicator.value = avg.get("PDR", 0.0)
             collisions_indicator.value = avg.get("collisions", 0)
             energy_indicator.value = avg.get("energy_J", 0.0)
-            delay_indicator.value = avg.get("avg_delay_s", 0.0)
             throughput_indicator.value = avg.get("throughput_bps", 0.0)
-            retrans_indicator.value = avg.get("retransmissions", 0)
             # PDR détaillés disponibles dans le fichier exporté uniquement
         current_run += 1
         seed_offset = current_run - 1
@@ -1029,9 +1018,7 @@ def on_stop(event):
         pdr_indicator.value = avg.get("PDR", 0.0)
         collisions_indicator.value = avg.get("collisions", 0)
         energy_indicator.value = avg.get("energy_J", 0.0)
-        delay_indicator.value = avg.get("avg_delay_s", 0.0)
         throughput_indicator.value = avg.get("throughput_bps", 0.0)
-        retrans_indicator.value = avg.get("retransmissions", 0)
         last = runs_metrics[-1]
         table_df = pd.DataFrame(
             {
@@ -1182,9 +1169,7 @@ def fast_forward(event=None):
                 pdr_indicator.value = metrics["PDR"]
                 collisions_indicator.value = metrics["collisions"]
                 energy_indicator.value = metrics["energy_J"]
-                delay_indicator.value = metrics["avg_delay_s"]
                 throughput_indicator.value = metrics["throughput_bps"]
-                retrans_indicator.value = metrics["retransmissions"]
                 global latest_metrics
                 latest_metrics = metrics
                 update_metrics_tables()
@@ -1390,10 +1375,8 @@ metrics_col = pn.Column(
     pdr_indicator,
     collisions_indicator,
     energy_indicator,
-    delay_indicator,
     throughput_indicator,
     callback_interval_indicator,
-    retrans_indicator,
     pdr_table,
     flora_compare_table,
 )

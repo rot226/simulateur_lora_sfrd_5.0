@@ -753,7 +753,7 @@ vise à faciliter les contributions extérieures.
 Les points suivants ont été intégrés au simulateur :
 
 - **PDR par nœud et par type de trafic.** Chaque nœud maintient l'historique de ses vingt dernières transmissions afin de calculer un taux de livraison global et récent. Ces valeurs sont visibles dans le tableau de bord et exportées dans un fichier `metrics_*.csv`.
-- **Historique glissant et indicateurs QoS.** Le simulateur calcule désormais le délai moyen de livraison ainsi que le nombre de retransmissions sur la période récente.
+- **Historique glissant et indicateurs QoS.** Le simulateur maintient un historique des transmissions pour calculer divers indicateurs de qualité de service.
 - **Indicateurs supplémentaires.** La méthode `get_metrics()` retourne le PDR par SF, passerelle, classe et nœud. Le tableau de bord affiche un récapitulatif et l'export produit deux fichiers CSV : un pour les événements détaillés et un pour les métriques agrégées.
  - **Moteur d'événements précis.** La file de priorité gère désormais un délai réseau de 10 ms et un traitement serveur de 1,2 s, reproduisant ainsi fidèlement l'ordonnancement d'OMNeT++.
 - **Suivi détaillé des ACK.** Chaque nœud mémorise les confirmations reçues pour appliquer fidèlement la logique ADR de FLoRa.

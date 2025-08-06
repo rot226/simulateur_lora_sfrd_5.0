@@ -33,9 +33,7 @@ def test_runs_metrics_capped(monkeypatch):
         "pdr_indicator",
         "collisions_indicator",
         "energy_indicator",
-        "delay_indicator",
         "throughput_indicator",
-        "retrans_indicator",
     ]:
         monkeypatch.setattr(dashboard, name, DummyIndicator())
     # Patch session_alive to always return True
