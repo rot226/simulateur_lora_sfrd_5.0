@@ -52,6 +52,7 @@ total_runs = 1
 current_run = 0
 runs_events: list[pd.DataFrame] = []
 runs_metrics: list[dict] = []
+RUNS_METRICS_MAX_LEN = 1000
 auto_fast_forward = False
 timeline_fig = go.Figure()
 last_event_index = 0
@@ -67,6 +68,14 @@ node_paths: dict[int, list[tuple[float, float]]] = {}
 delay_samples: list[float] = []
 hist_event_index = 0
 HIST_UPDATE_PERIOD = 1.0  # seconds
+
+
+def _record_run_metrics(metrics: dict) -> None:
+    """Enregistrer des métriques tout en limitant la taille de la liste."""
+    global runs_metrics
+    runs_metrics.append(metrics)
+    if len(runs_metrics) > RUNS_METRICS_MAX_LEN:
+        del runs_metrics[0]
 
 
 def average_numeric_metrics(metrics_list: list[dict]) -> dict:
@@ -576,6 +585,7 @@ def step_simulation():
         return
     cont = sim.step()
     metrics = sim.get_metrics()
+    _record_run_metrics(metrics)
     pdr_indicator.value = metrics["PDR"]
     collisions_indicator.value = metrics["collisions"]
     energy_indicator.value = metrics["energy_J"]
@@ -902,7 +912,7 @@ def on_stop(event):
     except Exception:
         pass
     try:
-        runs_metrics.append(sim.get_metrics())
+        _record_run_metrics(sim.get_metrics())
     except Exception:
         pass
 
