@@ -53,6 +53,7 @@ total_runs = 1
 current_run = 0
 runs_events: list[pd.DataFrame] = []
 runs_metrics: list[dict] = []
+RUNS_METRICS_LIMIT = 1000  # Max number of metric snapshots to keep
 auto_fast_forward = False
 timeline_fig = go.Figure()
 last_event_index = 0
@@ -589,7 +590,7 @@ def periodic_chrono_update():
 
 # --- Callback étape de simulation ---
 def step_simulation():
-    global last_step_ts, latest_metrics
+    global last_step_ts, latest_metrics, runs_metrics
     if sim is None or not session_alive():
         if not session_alive():
             _cleanup_callbacks()
@@ -606,6 +607,9 @@ def step_simulation():
     cont = sim.step()
     metrics = sim.get_metrics()
     latest_metrics = metrics
+    runs_metrics.append(metrics)
+    if len(runs_metrics) > RUNS_METRICS_LIMIT:
+        del runs_metrics[:-RUNS_METRICS_LIMIT]
     pdr_indicator.value = metrics["PDR"]
     collisions_indicator.value = metrics["collisions"]
     energy_indicator.value = metrics["energy_J"]
