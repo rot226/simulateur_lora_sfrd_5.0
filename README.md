@@ -6,6 +6,15 @@ Les principales équations sont décrites dans docs/equations_flora.md.
 ## 🛠️ Installation
 
 1. **Clonez ou téléchargez** le projet.
+
+   Sous Windows, installez d'abord [MSYS2](https://www.msys2.org/) et les *Visual Studio Build Tools* (module « Desktop development with C++ »). Dans une invite « MSYS2 UCRT64 », exécutez :
+
+   ```bash
+   pacman -S --needed base-devel mingw-w64-ucrt-x86_64-toolchain
+   ```
+
+   Ces outils fournissent `make` et un compilateur pour construire la bibliothèque native.
+
 2. **Créez un environnement virtuel et installez le projet :**
    ```bash
    python3 -m venv env
@@ -15,6 +24,7 @@ Les principales équations sont décrites dans docs/equations_flora.md.
    pip install -e .[dev]
    ```
    Cette commande compile également la bibliothèque native `libflora_phy.so`
+   (ou `libflora_phy.dll` sous Windows)
    qui permet d'utiliser par défaut le calcul de BER exact.
 3. **Lancez le tableau de bord :**
 ```bash
