@@ -1,5 +1,6 @@
 import pytest
 from pathlib import Path
+import sys
 
 from simulateur_lora_sfrd.launcher.simulator import Simulator
 from simulateur_lora_sfrd.launcher.compare_flora import (
@@ -174,7 +175,8 @@ def test_flora_full_mode(tmp_path):
             phy_model="flora_full",
         )
     except OSError:
-        pytest.skip("libflora_phy.so missing")
+        lib_name = "libflora_phy.dll" if sys.platform.startswith("win") else "libflora_phy.so"
+        pytest.skip(f"{lib_name} missing")
     sim.run()
     metrics = sim.get_metrics()
     flora = load_flora_metrics(flora_copy)

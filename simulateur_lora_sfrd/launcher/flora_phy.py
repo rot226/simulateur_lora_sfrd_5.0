@@ -5,6 +5,7 @@ from __future__ import annotations
 import math
 import random
 import warnings
+import sys
 
 
 _MISSING_LIB_WARNED = False
@@ -61,9 +62,11 @@ class FloraPHY:
             except OSError:
                 global _MISSING_LIB_WARNED
                 if self.warn_on_fallback and not _MISSING_LIB_WARNED:
+                    ext_suffix = "dll" if sys.platform.startswith("win") else "so"
+                    lib_name = f"libflora_phy.{ext_suffix}"
                     warnings.warn(
                         (
-                            "libflora_phy.so introuvable. "
+                            f"{lib_name} introuvable. "
                             "Utilisation de l'implémentation Python, "
                             "ce qui peut ralentir la simulation. "
                             "Installez le paquet pour compiler automatiquement la bibliothèque"
