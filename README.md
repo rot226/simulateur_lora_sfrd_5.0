@@ -15,10 +15,16 @@ Les principales équations sont décrites dans docs/equations_flora.md.
 
    Ces outils fournissent `make` et un compilateur pour construire la bibliothèque native.
 
-2. **Créez un environnement virtuel et installez le projet :**
+2. **Créez un environnement virtuel, installez les dépendances puis le projet :**
+
+   Les modules `panel`, `plotly`, `numpy` et `pandas` sont nécessaires pour le
+   tableau de bord. Il est recommandé d'installer les dépendances listées dans
+   `requirements.txt` avant de lancer le simulateur :
+
    ```bash
    python3 -m venv env
    source env/bin/activate  # Sous Windows : env\Scripts\activate
+   pip install -r requirements.txt
    pip install -e .
    # ou avec les dépendances de développement :
    pip install -e .[dev]
