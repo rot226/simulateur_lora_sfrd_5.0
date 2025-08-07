@@ -3,6 +3,7 @@ import sys
 import math
 import numbers
 import subprocess
+import shutil
 
 try:  # Les dépendances lourdes sont optionnelles pour pouvoir exécuter les tests sans elles
     import panel as pn
@@ -25,6 +26,19 @@ REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
 for path in (ROOT_DIR, REPO_ROOT):
     if path not in sys.path:
         sys.path.insert(0, path)
+
+LIB_FLORA = os.path.join(os.path.dirname(__file__), "libflora_phy.so")
+if not os.path.exists(LIB_FLORA):
+    print("libflora_phy.so manquant, compilation...")
+    script = os.path.join(REPO_ROOT, "scripts", "build_flora_cpp.sh")
+    try:
+        subprocess.run(["bash", script], check=True)
+    except Exception as exc:  # pragma: no cover - afficher erreur et continuer
+        print(f"Échec de compilation de libflora_phy.so: {exc}")
+    else:
+        built = os.path.join(REPO_ROOT, "flora-master", "libflora_phy.so")
+        if os.path.exists(built):
+            shutil.copy2(built, LIB_FLORA)
 
 from launcher.simulator import Simulator  # noqa: E402
 from launcher.channel import Channel  # noqa: E402
