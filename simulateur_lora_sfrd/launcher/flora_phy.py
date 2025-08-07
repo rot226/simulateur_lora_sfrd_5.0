@@ -48,10 +48,12 @@ class FloraPHY:
                 self._cpp = FloraCppPHY()
             except OSError as exc:
                 import warnings
+                import sys
 
+                ext = ".dll" if sys.platform.startswith("win") else ".so"
                 warnings.warn(
                     (
-                        "libflora_phy.so introuvable. "
+                        f"libflora_phy{ext} introuvable. "
                         "Utilisation de l'implémentation Python, "
                         "ce qui peut ralentir la simulation. "
                         "Installez le paquet pour compiler automatiquement la bibliothèque"

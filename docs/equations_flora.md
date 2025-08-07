@@ -23,7 +23,8 @@ PER = 1 / (1 + math.exp(2 * (snr - (th + 2))))
 > **Remarque :** cette loi logistique est une simplification des courbes PER de
 > FLoRa. Le code C++ original intègre la fonction `calculateBER` pour un calcul
 > par intégration. Pour des résultats plus fidèles, compilez
-> `libflora_phy.so` et utilisez `phy_model="flora_cpp"`.
+> `libflora_phy` (`.so` sous Linux, `.dll` sous Windows) et utilisez
+> `phy_model="flora_cpp"`.
 
 où `th` correspond au seuil SNR du spreading factor courant【F:README.md†L434-L441】【F:simulateur_lora_sfrd/launcher/flora_phy.py†L127-L130】.
 

@@ -1,3 +1,4 @@
+import sys
 import pytest
 
 from simulateur_lora_sfrd.launcher.channel import Channel
@@ -7,7 +8,8 @@ def test_rssi_matches_python_impl():
     try:
         ch_cpp = Channel(phy_model="flora_cpp", shadowing_std=0.0)
     except OSError:
-        pytest.skip("libflora_phy.so missing")
+        ext = ".dll" if sys.platform.startswith("win") else ".so"
+        pytest.skip(f"libflora_phy{ext} missing")
 
     ch_py = Channel(phy_model="flora_full", shadowing_std=0.0)
 
