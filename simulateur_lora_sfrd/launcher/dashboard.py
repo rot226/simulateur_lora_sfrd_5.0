@@ -900,7 +900,7 @@ def setup_simulation(seed_offset: int = 0):
             "hist_callback", update_histogram, int(HIST_UPDATE_PERIOD * 1000)
         )
 
-    pn.state.onload(_start_periodic_callbacks)
+    _start_periodic_callbacks()
 
     update_map()
     pdr_indicator.value = 0
