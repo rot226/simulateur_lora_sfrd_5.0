@@ -114,7 +114,15 @@ class MultiGPSTraceMobility:
         self.traces = [GPSTraceMobility(f, loop=loop) for f in files]
 
     def assign(self, node) -> None:
-        idx = (node.id - 1) % len(self.traces)
+        # Node identifiers in the simulator may start at 0 or 1 depending on
+        # how they are created.  Using ``node.id - 1`` would therefore map the
+        # first node (id ``0``) to the last trace due to Python's negative
+        # indexing.  To ensure a deterministic and intuitive mapping where the
+        # first node gets the first trace regardless of the starting index, we
+        # simply modulo by the number of traces without the ``- 1`` offset.
+        #
+        # This fixes incorrect assignments when node ids start at ``0``.
+        idx = node.id % len(self.traces)
         node._trace_model = self.traces[idx]
         node._trace_model.assign(node)
 
