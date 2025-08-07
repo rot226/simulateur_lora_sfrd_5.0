@@ -4,6 +4,10 @@ from __future__ import annotations
 
 import math
 import random
+import warnings
+
+
+_MISSING_LIB_WARNED = False
 
 
 class FloraPHY:
@@ -37,27 +41,36 @@ class FloraPHY:
     HATA_K2 = 35.2
     SNR_THRESHOLDS = {7: -7.5, 8: -10.0, 9: -12.5, 10: -15.0, 11: -17.5, 12: -20.0}
 
-    def __init__(self, channel, loss_model: str = "lognorm", *, use_exact_ber: bool = True) -> None:
+    def __init__(
+        self,
+        channel,
+        loss_model: str = "lognorm",
+        *,
+        use_exact_ber: bool = True,
+        warn_on_fallback: bool = True,
+    ) -> None:
         self.channel = channel
         self.loss_model = loss_model
         self.use_exact_ber = bool(use_exact_ber)
+        self.warn_on_fallback = bool(warn_on_fallback)
         self._cpp = None
         if self.use_exact_ber:
             from .flora_cpp import FloraCppPHY
             try:
                 self._cpp = FloraCppPHY()
-            except OSError as exc:
-                import warnings
-
-                warnings.warn(
-                    (
-                        "libflora_phy.so introuvable. "
-                        "Utilisation de l'implémentation Python, "
-                        "ce qui peut ralentir la simulation. "
-                        "Installez le paquet pour compiler automatiquement la bibliothèque"
-                    ),
-                    RuntimeWarning,
-                )
+            except OSError:
+                global _MISSING_LIB_WARNED
+                if self.warn_on_fallback and not _MISSING_LIB_WARNED:
+                    warnings.warn(
+                        (
+                            "libflora_phy.so introuvable. "
+                            "Utilisation de l'implémentation Python, "
+                            "ce qui peut ralentir la simulation. "
+                            "Installez le paquet pour compiler automatiquement la bibliothèque"
+                        ),
+                        RuntimeWarning,
+                    )
+                    _MISSING_LIB_WARNED = True
                 self._cpp = None
 
     def path_loss(self, distance: float) -> float:
