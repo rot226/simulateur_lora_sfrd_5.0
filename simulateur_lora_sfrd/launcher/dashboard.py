@@ -198,7 +198,9 @@ def session_alive() -> bool:
 
     Logs a warning in the console when the session is missing so that
     callback stoppages caused by a disconnected Bokeh server are visible
-    instead of failing silently.
+    instead of failing silently. If the session context has not yet been
+    established, ``True`` is returned to avoid interrupting callbacks while
+    the dashboard initialises.
     """
     global _session_alert_shown
     doc = pn.state.curdoc
@@ -209,7 +211,10 @@ def session_alive() -> bool:
         if not _session_alert_shown:
             _add_alert(msg, alert_type="warning")
             _session_alert_shown = True
-        return False
+        # Missing context often means the dashboard has not been fully
+        # initialised yet. Returning ``True`` allows periodic callbacks to
+        # continue running until the connection is properly established.
+        return True
     session = getattr(sc, "session", None)
     if session is not None and getattr(session, "closed", False):
         msg = "⚠️ Bokeh session inactive"
