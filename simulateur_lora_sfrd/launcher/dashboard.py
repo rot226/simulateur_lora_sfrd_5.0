@@ -91,7 +91,9 @@ if not os.path.exists(LIB_FLORA):
         script = os.path.join(scripts_dir, "build_flora_cpp.sh")
         cmd = ["bash", script]
     try:
-        subprocess.run(cmd, check=True)
+        # Always run the build from the repository root so the script can
+        # locate ``flora-master`` regardless of the current working directory.
+        subprocess.run(cmd, check=True, cwd=REPO_ROOT)
     except Exception as exc:  # pragma: no cover - afficher erreur et continuer
         msg = f"Échec de compilation de {lib_name}: {exc}"
         print(msg)
