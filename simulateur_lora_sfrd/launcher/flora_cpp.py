@@ -60,8 +60,11 @@ class FloraCppPHY:
             msg = f"Impossible de charger {lib_name}"
             if build_error:
                 msg += (
-                    f" (build failed: {build_error}. "
-                    "Install the required toolchain and retry)"
+                    " (compilation failed. Install a C++ toolchain "
+                    "(gcc/make on Linux, Visual Studio Build Tools or MSYS2 on Windows), "
+                    "then run scripts/build_flora_cpp.sh or build_flora_cpp.ps1 to "
+                    "generate the library in simulateur_lora_sfrd/launcher. "
+                    f"Original error: {build_error})"
                 )
             elif last_error:
                 msg += f" ({last_error})"
