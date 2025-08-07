@@ -468,7 +468,9 @@ def update_histogram(metrics: dict | None = None) -> None:
         metrics = sim.get_metrics()
     if hist_metric_select.value == "SF":
         sf_dist = metrics["sf_distribution"]
-        fig = go.Figure(data=[go.Bar(x=[f"SF{sf}" for sf in sf_dist.keys()], y=list(sf_dist.values()))])
+        categories = [f"SF {sf}" for sf in range(7, 13)]
+        values = [sf_dist.get(sf, 0) for sf in range(7, 13)]
+        fig = go.Figure(data=[go.Bar(x=categories, y=values)])
         fig.update_layout(
             title="Répartition des SF par nœud",
             xaxis_title="SF",
@@ -1177,9 +1179,9 @@ def fast_forward(event=None):
                     flora_compare_table.object = pd.DataFrame(rows)
                 # Les détails de PDR ne sont pas affichés en direct
                 sf_dist = metrics["sf_distribution"]
-                sf_fig = go.Figure(
-                    data=[go.Bar(x=[f"SF{sf}" for sf in sf_dist.keys()], y=list(sf_dist.values()))]
-                )
+                categories = [f"SF {sf}" for sf in range(7, 13)]
+                values = [sf_dist.get(sf, 0) for sf in range(7, 13)]
+                sf_fig = go.Figure(data=[go.Bar(x=categories, y=values)])
                 sf_fig.update_layout(
                     title="Répartition des SF par nœud",
                     xaxis_title="SF",
