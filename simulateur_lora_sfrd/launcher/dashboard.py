@@ -110,19 +110,16 @@ def session_alive() -> bool:
     # ``session`` was removed in newer versions of Bokeh (>=3).  When running
     # with such versions the original check evaluated to ``False`` even though
     # the session was still alive, preventing periodic callbacks from running
-    # and leaving dashboard metrics stuck at their initial values.  Consider the
-    # session active if a session context exists and exposes either the legacy
-    # ``session`` attribute or the newer ``server_context`` attribute.
-    alive = bool(
-        sc
-        and (
-            getattr(sc, "session", None) is not None
-            or getattr(sc, "server_context", None) is not None
-        )
-    )
-    if not alive:
-        print("⚠️ Bokeh session inactive")
-    return alive
+    # and leaving dashboard metrics stuck at their initial values.  Treat the
+    # session as alive whenever no context is available or when the context
+    # exposes either the legacy ``session`` attribute or the newer
+    # ``server_context`` attribute.
+    if sc is None:
+        return True
+    if getattr(sc, "session", None) is not None or getattr(sc, "server_context", None) is not None:
+        return True
+    print("⚠️ Bokeh session inactive")
+    return False
 
 def _cleanup_callbacks() -> None:
     """Stop all periodic callbacks safely."""
