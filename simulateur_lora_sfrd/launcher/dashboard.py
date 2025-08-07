@@ -710,10 +710,9 @@ def setup_simulation(seed_offset: int = 0):
 
     # Valider que des paquets ou une durée réelle sont définis
     if int(packets_input.value) <= 0 and float(real_time_duration_input.value) <= 0:
-        export_message.object = (
-            "⚠️ Définissez un nombre de paquets ou une durée réelle supérieurs à 0 !"
+        raise ValueError(
+            "packets_input or real_time_duration_input must be > 0 to schedule events"
         )
-        return
 
     if not _validate_positive_inputs():
         return
