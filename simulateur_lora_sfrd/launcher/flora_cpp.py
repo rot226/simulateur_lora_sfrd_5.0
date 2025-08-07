@@ -8,10 +8,8 @@ class FloraCppPHY:
     """Wrapper around the native FLoRa physical layer."""
 
     def __init__(self, lib_path: str | None = None) -> None:
-        if sys.platform.startswith("win"):
-            lib_name = "libflora_phy.dll"
-        else:
-            lib_name = "libflora_phy.so"
+        ext_suffix = "dll" if sys.platform.startswith("win") else "so"
+        lib_name = f"libflora_phy.{ext_suffix}"
 
         default_lib = Path(__file__).with_name(lib_name)
         build_error: Exception | None = None

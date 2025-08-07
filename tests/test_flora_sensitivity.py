@@ -2,6 +2,7 @@ import re
 from pathlib import Path
 
 import pytest
+import sys
 
 from simulateur_lora_sfrd.launcher.channel import Channel
 from simulateur_lora_sfrd.launcher.flora_phy import FloraPHY
@@ -53,7 +54,8 @@ def test_flora_exact_ber_matches_formula():
     try:
         ch = Channel(phy_model="flora_full", shadowing_std=0.0)
     except OSError:
-        pytest.skip("libflora_phy.so missing")
+        lib_name = "libflora_phy.dll" if sys.platform.startswith("win") else "libflora_phy.so"
+        pytest.skip(f"{lib_name} missing")
     phy = FloraPHY(ch, use_exact_ber=True)
 
     per = phy.packet_error_rate(snr, sf, payload)
