@@ -1,15 +1,28 @@
 import types
-import panel as pn
+import pytest
+
+pn = pytest.importorskip("panel")
 
 from launcher import dashboard
+
 
 def test_session_alive_without_context(monkeypatch):
     doc = types.SimpleNamespace(session_context=None)
     monkeypatch.setattr(pn.state, "curdoc", doc)
-    assert dashboard.session_alive() is True
+    assert dashboard.session_alive() is False
 
-def test_session_alive_inactive(monkeypatch):
-    sc = types.SimpleNamespace(session=None, server_context=None)
+
+def test_session_alive_closed_session(monkeypatch):
+    session = types.SimpleNamespace(closed=True)
+    sc = types.SimpleNamespace(session=session, server_context=None)
     doc = types.SimpleNamespace(session_context=sc)
     monkeypatch.setattr(pn.state, "curdoc", doc)
     assert dashboard.session_alive() is False
+
+
+def test_session_alive_active(monkeypatch):
+    session = types.SimpleNamespace(closed=False)
+    sc = types.SimpleNamespace(session=session, server_context=None)
+    doc = types.SimpleNamespace(session_context=sc)
+    monkeypatch.setattr(pn.state, "curdoc", doc)
+    assert dashboard.session_alive() is True

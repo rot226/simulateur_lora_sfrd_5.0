@@ -145,10 +145,14 @@ def session_alive() -> bool:
     """
     doc = pn.state.curdoc
     sc = getattr(doc, "session_context", None)
-    if sc is not None:
-        return True
-    print("⚠️ Bokeh session inactive")
-    return False
+    if sc is None:
+        print("⚠️ Bokeh session inactive")
+        return False
+    session = getattr(sc, "session", None)
+    if session is not None and getattr(session, "closed", False):
+        print("⚠️ Bokeh session inactive")
+        return False
+    return True
 
 def _cleanup_callbacks() -> None:
     """Stop all periodic callbacks safely."""
@@ -814,7 +818,31 @@ def setup_simulation(seed_offset: int = 0):
     # La mobilité est désormais gérée directement par le simulateur
     start_time = time.time()
     max_real_time = real_time_duration_input.value if real_time_duration_input.value > 0 else None
-    chrono_callback = pn.state.add_periodic_callback(periodic_chrono_update, period=100, timeout=None)
+
+    def _start_periodic_callbacks() -> None:
+        global chrono_callback, sim_callback, map_anim_callback, hist_callback
+        chrono_callback = pn.state.add_periodic_callback(
+            periodic_chrono_update, period=100, timeout=None
+        )
+        sim_callback = pn.state.add_periodic_callback(
+            step_simulation, period=SIM_STEP_PERIOD_MS, timeout=None
+        )
+
+        def anim() -> None:
+            if not session_alive():
+                _cleanup_callbacks()
+                return
+            update_map()
+            update_timeline()
+
+        map_anim_callback = pn.state.add_periodic_callback(
+            anim, period=200, timeout=None
+        )
+        hist_callback = pn.state.add_periodic_callback(
+            update_histogram, period=int(HIST_UPDATE_PERIOD * 1000), timeout=None
+        )
+
+    pn.state.onload(_start_periodic_callbacks)
 
     update_map()
     pdr_indicator.value = 0
@@ -863,15 +891,6 @@ def setup_simulation(seed_offset: int = 0):
     export_message.object = "Cliquez sur Exporter pour générer le fichier CSV après la simulation."
 
     sim.running = True
-    sim_callback = pn.state.add_periodic_callback(step_simulation, period=SIM_STEP_PERIOD_MS, timeout=None)
-    def anim():
-        if not session_alive():
-            _cleanup_callbacks()
-            return
-        update_map()
-        update_timeline()
-    map_anim_callback = pn.state.add_periodic_callback(anim, period=200, timeout=None)
-    hist_callback = pn.state.add_periodic_callback(update_histogram, period=int(HIST_UPDATE_PERIOD * 1000), timeout=None)
 
 
 # --- Bouton "Lancer la simulation" ---
@@ -1135,9 +1154,10 @@ def fast_forward(event=None):
                     pct = int(sim.packets_sent / total_packets * 100)
                     if pct != last:
                         last = pct
-                        if session_alive():
-                            doc.add_next_tick_callback(
-                                lambda val=pct: setattr(fast_forward_progress, "value", val)
+                        if pn.io.with_lock(session_alive):
+                            pn.io.with_lock(
+                                doc.add_next_tick_callback,
+                                lambda val=pct: setattr(fast_forward_progress, "value", val),
                             )
 
             def update_ui():
@@ -1186,14 +1206,14 @@ def fast_forward(event=None):
                 pause_button.disabled = pause_prev_disabled
                 export_button.disabled = False
 
-            if session_alive():
-                doc.add_next_tick_callback(update_ui)
+            if pn.io.with_lock(session_alive):
+                pn.io.with_lock(doc.add_next_tick_callback, update_ui)
             else:
-                _cleanup_callbacks()
+                pn.io.with_lock(_cleanup_callbacks)
                 try:
-                    on_stop(None)
+                    pn.io.with_lock(on_stop, None)
                 finally:
-                    export_button.disabled = False
+                    pn.io.with_lock(lambda: setattr(export_button, "disabled", False))
 
         threading.Thread(target=run_and_update, daemon=True).start()
 
