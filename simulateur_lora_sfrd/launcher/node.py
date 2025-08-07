@@ -102,14 +102,20 @@ class Node:
         # des erreurs lors des calculs d'airtime ou de RSSI.
         self.channel = channel or Channel()
         # Offsets de fréquence et de synchronisation (corrélés dans le temps)
-        from .advanced_channel import _CorrelatedValue
+        from .utils.correlated import _CorrelatedValue
 
-        self._freq_offset = _CorrelatedValue(
-            frequency_offset_hz, freq_offset_std_hz, offset_correlation
-        )
-        self._sync_offset = _CorrelatedValue(
-            sync_offset_s, sync_offset_std_s, offset_correlation
-        )
+        if frequency_offset_hz != 0.0 or freq_offset_std_hz != 0.0:
+            self._freq_offset = _CorrelatedValue(
+                frequency_offset_hz, freq_offset_std_hz, offset_correlation
+            )
+        else:
+            self._freq_offset = None
+        if sync_offset_s != 0.0 or sync_offset_std_s != 0.0:
+            self._sync_offset = _CorrelatedValue(
+                sync_offset_s, sync_offset_std_s, offset_correlation
+            )
+        else:
+            self._sync_offset = None
         self.current_freq_offset = frequency_offset_hz
         self.current_sync_offset = sync_offset_s
 
@@ -314,8 +320,10 @@ class Node:
     # ------------------------------------------------------------------
     def update_offsets(self) -> None:
         """Sample correlated frequency and timing offsets."""
-        self.current_freq_offset = self._freq_offset.sample()
-        self.current_sync_offset = self._sync_offset.sample()
+        if self._freq_offset is not None:
+            self.current_freq_offset = self._freq_offset.sample()
+        if self._sync_offset is not None:
+            self.current_sync_offset = self._sync_offset.sample()
 
     def miss_beacon(self, interval: float) -> None:
         """Update internal clock when a beacon is missed."""
