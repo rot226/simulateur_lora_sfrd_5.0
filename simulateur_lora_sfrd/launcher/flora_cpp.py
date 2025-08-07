@@ -1,13 +1,24 @@
 import ctypes
 import os
+import subprocess
 from pathlib import Path
 
 class FloraCppPHY:
     """Wrapper around the native FLoRa physical layer."""
 
     def __init__(self, lib_path: str | None = None) -> None:
+        default_lib = Path(__file__).with_name("libflora_phy.so")
+        build_error: Exception | None = None
+        if not default_lib.exists():
+            root_dir = Path(__file__).resolve().parent.parent.parent
+            build_script = root_dir / "scripts" / "build_flora_cpp.sh"
+            try:
+                subprocess.run([str(build_script)], check=True, cwd=root_dir)
+            except subprocess.CalledProcessError as e:
+                build_error = e
+
         env = os.environ.get("FLORA_CPP_LIB")
-        paths = []
+        paths: list[Path] = []
         if lib_path:
             paths.append(Path(lib_path))
         if env:
@@ -15,11 +26,12 @@ class FloraCppPHY:
         if not paths:
             paths.extend([
                 Path("libflora_phy.so"),
-                Path(__file__).with_name("libflora_phy.so"),
+                default_lib,
                 Path(__file__).resolve().parent.parent.parent / "flora-master" / "libflora_phy.so",
             ])
+
         self.lib = None
-        last_error = None
+        last_error: Exception | None = None
         for p in paths:
             if p.exists():
                 try:
@@ -29,11 +41,10 @@ class FloraCppPHY:
                     last_error = e
                     continue
         if self.lib is None:
-            msg = (
-                "libflora_phy.so introuvable. "
-                "Installez le paquet pour compiler automatiquement la bibliothèque"
-            )
-            if last_error:
+            msg = "Impossible de charger libflora_phy.so"
+            if build_error:
+                msg += f" (build failed: {build_error})"
+            elif last_error:
                 msg += f" ({last_error})"
             raise OSError(msg)
 
