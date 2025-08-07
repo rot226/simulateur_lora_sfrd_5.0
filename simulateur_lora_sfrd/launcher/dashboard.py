@@ -702,9 +702,13 @@ def step_simulation():
     alive = session_alive()
     if sim is None or not alive:
         return
-
-    cont = sim.step()
-    metrics = sim.get_metrics()
+    try:
+        cont = sim.step()
+        metrics = sim.get_metrics()
+    except Exception as exc:
+        _add_alert(f"Erreur lors de la simulation : {exc}")
+        on_stop(None)
+        return
     runs_metrics.append(metrics)
     if len(runs_metrics) > RUNS_METRICS_LIMIT:
         del runs_metrics[:-RUNS_METRICS_LIMIT]
