@@ -27,24 +27,17 @@ def _install_requirements() -> None:
         ) from exc
 
 
-try:  # Les dépendances lourdes sont optionnelles pour pouvoir exécuter les tests sans elles
+# Install dashboard dependencies automatically when the module is imported.
+try:  # pragma: no cover - installation or import may fail when deps unavailable
+    _install_requirements()
     import panel as pn
     import plotly.graph_objects as go
     import numpy as np
     import time
     import threading
     import pandas as pd
-except Exception:  # pragma: no cover - utilisé uniquement lorsque dépendances manquantes
-    try:
-        _install_requirements()
-    except Exception as exc:  # pragma: no cover
-        raise ImportError("dashboard dependencies not available") from exc
-    import panel as pn
-    import plotly.graph_objects as go
-    import numpy as np
-    import time
-    import threading
-    import pandas as pd
+except Exception as exc:  # pragma: no cover - fallback when dependencies missing
+    raise ImportError("dashboard dependencies not available") from exc
 
 # Collect alerts for later display in ``metrics_col``
 metrics_col = None
