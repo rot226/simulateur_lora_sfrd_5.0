@@ -12,16 +12,25 @@ if (-not (Test-Path $FloraDir)) {
 
 Set-Location $FloraDir
 
-# Determine make executable (make or mingw32-make)
-$make = Get-Command make -ErrorAction SilentlyContinue
+# Determine build tool (nmake or make.exe)
+$make = Get-Command nmake -ErrorAction SilentlyContinue
 if (-not $make) {
-    $make = Get-Command mingw32-make -ErrorAction SilentlyContinue
+    $make = Get-Command make -ErrorAction SilentlyContinue
 }
 if (-not $make) {
-    Write-Error "'make' or 'mingw32-make' not found in PATH"
+    $bundledMake = Join-Path $ScriptDir 'make.exe'
+    if (Test-Path $bundledMake) {
+        $make = Get-Item $bundledMake
+    }
+}
+if (-not $make) {
+    Write-Error "No suitable build tool ('nmake' or 'make.exe') found"
+    Write-Host "Install Visual Studio Build Tools (provides nmake) or MSYS2"
+    Write-Host "Chocolatey : choco install make"
+    Write-Host "MSYS2       : pacman -S make"
     exit 1
 }
-$make = $make.Source
+$make = if ($make -is [string]) { $make } else { $make.Source }
 
 # Generate makefiles if missing
 if (-not (Test-Path 'src/Makefile')) {
