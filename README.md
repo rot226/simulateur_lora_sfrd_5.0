@@ -560,7 +560,7 @@ Pour reproduire un scénario FLoRa :
    (`multipath_taps=3`), un seuil de détection fixé à `-110 dBm` et une fenêtre
    d'interférence minimale de `5 s`. Le délai réseau est également de 10 ms avec
    un traitement serveur de 1,2 s comme dans OMNeT++.
-2. Appliquez l'algorithme ADR1 via `from simulateur_lora_sfrd.launcher.adr_standard_1 import apply as adr1` puis `adr1(sim)`.
+2. Appliquez l'algorithme ADR1 via `from simulateur_lora_sfrd.launcher.adr_standard_1 import apply as adr1` puis `adr1(sim, disable_channel_impairments=False)`.
    Cette fonction reprend la logique du serveur FLoRa original.
 3. Spécifiez `adr_method="avg"` lors de la création du `Simulator` (ou sur
    `sim.network_server`) pour utiliser la moyenne des 20 derniers SNR.

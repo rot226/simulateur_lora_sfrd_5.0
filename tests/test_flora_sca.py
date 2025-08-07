@@ -19,7 +19,7 @@ def test_flora_sca_compare():
     )
     sca = Path(__file__).parent / "data" / "n100_gw1_expected.sca"
     sim = Simulator(flora_mode=True, config_file=CONFIG, seed=1, adr_method="avg")
-    adr1(sim)
+    adr1(sim, disable_channel_impairments=False)
     sim.run(1000)
     metrics = sim.get_metrics()
 

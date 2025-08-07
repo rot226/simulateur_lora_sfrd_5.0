@@ -766,7 +766,12 @@ def setup_simulation(seed_offset: int = 0):
 
     # Appliquer le profil ADR sélectionné
     if selected_adr_module:
-        selected_adr_module.apply(sim)
+        if selected_adr_module is adr_standard_1:
+            selected_adr_module.apply(
+                sim, disable_channel_impairments=not flora_mode_toggle.value
+            )
+        else:
+            selected_adr_module.apply(sim)
 
     # La mobilité est désormais gérée directement par le simulateur
     start_time = time.time()
