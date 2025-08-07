@@ -11,6 +11,8 @@ Les principales équations sont décrites dans docs/equations_flora.md.
    python3 -m venv env
    source env/bin/activate  # Sous Windows : env\Scripts\activate
    pip install -e .
+   # ou avec les dépendances de développement :
+   pip install -e .[dev]
    ```
    Cette commande compile également la bibliothèque native `libflora_phy.so`
    qui permet d'utiliser par défaut le calcul de BER exact.
@@ -590,8 +592,8 @@ make -j$(nproc)
 ```
 
 Pour interfacer le simulateur Python avec la couche physique C++ et calculer la
-BER exacte via ``ctypes``, la bibliothèque partagée ``libflora_phy.so`` est
-désormais compilée automatiquement lors de l'installation (`pip install -e .`).
+ BER exacte via ``ctypes``, la bibliothèque partagée ``libflora_phy.so`` est
+ désormais compilée automatiquement lors de l'installation (`pip install -e .` ou `pip install -e .[dev]`).
 Si elle est absente, ``FloraPHY`` bascule automatiquement sur une implémentation
 Python (plus lente mais fonctionnelle) et émet un avertissement.  Vous pouvez
 toujours lancer manuellement `./scripts/build_flora_cpp.sh` depuis la racine du
