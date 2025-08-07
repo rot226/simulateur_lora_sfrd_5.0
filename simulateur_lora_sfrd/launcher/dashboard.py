@@ -51,16 +51,38 @@ for path in (ROOT_DIR, REPO_ROOT):
     if path not in sys.path:
         sys.path.insert(0, path)
 
-LIB_FLORA = os.path.join(os.path.dirname(__file__), "libflora_phy.so")
+lib_ext = ".dll" if sys.platform.startswith("win") else ".so"
+lib_name = f"libflora_phy{lib_ext}"
+LIB_FLORA = os.path.join(os.path.dirname(__file__), lib_name)
 if not os.path.exists(LIB_FLORA):
-    print("libflora_phy.so manquant, compilation...")
-    script = os.path.join(REPO_ROOT, "scripts", "build_flora_cpp.sh")
-    try:
-        subprocess.run(["bash", script], check=True)
-    except Exception as exc:  # pragma: no cover - afficher erreur et continuer
-        print(f"Échec de compilation de libflora_phy.so: {exc}")
+    print(f"{lib_name} manquant, compilation...")
+    scripts_dir = os.path.join(REPO_ROOT, "scripts")
+    if sys.platform.startswith("win"):
+        script = os.path.join(scripts_dir, "build_flora_cpp.ps1")
+        cmd = [
+            "powershell",
+            "-NoProfile",
+            "-ExecutionPolicy",
+            "Bypass",
+            "-File",
+            script,
+        ]
     else:
-        built = os.path.join(REPO_ROOT, "flora-master", "libflora_phy.so")
+        script = os.path.join(scripts_dir, "build_flora_cpp.sh")
+        cmd = ["bash", script]
+    try:
+        subprocess.run(cmd, check=True)
+    except Exception as exc:  # pragma: no cover - afficher erreur et continuer
+        print(f"Échec de compilation de {lib_name}: {exc}")
+    else:
+        flora_dir = os.path.join(REPO_ROOT, "flora-master")
+        built = os.path.join(flora_dir, lib_name)
+        if not os.path.exists(built):
+            alt_ext = ".dll" if lib_ext == ".so" else ".so"
+            alt_built = os.path.join(flora_dir, f"libflora_phy{alt_ext}")
+            if os.path.exists(alt_built):
+                built = alt_built
+                LIB_FLORA = os.path.join(os.path.dirname(__file__), os.path.basename(built))
         if os.path.exists(built):
             shutil.copy2(built, LIB_FLORA)
 
