@@ -95,6 +95,15 @@ sensiblement plus lente.
 - `wsl : command not found` : activez WSL (`wsl --install`) ou utilisez
   PowerShell avec les Build Tools.
 
+## Windows
+
+- installez `make` ou `mingw32-make` (par exemple via
+  [MinGW-w64](https://www.mingw-w64.org/downloads/) ou
+  [Chocolatey](https://community.chocolatey.org/packages/make))
+- lancez `scripts/build_flora_cpp.ps1` pour générer `libflora_phy.dll`
+- si nécessaire, définissez la variable d'environnement `FLORA_CPP_LIB`
+  pour pointer vers votre `libflora_phy.dll`
+
 ## Exemples d'utilisation avancés
 
 Quelques commandes pour tester des scénarios plus complexes :
