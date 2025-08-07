@@ -112,6 +112,18 @@ sensiblement plus lente.
 - si nécessaire, définissez la variable d'environnement `FLORA_CPP_LIB`
   pour pointer vers votre `libflora_phy.dll`
 
+Après l'exécution du script (`scripts/build_flora_cpp.sh` sous Linux/macOS ou
+`scripts/build_flora_cpp.ps1` sous Windows), la bibliothèque générée est
+automatiquement copiée dans `simulateur_lora_sfrd/launcher`. Vérifiez que
+`libflora_phy.so` ou `libflora_phy.dll` est bien présent :
+
+```bash
+ls simulateur_lora_sfrd/launcher/libflora_phy.*
+```
+
+Si le fichier est absent, assurez-vous d'avoir installé la chaîne de
+compilation appropriée puis relancez le script.
+
 ## Exemples d'utilisation avancés
 
 Quelques commandes pour tester des scénarios plus complexes :

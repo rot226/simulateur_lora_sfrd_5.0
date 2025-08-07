@@ -21,6 +21,11 @@ if [ ! -f src/Makefile ]; then
     make makefiles
 fi
 
-make libflora_phy.so -j$(nproc)
+LIB_NAME="libflora_phy.so"
+make "$LIB_NAME" -j$(nproc)
 
-echo "Built library at $FLORA_DIR/libflora_phy.so"
+LAUNCHER_DIR="$ROOT_DIR/simulateur_lora_sfrd/launcher"
+mkdir -p "$LAUNCHER_DIR"
+cp "$FLORA_DIR/$LIB_NAME" "$LAUNCHER_DIR/"
+
+echo "Placed library in $LAUNCHER_DIR/$LIB_NAME"

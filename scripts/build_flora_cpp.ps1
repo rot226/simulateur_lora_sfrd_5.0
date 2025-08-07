@@ -40,8 +40,12 @@ if (-not (Test-Path 'src/Makefile')) {
 
 # Build the library using all available cores
 $jobs = [Environment]::ProcessorCount
-& $make 'libflora_phy.dll' ("-j$jobs")
+$libName = 'libflora_phy.dll'
+& $make $libName ("-j$jobs")
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-$dllPath = Join-Path $FloraDir 'libflora_phy.dll'
-Write-Host "DLL built successfully at $dllPath"
+$dllPath = Join-Path $FloraDir $libName
+$targetDir = Join-Path $RootDir 'simulateur_lora_sfrd/launcher'
+New-Item -ItemType Directory -Path $targetDir -Force | Out-Null
+Copy-Item $dllPath $targetDir -Force
+Write-Host "DLL built and placed in $targetDir\$libName"
