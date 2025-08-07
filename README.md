@@ -54,10 +54,46 @@ fournies dans l'INI de FLoRa.
    ```bash
    uvicorn launcher.web_api:app --reload
    ```
-   L'endpoint `POST /simulations/start` accepte un JSON
-   `{"command": "start_sim", "params": {...}}` pour lancer une simulation.
-   Les métriques en temps réel sont diffusées sur le WebSocket `/ws` sous la
-   forme `{"event": "metrics", "data": {...}}`.
+  L'endpoint `POST /simulations/start` accepte un JSON
+  `{"command": "start_sim", "params": {...}}` pour lancer une simulation.
+  Les métriques en temps réel sont diffusées sur le WebSocket `/ws` sous la
+  forme `{"event": "metrics", "data": {...}}`.
+
+## Bibliothèque native
+
+La bibliothèque optionnelle `libflora_phy` accélère les calculs de BER et les
+interactions au niveau physique. Elle est conseillée pour les simulations de
+grande taille ou lorsque la précision maximale est nécessaire. Si elle est
+absente, une implémentation Python est utilisée automatiquement, mais elle est
+sensiblement plus lente.
+
+### Compilation
+
+- **Linux**
+  ```bash
+  python setup.py build_ext --inplace
+  ```
+- **macOS**
+  Installez les *Xcode Command Line Tools* puis exécutez :
+  ```bash
+  python setup.py build_ext --inplace
+  ```
+- **Windows**
+  - **WSL** : activez WSL (`wsl --install`) et installez `make`/`gcc`, puis
+    lancez la commande précédente dans un terminal WSL.
+  - **PowerShell** : installez les *Visual Studio Build Tools* ou
+    [MSYS2](https://www.msys2.org/) (`base-devel`,
+    `mingw-w64-ucrt-x86_64-toolchain`) et exécutez :
+    ```bash
+    python setup.py build_ext --inplace
+    ```
+
+### Problèmes courants
+
+- `make : command not found` : installez `build-essential` (Linux) ou les
+  outils Xcode/WSL/MSYS2 appropriés.
+- `wsl : command not found` : activez WSL (`wsl --install`) ou utilisez
+  PowerShell avec les Build Tools.
 
 ## Exemples d'utilisation avancés
 
