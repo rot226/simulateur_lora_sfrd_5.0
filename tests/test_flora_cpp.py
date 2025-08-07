@@ -17,3 +17,14 @@ def test_rssi_matches_python_impl():
     rssi_py, _ = ch_py.compute_rssi(14.0, 100.0, sf=7)
 
     assert abs(rssi_cpp - rssi_py) <= 0.01
+
+
+def test_flora_cpp_instantiation():
+    FloraCppPHY = pytest.importorskip(
+        "simulateur_lora_sfrd.launcher.flora_cpp"
+    ).FloraCppPHY
+    try:
+        FloraCppPHY()
+    except OSError:
+        lib_name = "libflora_phy.dll" if sys.platform.startswith("win") else "libflora_phy.so"
+        pytest.xfail(f"{lib_name} missing")
