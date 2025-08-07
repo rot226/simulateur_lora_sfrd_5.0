@@ -156,6 +156,16 @@ delay_samples: list[float] = []
 hist_event_index = 0
 HIST_UPDATE_PERIOD = 1.0  # seconds
 
+# --- PDR table update throttling ---
+# Recompute the per-node PDR table only periodically to reduce overhead.
+# The table is refreshed after ``PDR_TABLE_UPDATE_STEPS`` simulation steps or
+# when at least ``PDR_TABLE_UPDATE_SECONDS`` seconds have elapsed since the last
+# update, whichever comes first.
+PDR_TABLE_UPDATE_STEPS = 10
+PDR_TABLE_UPDATE_SECONDS = 1.0  # seconds
+pdr_table_step_counter = 0
+pdr_table_last_update = 0.0
+
 
 def average_numeric_metrics(metrics_list: list[dict]) -> dict:
     """Return the average of numeric metrics across runs.
@@ -698,7 +708,7 @@ def periodic_chrono_update():
 
 # --- Callback étape de simulation ---
 def step_simulation():
-    global runs_metrics
+    global runs_metrics, pdr_table_step_counter, pdr_table_last_update
     alive = session_alive()
     if sim is None or not alive:
         return
@@ -713,17 +723,27 @@ def step_simulation():
     energy_indicator.value = metrics["energy_J"]
     throughput_indicator.value = metrics["throughput_bps"]
 
-    table_df = pd.DataFrame(
-        {
-            "Node": list(metrics["pdr_by_node"].keys()),
-            "PDR": list(metrics["pdr_by_node"].values()),
-            "Recent PDR": [
-                metrics["recent_pdr_by_node"][nid]
-                for nid in metrics["pdr_by_node"].keys()
-            ],
-        }
-    )
-    pdr_table.object = table_df
+    # Update the per-node PDR table only periodically to avoid costly
+    # DataFrame reconstruction on every simulation step.
+    pdr_table_step_counter += 1
+    now = time.time()
+    if (
+        pdr_table_step_counter >= PDR_TABLE_UPDATE_STEPS
+        or now - pdr_table_last_update >= PDR_TABLE_UPDATE_SECONDS
+    ):
+        table_df = pd.DataFrame(
+            {
+                "Node": list(metrics["pdr_by_node"].keys()),
+                "PDR": list(metrics["pdr_by_node"].values()),
+                "Recent PDR": [
+                    metrics["recent_pdr_by_node"][nid]
+                    for nid in metrics["pdr_by_node"].keys()
+                ],
+            }
+        )
+        pdr_table.object = table_df
+        pdr_table_step_counter = 0
+        pdr_table_last_update = now
 
     if not cont:
         on_stop(None)
