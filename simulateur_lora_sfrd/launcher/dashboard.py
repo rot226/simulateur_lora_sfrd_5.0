@@ -107,16 +107,7 @@ def session_alive() -> bool:
     """
     doc = pn.state.curdoc
     sc = getattr(doc, "session_context", None)
-    # ``session`` was removed in newer versions of Bokeh (>=3).  When running
-    # with such versions the original check evaluated to ``False`` even though
-    # the session was still alive, preventing periodic callbacks from running
-    # and leaving dashboard metrics stuck at their initial values.  Treat the
-    # session as alive whenever no context is available or when the context
-    # exposes either the legacy ``session`` attribute or the newer
-    # ``server_context`` attribute.
-    if sc is None:
-        return True
-    if getattr(sc, "session", None) is not None or getattr(sc, "server_context", None) is not None:
+    if sc is not None:
         return True
     print("⚠️ Bokeh session inactive")
     return False
@@ -135,8 +126,9 @@ def _cleanup_callbacks() -> None:
         if cb is not None:
             try:
                 cb.stop()
-            except Exception:
-                pass
+                print(f"Callback '{cb_name}' stopped")
+            except Exception as exc:
+                print(f"⚠️ Error stopping callback '{cb_name}': {exc}")
             globals()[cb_name] = None
     # Reset histogram tracking when cleaning up callbacks
     delay_samples.clear()
@@ -590,8 +582,9 @@ def periodic_chrono_update():
 # --- Callback étape de simulation ---
 def step_simulation():
     global runs_metrics
-    if sim is None or not session_alive():
-        if not session_alive():
+    alive = session_alive()
+    if sim is None or not alive:
+        if not alive:
             _cleanup_callbacks()
         return
 
