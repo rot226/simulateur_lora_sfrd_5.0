@@ -81,6 +81,7 @@ sim_callback = None
 chrono_callback = None
 map_anim_callback = None
 hist_callback = None
+callbacks_guard = None
 start_time = None
 elapsed_time = 0
 max_real_time = None
@@ -150,24 +151,37 @@ def session_alive() -> bool:
     print("⚠️ Bokeh session inactive")
     return False
 
+
+def _start_callback(name: str, func, period: int):
+    """Start a periodic callback and log its creation."""
+    cb = pn.state.add_periodic_callback(func, period=period, timeout=None)
+    print(f"Callback '{name}' started")
+    return cb
+
+
+def _stop_callback(name: str) -> None:
+    """Stop a periodic callback if it exists."""
+    cb = globals().get(name)
+    if cb is not None:
+        try:
+            cb.stop()
+            print(f"Callback '{name}' stopped")
+        except Exception as exc:
+            print(f"⚠️ Error stopping callback '{name}': {exc}")
+        finally:
+            globals()[name] = None
+
 def _cleanup_callbacks() -> None:
     """Stop all periodic callbacks safely."""
-    global sim_callback, chrono_callback, map_anim_callback, hist_callback
     global delay_samples, hist_event_index
     for cb_name in (
         "sim_callback",
         "chrono_callback",
         "map_anim_callback",
         "hist_callback",
+        "callbacks_guard",
     ):
-        cb = globals().get(cb_name)
-        if cb is not None:
-            try:
-                cb.stop()
-                print(f"Callback '{cb_name}' stopped")
-            except Exception as exc:
-                print(f"⚠️ Error stopping callback '{cb_name}': {exc}")
-            globals()[cb_name] = None
+        _stop_callback(cb_name)
     # Reset histogram tracking when cleaning up callbacks
     delay_samples.clear()
     hist_event_index = 0
@@ -653,6 +667,27 @@ def step_simulation():
         return
 
 
+# --- Surveillance des callbacks ---
+def _ensure_callbacks() -> None:
+    """Relancer les callbacks manquants lorsque la session est active."""
+    global sim_callback, hist_callback, chrono_callback
+    if auto_fast_forward or not session_alive():
+        return
+    if sim is not None and getattr(sim, "running", False):
+        if sim_callback is None:
+            sim_callback = _start_callback(
+                "sim_callback", step_simulation, SIM_STEP_PERIOD_MS
+            )
+        if hist_callback is None:
+            hist_callback = _start_callback(
+                "hist_callback", update_histogram, int(HIST_UPDATE_PERIOD * 1000)
+            )
+        if chrono_callback is None and start_time is not None:
+            chrono_callback = _start_callback(
+                "chrono_callback", periodic_chrono_update, 100
+            )
+
+
 # --- Préparation de la simulation ---
 def setup_simulation(seed_offset: int = 0):
     """Crée et démarre un simulateur avec les paramètres du tableau de bord."""
@@ -680,18 +715,8 @@ def setup_simulation(seed_offset: int = 0):
     delay_samples.clear()
     hist_event_index = 0
 
-    if sim_callback:
-        sim_callback.stop()
-        sim_callback = None
-    if map_anim_callback:
-        map_anim_callback.stop()
-        map_anim_callback = None
-    if hist_callback:
-        hist_callback.stop()
-        hist_callback = None
-    if chrono_callback:
-        chrono_callback.stop()
-        chrono_callback = None
+    for name in ("sim_callback", "map_anim_callback", "hist_callback", "chrono_callback"):
+        _stop_callback(name)
 
     seed_val = int(seed_input.value)
     seed = seed_val + seed_offset if seed_val != 0 else None
@@ -814,7 +839,7 @@ def setup_simulation(seed_offset: int = 0):
     # La mobilité est désormais gérée directement par le simulateur
     start_time = time.time()
     max_real_time = real_time_duration_input.value if real_time_duration_input.value > 0 else None
-    chrono_callback = pn.state.add_periodic_callback(periodic_chrono_update, period=100, timeout=None)
+    chrono_callback = _start_callback("chrono_callback", periodic_chrono_update, 100)
 
     update_map()
     pdr_indicator.value = 0
@@ -863,15 +888,19 @@ def setup_simulation(seed_offset: int = 0):
     export_message.object = "Cliquez sur Exporter pour générer le fichier CSV après la simulation."
 
     sim.running = True
-    sim_callback = pn.state.add_periodic_callback(step_simulation, period=SIM_STEP_PERIOD_MS, timeout=None)
+    sim_callback = _start_callback("sim_callback", step_simulation, SIM_STEP_PERIOD_MS)
+
     def anim():
         if not session_alive():
             _cleanup_callbacks()
             return
         update_map()
         update_timeline()
-    map_anim_callback = pn.state.add_periodic_callback(anim, period=200, timeout=None)
-    hist_callback = pn.state.add_periodic_callback(update_histogram, period=int(HIST_UPDATE_PERIOD * 1000), timeout=None)
+
+    map_anim_callback = _start_callback("map_anim_callback", anim, 200)
+    hist_callback = _start_callback(
+        "hist_callback", update_histogram, int(HIST_UPDATE_PERIOD * 1000)
+    )
 
 
 # --- Bouton "Lancer la simulation" ---
@@ -918,18 +947,8 @@ def on_stop(event):
     # Afficher l'état final avant l'arrêt des callbacks
     update_map()
     update_timeline()
-    if sim_callback:
-        sim_callback.stop()
-        sim_callback = None
-    if map_anim_callback:
-        map_anim_callback.stop()
-        map_anim_callback = None
-    if hist_callback:
-        hist_callback.stop()
-        hist_callback = None
-    if chrono_callback:
-        chrono_callback.stop()
-        chrono_callback = None
+    for name in ("sim_callback", "map_anim_callback", "hist_callback", "chrono_callback"):
+        _stop_callback(name)
 
     try:
         df = sim.get_events_dataframe()
@@ -1107,18 +1126,8 @@ def fast_forward(event=None):
         stop_button.disabled = True
 
         # Stop periodic callbacks to avoid concurrent updates
-        if sim_callback:
-            sim_callback.stop()
-            sim_callback = None
-        if map_anim_callback:
-            map_anim_callback.stop()
-            map_anim_callback = None
-        if hist_callback:
-            hist_callback.stop()
-            hist_callback = None
-        if chrono_callback:
-            chrono_callback.stop()
-            chrono_callback = None
+        for name in ("sim_callback", "map_anim_callback", "hist_callback", "chrono_callback"):
+            _stop_callback(name)
 
         # Pause chrono so time does not keep increasing during fast forward
         start_time = None
@@ -1210,15 +1219,8 @@ def on_pause(event=None):
 
     if not paused:
         # Pausing the simulation
-        if sim_callback:
-            sim_callback.stop()
-            sim_callback = None
-        if chrono_callback:
-            chrono_callback.stop()
-            chrono_callback = None
-        if hist_callback:
-            hist_callback.stop()
-            hist_callback = None
+        for name in ("sim_callback", "chrono_callback", "hist_callback"):
+            _stop_callback(name)
         if start_time is not None:
             elapsed_time = time.time() - start_time
         start_time = None  # Freeze chrono while paused
@@ -1231,11 +1233,17 @@ def on_pause(event=None):
         if start_time is None:
             start_time = time.time() - elapsed_time
         if sim_callback is None:
-            sim_callback = pn.state.add_periodic_callback(step_simulation, period=SIM_STEP_PERIOD_MS, timeout=None)
+            sim_callback = _start_callback(
+                "sim_callback", step_simulation, SIM_STEP_PERIOD_MS
+            )
         if chrono_callback is None:
-            chrono_callback = pn.state.add_periodic_callback(periodic_chrono_update, period=100, timeout=None)
+            chrono_callback = _start_callback(
+                "chrono_callback", periodic_chrono_update, 100
+            )
         if hist_callback is None:
-            hist_callback = pn.state.add_periodic_callback(update_histogram, period=int(HIST_UPDATE_PERIOD * 1000), timeout=None)
+            hist_callback = _start_callback(
+                "hist_callback", update_histogram, int(HIST_UPDATE_PERIOD * 1000)
+            )
         pause_button.name = "⏸ Pause"
         pause_button.button_type = "primary"
         fast_forward_button.disabled = False
@@ -1381,5 +1389,15 @@ dashboard = pn.Row(
     metrics_col,
     sizing_mode="stretch_width",
 )
+
+
+def _start_callbacks_guard() -> None:
+    """Start a watchdog to ensure callbacks keep running."""
+    global callbacks_guard
+    if callbacks_guard is None:
+        callbacks_guard = _start_callback("callbacks_guard", _ensure_callbacks, 1000)
+
+
+pn.state.onload(_start_callbacks_guard)
 dashboard.servable(title="Simulateur LoRa")
 pn.state.on_session_destroyed(lambda session_context: _cleanup_callbacks())
