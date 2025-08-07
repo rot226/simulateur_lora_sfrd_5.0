@@ -25,6 +25,14 @@ dependencies = [
   "uvicorn>=0.20"
 ]
 
+[project.optional-dependencies]
+dev = [
+  "pytest",
+  "flake8",
+  "black",
+  "mypy"
+]
+
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["simulateur_lora_sfrd*", "traffic*"]
