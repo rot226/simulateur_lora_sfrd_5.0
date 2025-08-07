@@ -74,39 +74,49 @@ for path in (ROOT_DIR, REPO_ROOT):
 lib_ext = ".dll" if sys.platform.startswith("win") else ".so"
 lib_name = f"libflora_phy{lib_ext}"
 LIB_FLORA = os.path.join(os.path.dirname(__file__), lib_name)
+flora_dir = os.path.join(REPO_ROOT, "flora-master")
+built = os.path.join(flora_dir, lib_name)
 if not os.path.exists(LIB_FLORA):
-    print(f"{lib_name} manquant, compilation...")
-    scripts_dir = os.path.join(REPO_ROOT, "scripts")
-    if sys.platform.startswith("win"):
-        script = os.path.join(scripts_dir, "build_flora_cpp.ps1")
-        cmd = [
-            "powershell",
-            "-NoProfile",
-            "-ExecutionPolicy",
-            "Bypass",
-            "-File",
-            script,
-        ]
-    else:
-        script = os.path.join(scripts_dir, "build_flora_cpp.sh")
-        cmd = ["bash", script]
-    try:
-        subprocess.run(cmd, check=True)
-    except Exception as exc:  # pragma: no cover - afficher erreur et continuer
-        msg = f"Échec de compilation de {lib_name}: {exc}"
+    if os.path.exists(built):
+        msg = (
+            f"{lib_name} introuvable dans 'launcher' mais présent dans "
+            f"'{flora_dir}'. Copiez-le manuellement."
+        )
         print(msg)
-        _add_alert(msg)
+        _add_alert(msg, alert_type="warning")
     else:
-        flora_dir = os.path.join(REPO_ROOT, "flora-master")
-        built = os.path.join(flora_dir, lib_name)
-        if not os.path.exists(built):
-            alt_ext = ".dll" if lib_ext == ".so" else ".so"
-            alt_built = os.path.join(flora_dir, f"libflora_phy{alt_ext}")
-            if os.path.exists(alt_built):
-                built = alt_built
-                LIB_FLORA = os.path.join(os.path.dirname(__file__), os.path.basename(built))
-        if os.path.exists(built):
-            shutil.copy2(built, LIB_FLORA)
+        print(f"{lib_name} manquant, compilation...")
+        scripts_dir = os.path.join(REPO_ROOT, "scripts")
+        if sys.platform.startswith("win"):
+            script = os.path.join(scripts_dir, "build_flora_cpp.ps1")
+            cmd = [
+                "powershell",
+                "-NoProfile",
+                "-ExecutionPolicy",
+                "Bypass",
+                "-File",
+                script,
+            ]
+        else:
+            script = os.path.join(scripts_dir, "build_flora_cpp.sh")
+            cmd = ["bash", script]
+        try:
+            subprocess.run(cmd, check=True)
+        except Exception as exc:  # pragma: no cover - afficher erreur et continuer
+            msg = f"Échec de compilation de {lib_name}: {exc}"
+            print(msg)
+            _add_alert(msg)
+        else:
+            if not os.path.exists(built):
+                alt_ext = ".dll" if lib_ext == ".so" else ".so"
+                alt_built = os.path.join(flora_dir, f"libflora_phy{alt_ext}")
+                if os.path.exists(alt_built):
+                    built = alt_built
+                    LIB_FLORA = os.path.join(
+                        os.path.dirname(__file__), os.path.basename(built)
+                    )
+            if os.path.exists(built):
+                shutil.copy2(built, LIB_FLORA)
 
 from launcher.simulator import Simulator  # noqa: E402
 from launcher.channel import Channel  # noqa: E402

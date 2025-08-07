@@ -34,4 +34,5 @@ $jobs = [Environment]::ProcessorCount
 & $make 'libflora_phy.dll' ("-j$jobs")
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-Write-Host "Built library at $(Join-Path $FloraDir 'libflora_phy.dll')"
+$dllPath = Join-Path $FloraDir 'libflora_phy.dll'
+Write-Host "DLL built successfully at $dllPath"
