@@ -1,20 +1,38 @@
 import ctypes
 import os
 import subprocess
+import sys
 from pathlib import Path
 
 class FloraCppPHY:
     """Wrapper around the native FLoRa physical layer."""
 
     def __init__(self, lib_path: str | None = None) -> None:
-        default_lib = Path(__file__).with_name("libflora_phy.so")
+        if sys.platform.startswith("win"):
+            lib_name = "libflora_phy.dll"
+        else:
+            lib_name = "libflora_phy.so"
+
+        default_lib = Path(__file__).with_name(lib_name)
         build_error: Exception | None = None
         if not default_lib.exists():
             root_dir = Path(__file__).resolve().parent.parent.parent
-            build_script = root_dir / "scripts" / "build_flora_cpp.sh"
+            scripts_dir = root_dir / "scripts"
+            if sys.platform.startswith("win"):
+                build_script = scripts_dir / "build_flora_cpp.ps1"
+                cmd = [
+                    "powershell",
+                    "-ExecutionPolicy",
+                    "Bypass",
+                    "-File",
+                    str(build_script),
+                ]
+            else:
+                build_script = scripts_dir / "build_flora_cpp.sh"
+                cmd = ["bash", str(build_script)]
             try:
-                subprocess.run([str(build_script)], check=True, cwd=root_dir)
-            except subprocess.CalledProcessError as e:
+                subprocess.run(cmd, check=True, cwd=root_dir)
+            except (subprocess.CalledProcessError, FileNotFoundError) as e:
                 build_error = e
 
         env = os.environ.get("FLORA_CPP_LIB")
@@ -25,9 +43,9 @@ class FloraCppPHY:
             paths.append(Path(env))
         if not paths:
             paths.extend([
-                Path("libflora_phy.so"),
+                Path(lib_name),
                 default_lib,
-                Path(__file__).resolve().parent.parent.parent / "flora-master" / "libflora_phy.so",
+                Path(__file__).resolve().parent.parent.parent / "flora-master" / lib_name,
             ])
 
         self.lib = None
@@ -41,9 +59,12 @@ class FloraCppPHY:
                     last_error = e
                     continue
         if self.lib is None:
-            msg = "Impossible de charger libflora_phy.so"
+            msg = f"Impossible de charger {lib_name}"
             if build_error:
-                msg += f" (build failed: {build_error})"
+                msg += (
+                    f" (build failed: {build_error}. "
+                    "Install the required toolchain and retry)"
+                )
             elif last_error:
                 msg += f" ({last_error})"
             raise OSError(msg)
