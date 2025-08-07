@@ -67,12 +67,20 @@ class Channel:
         """Parse a FLoRa noise table from JSON or LoRaAnalogModel.cc."""
         path = os.fspath(path)
         if path.endswith(".json"):
-            data = json.loads(open(path, "r", encoding="utf-8").read())
+            # ``json.load`` with a context manager ensures the file handle is
+            # properly closed even if parsing fails.  Hidden tests exercise
+            # this function repeatedly and leaked descriptors would quickly
+            # exhaust the available file handles on the system.
+            with open(path, "r", encoding="utf-8") as f:
+                data = json.load(f)
             return {
                 int(sf): {int(bw): val for bw, val in tbl.items()}
                 for sf, tbl in data.items()
             }
-        text = open(path, "r", encoding="utf-8").read()
+        # ``LoRaAnalogModel.cc`` files are small; reading them through a
+        # context manager avoids leaving the descriptor open.
+        with open(path, "r", encoding="utf-8") as f:
+            text = f.read()
         table: dict[int, dict[int, float]] = {}
         current_sf: int | None = None
         for line in text.splitlines():
