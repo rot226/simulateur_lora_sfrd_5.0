@@ -36,3 +36,11 @@ def test_invalid_area_prevents_start():
     dashboard.on_start(None)
     assert dashboard.sim is None
     assert "⚠️" in dashboard.export_message.object
+
+
+def test_zero_packets_and_duration_raise():
+    reset_inputs()
+    dashboard.packets_input.value = 0
+    dashboard.real_time_duration_input.value = 0.0
+    with pytest.raises(ValueError):
+        dashboard.setup_simulation()
