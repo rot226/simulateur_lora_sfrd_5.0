@@ -1243,8 +1243,11 @@ def fast_forward(event=None):
                         last = pct
                         if pn.io.with_lock(session_alive):
                             pn.io.with_lock(
-                                doc.add_next_tick_callback,
-                                lambda val=pct: setattr(fast_forward_progress, "value", val),
+                                lambda: doc.add_next_tick_callback(
+                                    lambda val=pct: setattr(
+                                        fast_forward_progress, "value", val
+                                    )
+                                )
                             )
 
             def update_ui():
@@ -1293,9 +1296,9 @@ def fast_forward(event=None):
                 export_button.disabled = False
 
             if pn.io.with_lock(session_alive):
-                pn.io.with_lock(doc.add_next_tick_callback, update_ui)
+                pn.io.with_lock(lambda: doc.add_next_tick_callback(update_ui))
             else:
-                pn.io.with_lock(on_stop, None)
+                pn.io.with_lock(lambda: on_stop(None))
                 pn.io.with_lock(lambda: setattr(export_button, "disabled", False))
 
         threading.Thread(target=run_and_update, daemon=True).start()
