@@ -51,16 +51,28 @@ for path in (ROOT_DIR, REPO_ROOT):
     if path not in sys.path:
         sys.path.insert(0, path)
 
-LIB_FLORA = os.path.join(os.path.dirname(__file__), "libflora_phy.so")
+LIB_FLORA_NAME = "libflora_phy.dll" if sys.platform.startswith("win") else "libflora_phy.so"
+LIB_FLORA = os.path.join(os.path.dirname(__file__), LIB_FLORA_NAME)
 if not os.path.exists(LIB_FLORA):
-    print("libflora_phy.so manquant, compilation...")
-    script = os.path.join(REPO_ROOT, "scripts", "build_flora_cpp.sh")
-    try:
-        subprocess.run(["bash", script], check=True)
-    except Exception as exc:  # pragma: no cover - afficher erreur et continuer
-        print(f"Échec de compilation de libflora_phy.so: {exc}")
+    print(f"{LIB_FLORA_NAME} manquant, compilation...")
+    if sys.platform.startswith("win"):
+        script = os.path.join(REPO_ROOT, "scripts", "build_flora_cpp.ps1")
+        cmd = [
+            "powershell",
+            "-ExecutionPolicy",
+            "Bypass",
+            "-File",
+            script,
+        ]
     else:
-        built = os.path.join(REPO_ROOT, "flora-master", "libflora_phy.so")
+        script = os.path.join(REPO_ROOT, "scripts", "build_flora_cpp.sh")
+        cmd = ["bash", script]
+    try:
+        subprocess.run(cmd, check=True)
+    except Exception as exc:  # pragma: no cover - afficher erreur et continuer
+        print(f"Échec de compilation de {LIB_FLORA_NAME}: {exc}")
+    else:
+        built = os.path.join(REPO_ROOT, "flora-master", LIB_FLORA_NAME)
         if os.path.exists(built):
             shutil.copy2(built, LIB_FLORA)
 

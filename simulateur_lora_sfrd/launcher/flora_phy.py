@@ -49,9 +49,10 @@ class FloraPHY:
             except OSError as exc:
                 import warnings
 
+                lib_name = FloraCppPHY.LIB_NAME
                 warnings.warn(
                     (
-                        "libflora_phy.so introuvable. "
+                        f"{lib_name} introuvable. "
                         "Utilisation de l'implémentation Python, "
                         "ce qui peut ralentir la simulation. "
                         "Installez le paquet pour compiler automatiquement la bibliothèque"

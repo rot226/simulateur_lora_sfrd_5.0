@@ -31,7 +31,7 @@ if (-not (Test-Path 'src/Makefile')) {
 
 # Build the library using all available cores
 $jobs = [Environment]::ProcessorCount
-& $make 'libflora_phy.so' ("-j$jobs")
+& $make 'libflora_phy.dll' ("-j$jobs")
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-Write-Host "Built library at $(Join-Path $FloraDir 'libflora_phy.so')"
+Write-Host "Built library at $(Join-Path $FloraDir 'libflora_phy.dll')"

@@ -12,8 +12,8 @@ class BuildFloraExtension(build_ext):
     """Custom build_ext to compile the native FLoRa library.
 
     It simply delegates to the existing shell script then copies the produced
-    ``libflora_phy.so`` into the package directory so it is bundled with the
-    wheel.
+    ``libflora_phy.dll`` (on Windows) or ``libflora_phy.so`` into the package
+    directory so it is bundled with the wheel.
     """
 
     def build_extension(self, ext):  # type: ignore[override]

@@ -1,4 +1,5 @@
 import re
+import sys
 from pathlib import Path
 
 import pytest
@@ -6,6 +7,8 @@ import pytest
 from simulateur_lora_sfrd.launcher.channel import Channel
 from simulateur_lora_sfrd.launcher.flora_phy import FloraPHY
 from simulateur_lora_sfrd.launcher.omnet_modulation import calculate_ber
+
+LIB_NAME = "libflora_phy.dll" if sys.platform.startswith("win") else "libflora_phy.so"
 
 
 def parse_flora_sensitivity():
@@ -53,7 +56,7 @@ def test_flora_exact_ber_matches_formula():
     try:
         ch = Channel(phy_model="flora_full", shadowing_std=0.0)
     except OSError:
-        pytest.skip("libflora_phy.so missing")
+        pytest.skip(f"{LIB_NAME} missing")
     phy = FloraPHY(ch, use_exact_ber=True)
 
     per = phy.packet_error_rate(snr, sf, payload)

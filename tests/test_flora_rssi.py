@@ -1,7 +1,10 @@
 import math
+import sys
 import pytest
 from simulateur_lora_sfrd.launcher.channel import Channel
 from simulateur_lora_sfrd.launcher.flora_phy import FloraPHY
+
+LIB_NAME = "libflora_phy.dll" if sys.platform.startswith("win") else "libflora_phy.so"
 
 
 def flora_equations(tx_power: float, distance: float, sf: int, ch: Channel):
@@ -56,7 +59,7 @@ def test_channel_compute_rssi_matches_flora_equations():
             frontend_filter_order=0,
         )
     except OSError:
-        pytest.skip("libflora_phy.so missing")
+        pytest.skip(f"{LIB_NAME} missing")
     ch.shadowing_std = 0.0  # deterministic
     expected_rssi, expected_snr = flora_equations(tx_power, distance, sf, ch)
     rssi, snr = ch.compute_rssi(tx_power, distance, sf=sf)
@@ -77,7 +80,7 @@ def test_oulu_path_loss_model():
             frontend_filter_order=0,
         )
     except OSError:
-        pytest.skip("libflora_phy.so missing")
+        pytest.skip(f"{LIB_NAME} missing")
     ch.shadowing_std = 0.0
     expected_rssi, expected_snr = oulu_equations(tx_power, distance, sf, ch)
     rssi, snr = ch.compute_rssi(tx_power, distance, sf=sf)
