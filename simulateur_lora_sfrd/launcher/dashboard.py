@@ -18,7 +18,13 @@ def _install_requirements() -> None:
     """
 
     req_file = os.path.join(REPO_ROOT, "requirements.txt")
-    subprocess.check_call([sys.executable, "-m", "pip", "install", "-r", req_file])
+    try:
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "-r", req_file])
+    except subprocess.CalledProcessError as exc:  # pragma: no cover
+        raise RuntimeError(
+            "Failed to install dashboard dependencies. "
+            "Please run 'pip install -r requirements.txt' manually."
+        ) from exc
 
 
 try:  # Les dépendances lourdes sont optionnelles pour pouvoir exécuter les tests sans elles
@@ -31,7 +37,7 @@ try:  # Les dépendances lourdes sont optionnelles pour pouvoir exécuter les te
 except Exception:  # pragma: no cover - utilisé uniquement lorsque dépendances manquantes
     try:
         _install_requirements()
-    except subprocess.CalledProcessError as exc:  # pragma: no cover
+    except Exception as exc:  # pragma: no cover
         raise ImportError("dashboard dependencies not available") from exc
     import panel as pn
     import plotly.graph_objects as go
