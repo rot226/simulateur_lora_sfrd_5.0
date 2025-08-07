@@ -40,6 +40,20 @@ except Exception:  # pragma: no cover - utilisé uniquement lorsque dépendances
     import threading
     import pandas as pd
 
+# Collect alerts for later display in ``metrics_col``
+metrics_col = None
+_pending_alerts: list[pn.pane.Alert] = []
+_session_alert_shown = False
+
+
+def _add_alert(message: str, alert_type: str = "danger") -> None:
+    """Append an alert to ``metrics_col`` or store it for later."""
+    alert = pn.pane.Alert(message, alert_type=alert_type)
+    if metrics_col is not None:
+        metrics_col.append(alert)
+    else:
+        _pending_alerts.append(alert)
+
 # Assurer la résolution correcte des imports quel que soit le répertoire
 # depuis lequel ce fichier est exécuté. On ajoute le dossier parent
 # (celui contenant le paquet ``launcher``) ainsi que la racine du projet
@@ -73,7 +87,9 @@ if not os.path.exists(LIB_FLORA):
     try:
         subprocess.run(cmd, check=True)
     except Exception as exc:  # pragma: no cover - afficher erreur et continuer
-        print(f"Échec de compilation de {lib_name}: {exc}")
+        msg = f"Échec de compilation de {lib_name}: {exc}"
+        print(msg)
+        _add_alert(msg)
     else:
         flora_dir = os.path.join(REPO_ROOT, "flora-master")
         built = os.path.join(flora_dir, lib_name)
@@ -165,14 +181,23 @@ def session_alive() -> bool:
     callback stoppages caused by a disconnected Bokeh server are visible
     instead of failing silently.
     """
+    global _session_alert_shown
     doc = pn.state.curdoc
     sc = getattr(doc, "session_context", None)
     if sc is None:
-        print("⚠️ Bokeh session inactive")
+        msg = "⚠️ Bokeh session inactive"
+        print(msg)
+        if not _session_alert_shown:
+            _add_alert(msg, alert_type="warning")
+            _session_alert_shown = True
         return False
     session = getattr(sc, "session", None)
     if session is not None and getattr(session, "closed", False):
-        print("⚠️ Bokeh session inactive")
+        msg = "⚠️ Bokeh session inactive"
+        print(msg)
+        if not _session_alert_shown:
+            _add_alert(msg, alert_type="warning")
+            _session_alert_shown = True
         return False
     return True
 
@@ -1403,6 +1428,9 @@ metrics_col = pn.Column(
     pdr_table,
 )
 metrics_col.width = 220
+for alert in _pending_alerts:
+    metrics_col.append(alert)
+_pending_alerts.clear()
 
 center_col = pn.Column(
     map_pane,
