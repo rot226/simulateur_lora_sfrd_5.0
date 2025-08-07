@@ -176,6 +176,22 @@ def session_alive() -> bool:
         return False
     return True
 
+
+def _start_callback(name: str, func, period_ms: int):
+    """Create and log a periodic callback."""
+    cb = pn.state.add_periodic_callback(func, period=period_ms, timeout=None)
+    print(f"Callback '{name}' started")
+    return cb
+
+
+def _stop_callback(name: str, cb) -> None:
+    """Stop a periodic callback with logging."""
+    try:
+        cb.stop()
+        print(f"Callback '{name}' stopped")
+    except Exception as exc:
+        print(f"⚠️ Error stopping callback '{name}': {exc}")
+
 def _cleanup_callbacks() -> None:
     """Stop all periodic callbacks safely."""
     global sim_callback, chrono_callback, map_anim_callback, hist_callback
@@ -188,11 +204,7 @@ def _cleanup_callbacks() -> None:
     ):
         cb = globals().get(cb_name)
         if cb is not None:
-            try:
-                cb.stop()
-                print(f"Callback '{cb_name}' stopped")
-            except Exception as exc:
-                print(f"⚠️ Error stopping callback '{cb_name}': {exc}")
+            _stop_callback(cb_name, cb)
             globals()[cb_name] = None
     # Reset histogram tracking when cleaning up callbacks
     delay_samples.clear()
@@ -503,6 +515,14 @@ def update_timeline():
     timeline_pane.object = timeline_fig
 
 
+def _map_anim() -> None:
+    """Periodic callback updating map and timeline safely."""
+    if not session_alive():
+        return
+    update_map()
+    update_timeline()
+
+
 def update_histogram(metrics: dict | None = None) -> None:
     """Mettre à jour l'histogramme interactif selon l'option sélectionnée."""
     global delay_samples, hist_event_index
@@ -634,7 +654,6 @@ _update_adr_badge("ADR 1")
 def periodic_chrono_update():
     global chrono_indicator, start_time, elapsed_time, max_real_time
     if not session_alive():
-        _cleanup_callbacks()
         return
     if start_time is not None:
         elapsed_time = time.time() - start_time
@@ -648,8 +667,6 @@ def step_simulation():
     global runs_metrics
     alive = session_alive()
     if sim is None or not alive:
-        if not alive:
-            _cleanup_callbacks()
         return
 
     cont = sim.step()
@@ -707,16 +724,16 @@ def setup_simulation(seed_offset: int = 0):
     hist_event_index = 0
 
     if sim_callback:
-        sim_callback.stop()
+        _stop_callback("sim_callback", sim_callback)
         sim_callback = None
     if map_anim_callback:
-        map_anim_callback.stop()
+        _stop_callback("map_anim_callback", map_anim_callback)
         map_anim_callback = None
     if hist_callback:
-        hist_callback.stop()
+        _stop_callback("hist_callback", hist_callback)
         hist_callback = None
     if chrono_callback:
-        chrono_callback.stop()
+        _stop_callback("chrono_callback", chrono_callback)
         chrono_callback = None
 
     seed_val = int(seed_input.value)
@@ -843,25 +860,11 @@ def setup_simulation(seed_offset: int = 0):
 
     def _start_periodic_callbacks() -> None:
         global chrono_callback, sim_callback, map_anim_callback, hist_callback
-        chrono_callback = pn.state.add_periodic_callback(
-            periodic_chrono_update, period=100, timeout=None
-        )
-        sim_callback = pn.state.add_periodic_callback(
-            step_simulation, period=SIM_STEP_PERIOD_MS, timeout=None
-        )
-
-        def anim() -> None:
-            if not session_alive():
-                _cleanup_callbacks()
-                return
-            update_map()
-            update_timeline()
-
-        map_anim_callback = pn.state.add_periodic_callback(
-            anim, period=200, timeout=None
-        )
-        hist_callback = pn.state.add_periodic_callback(
-            update_histogram, period=int(HIST_UPDATE_PERIOD * 1000), timeout=None
+        chrono_callback = _start_callback("chrono_callback", periodic_chrono_update, 100)
+        sim_callback = _start_callback("sim_callback", step_simulation, SIM_STEP_PERIOD_MS)
+        map_anim_callback = _start_callback("map_anim_callback", _map_anim, 200)
+        hist_callback = _start_callback(
+            "hist_callback", update_histogram, int(HIST_UPDATE_PERIOD * 1000)
         )
 
     pn.state.onload(_start_periodic_callbacks)
@@ -960,16 +963,16 @@ def on_stop(event):
     update_map()
     update_timeline()
     if sim_callback:
-        sim_callback.stop()
+        _stop_callback("sim_callback", sim_callback)
         sim_callback = None
     if map_anim_callback:
-        map_anim_callback.stop()
+        _stop_callback("map_anim_callback", map_anim_callback)
         map_anim_callback = None
     if hist_callback:
-        hist_callback.stop()
+        _stop_callback("hist_callback", hist_callback)
         hist_callback = None
     if chrono_callback:
-        chrono_callback.stop()
+        _stop_callback("chrono_callback", chrono_callback)
         chrono_callback = None
 
     try:
@@ -1149,16 +1152,16 @@ def fast_forward(event=None):
 
         # Stop periodic callbacks to avoid concurrent updates
         if sim_callback:
-            sim_callback.stop()
+            _stop_callback("sim_callback", sim_callback)
             sim_callback = None
         if map_anim_callback:
-            map_anim_callback.stop()
+            _stop_callback("map_anim_callback", map_anim_callback)
             map_anim_callback = None
         if hist_callback:
-            hist_callback.stop()
+            _stop_callback("hist_callback", hist_callback)
             hist_callback = None
         if chrono_callback:
-            chrono_callback.stop()
+            _stop_callback("chrono_callback", chrono_callback)
             chrono_callback = None
 
         # Pause chrono so time does not keep increasing during fast forward
@@ -1185,7 +1188,6 @@ def fast_forward(event=None):
             def update_ui():
                 fast_forward_progress.value = 100
                 if not session_alive():
-                    _cleanup_callbacks()
                     try:
                         on_stop(None)
                     finally:
@@ -1231,11 +1233,8 @@ def fast_forward(event=None):
             if pn.io.with_lock(session_alive):
                 pn.io.with_lock(doc.add_next_tick_callback, update_ui)
             else:
-                pn.io.with_lock(_cleanup_callbacks)
-                try:
-                    pn.io.with_lock(on_stop, None)
-                finally:
-                    pn.io.with_lock(lambda: setattr(export_button, "disabled", False))
+                pn.io.with_lock(on_stop, None)
+                pn.io.with_lock(lambda: setattr(export_button, "disabled", False))
 
         threading.Thread(target=run_and_update, daemon=True).start()
 
@@ -1253,13 +1252,13 @@ def on_pause(event=None):
     if not paused:
         # Pausing the simulation
         if sim_callback:
-            sim_callback.stop()
+            _stop_callback("sim_callback", sim_callback)
             sim_callback = None
         if chrono_callback:
-            chrono_callback.stop()
+            _stop_callback("chrono_callback", chrono_callback)
             chrono_callback = None
         if hist_callback:
-            hist_callback.stop()
+            _stop_callback("hist_callback", hist_callback)
             hist_callback = None
         if start_time is not None:
             elapsed_time = time.time() - start_time
@@ -1273,11 +1272,13 @@ def on_pause(event=None):
         if start_time is None:
             start_time = time.time() - elapsed_time
         if sim_callback is None:
-            sim_callback = pn.state.add_periodic_callback(step_simulation, period=SIM_STEP_PERIOD_MS, timeout=None)
+            sim_callback = _start_callback("sim_callback", step_simulation, SIM_STEP_PERIOD_MS)
         if chrono_callback is None:
-            chrono_callback = pn.state.add_periodic_callback(periodic_chrono_update, period=100, timeout=None)
+            chrono_callback = _start_callback("chrono_callback", periodic_chrono_update, 100)
         if hist_callback is None:
-            hist_callback = pn.state.add_periodic_callback(update_histogram, period=int(HIST_UPDATE_PERIOD * 1000), timeout=None)
+            hist_callback = _start_callback(
+                "hist_callback", update_histogram, int(HIST_UPDATE_PERIOD * 1000)
+            )
         pause_button.name = "⏸ Pause"
         pause_button.button_type = "primary"
         fast_forward_button.disabled = False
