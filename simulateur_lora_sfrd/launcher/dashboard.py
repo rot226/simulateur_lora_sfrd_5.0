@@ -5,6 +5,22 @@ import numbers
 import subprocess
 import shutil
 
+REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
+
+
+def _install_requirements() -> None:
+    """Install Python packages required for the dashboard.
+
+    The dashboard can be launched without a prior ``pip install`` step.
+    When one of the heavy dependencies is missing, packages listed in
+    ``requirements.txt`` are installed automatically in the current
+    environment.
+    """
+
+    req_file = os.path.join(REPO_ROOT, "requirements.txt")
+    subprocess.check_call([sys.executable, "-m", "pip", "install", "-r", req_file])
+
+
 try:  # Les dépendances lourdes sont optionnelles pour pouvoir exécuter les tests sans elles
     import panel as pn
     import plotly.graph_objects as go
@@ -12,8 +28,17 @@ try:  # Les dépendances lourdes sont optionnelles pour pouvoir exécuter les te
     import time
     import threading
     import pandas as pd
-except Exception as exc:  # pragma: no cover - utilisé uniquement lorsque dépendances manquantes
-    raise ImportError("dashboard dependencies not available") from exc
+except Exception:  # pragma: no cover - utilisé uniquement lorsque dépendances manquantes
+    try:
+        _install_requirements()
+    except subprocess.CalledProcessError as exc:  # pragma: no cover
+        raise ImportError("dashboard dependencies not available") from exc
+    import panel as pn
+    import plotly.graph_objects as go
+    import numpy as np
+    import time
+    import threading
+    import pandas as pd
 
 # Assurer la résolution correcte des imports quel que soit le répertoire
 # depuis lequel ce fichier est exécuté. On ajoute le dossier parent
@@ -22,7 +47,6 @@ except Exception as exc:  # pragma: no cover - utilisé uniquement lorsque dépe
 # fonctionnera aussi avec la commande ``panel serve dashboard.py`` exécutée
 # depuis ce dossier et les modules comme ``traffic`` seront importables.
 ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
 for path in (ROOT_DIR, REPO_ROOT):
     if path not in sys.path:
         sys.path.insert(0, path)
