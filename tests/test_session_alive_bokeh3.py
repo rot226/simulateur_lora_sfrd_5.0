@@ -10,16 +10,22 @@ dashboard = pytest.importorskip(
 
 
 class DummySessionContext:
-    def __init__(self):
-        # Simulates Bokeh >=3 where the ``session`` attribute is missing
-        # but ``server_context`` is still available for active sessions.
-        self.server_context = object()
+    def __init__(self, server_present: bool = True):
+        # Simulates Bokeh >=3 where the ``session`` attribute is missing.
+        # ``server_context`` indicates an active session when present.
+        self.server_context = object() if server_present else None
 
 
 class DummyDoc:
-    session_context = DummySessionContext()
+    def __init__(self, server_present: bool = True):
+        self.session_context = DummySessionContext(server_present)
 
 
 def test_session_alive_with_server_context(monkeypatch):
     monkeypatch.setattr(dashboard.pn.state, "curdoc", DummyDoc())
     assert dashboard.session_alive() is True
+
+
+def test_session_alive_without_server_context(monkeypatch):
+    monkeypatch.setattr(dashboard.pn.state, "curdoc", DummyDoc(server_present=False))
+    assert dashboard.session_alive() is False
