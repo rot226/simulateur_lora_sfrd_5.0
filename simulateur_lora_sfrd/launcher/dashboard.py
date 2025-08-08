@@ -387,7 +387,7 @@ export_message = pn.pane.HTML("Cliquez sur Exporter pour générer le fichier CS
 
 # --- Indicateurs de métriques ---
 pdr_indicator = pn.indicators.Number(name="PDR", value=0, format="{value:.1%}")
-# Display collisions as a float in case multiple runs are averaged
+# Afficher les collisions en nombre flottant pour gérer les moyennes multi-runs
 collisions_indicator = pn.indicators.Number(
     name="Collisions", value=0.0, format="{value:.1f}"
 )
