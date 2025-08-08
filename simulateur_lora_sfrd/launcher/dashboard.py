@@ -1224,7 +1224,7 @@ def fast_forward(event=None):
                     pct = int(sim.packets_sent / total_packets * 100)
                     if pct != last:
                         last = pct
-                        if pn.io.with_lock(session_alive):
+                        if session_alive():
                             pn.io.with_lock(
                                 lambda: doc.add_next_tick_callback(
                                     lambda val=pct: setattr(
@@ -1278,11 +1278,11 @@ def fast_forward(event=None):
                 pause_button.disabled = pause_prev_disabled
                 export_button.disabled = False
 
-            if pn.io.with_lock(session_alive):
+            if session_alive():
                 pn.io.with_lock(lambda: doc.add_next_tick_callback(update_ui))
             else:
-                pn.io.with_lock(lambda: on_stop(None))
-                pn.io.with_lock(lambda: setattr(export_button, "disabled", False))
+                on_stop(None)
+                export_button.disabled = False
 
         threading.Thread(target=run_and_update, daemon=True).start()
 
