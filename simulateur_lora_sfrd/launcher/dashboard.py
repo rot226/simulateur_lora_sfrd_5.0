@@ -198,14 +198,29 @@ def session_alive() -> bool:
         # initialised yet. Returning ``True`` allows periodic callbacks to
         # continue running until the connection is properly established.
         return True
+
     session = getattr(sc, "session", None)
-    if session is not None and getattr(session, "closed", False):
+    if session is not None:
+        if getattr(session, "closed", False):
+            msg = "⚠️ Bokeh session inactive"
+            print(msg)
+            if not _session_alert_shown:
+                _add_alert(msg, alert_type="warning")
+                _session_alert_shown = True
+            return False
+        return True
+
+    # ``session`` is None. For Bokeh>=3 the presence of ``server_context``
+    # indicates the connection is still alive.  Only when both are missing do
+    # we consider the session definitively closed.
+    if getattr(sc, "server_context", None) is None:
         msg = "⚠️ Bokeh session inactive"
         print(msg)
         if not _session_alert_shown:
             _add_alert(msg, alert_type="warning")
             _session_alert_shown = True
         return False
+
     return True
 
 
@@ -697,8 +712,11 @@ def periodic_chrono_update():
 # --- Callback étape de simulation ---
 def step_simulation():
     global runs_metrics, pdr_table_step_counter, pdr_table_last_update
+    if sim is None:
+        return
     alive = session_alive()
-    if sim is None or not alive:
+    if not alive:
+        print("Debug: step_simulation skipped (inactive session)")
         return
     try:
         cont = sim.step()
