@@ -585,6 +585,7 @@ class Simulator:
         self.delivered_by_sf: Counter[int] = Counter()
         self.sent_by_class: Counter[str] = Counter()
         self.delivered_by_class: Counter[str] = Counter()
+        self.sent_by_gateway: Counter[int] = Counter()
         self.delivered_by_gateway: Counter[int] = Counter()
         self.total_payload_bits_delivered = 0
         self.event_sf: dict[int, int] = {}
@@ -853,6 +854,7 @@ class Simulator:
                 if best_snr is None or snr > best_snr:
                     best_snr = snr
                 # Démarrer la réception à la passerelle (gestion des collisions et capture)
+                self.sent_by_gateway[gw.id] += 1
                 gw.start_reception(
                     event_id,
                     node_id,
@@ -1352,8 +1354,8 @@ class Simulator:
         }
         pdr_by_gateway = {
             gw.id: (
-                self.delivered_by_gateway[gw.id] / total_sent
-                if total_sent > 0
+                self.delivered_by_gateway[gw.id] / self.sent_by_gateway[gw.id]
+                if self.sent_by_gateway[gw.id] > 0
                 else 0.0
             )
             for gw in self.gateways
