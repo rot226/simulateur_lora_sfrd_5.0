@@ -75,41 +75,24 @@ if not os.path.exists(LIB_FLORA):
             f"{lib_name} introuvable dans 'launcher' mais présent dans "
             f"'{flora_dir}'. Copiez-le manuellement."
         )
-        print(msg)
-        _add_alert(msg, alert_type="warning")
     else:
-        print(f"{lib_name} manquant, compilation...")
-        scripts_dir = os.path.join(REPO_ROOT, "scripts")
-        if sys.platform.startswith("win"):
-            script = os.path.join(scripts_dir, "build_flora_cpp.ps1")
-            cmd = [
-                "powershell",
-                "-NoProfile",
-                "-ExecutionPolicy",
-                "Bypass",
-                "-File",
-                script,
-            ]
-        else:
-            script = os.path.join(scripts_dir, "build_flora_cpp.sh")
-            cmd = ["bash", script]
-        try:
-            subprocess.run(cmd, check=True)
-        except Exception as exc:  # pragma: no cover - afficher erreur et continuer
-            msg = f"Échec de compilation de {lib_name}: {exc}"
-            print(msg)
-            _add_alert(msg)
-        else:
-            if not os.path.exists(built):
-                alt_ext = ".dll" if lib_ext == ".so" else ".so"
-                alt_built = os.path.join(flora_dir, f"libflora_phy{alt_ext}")
-                if os.path.exists(alt_built):
-                    built = alt_built
-                    LIB_FLORA = os.path.join(
-                        os.path.dirname(__file__), os.path.basename(built)
-                    )
-            if os.path.exists(built):
-                shutil.copy2(built, LIB_FLORA)
+        msg = (
+            f"{lib_name} introuvable. Utilisation de l'implémentation Python "
+            "(FloraPHY avec use_exact_ber=False)."
+        )
+    print(msg)
+    _add_alert(msg, alert_type="warning")
+
+    # Assure l'utilisation du repli Python sans tenter de charger la
+    # bibliothèque native.
+    from launcher import flora_phy as _flora_phy  # noqa: E402
+
+    class _FloraPHYFallback(_flora_phy.FloraPHY):  # type: ignore[misc]
+        def __init__(self, *args, **kwargs):  # pragma: no cover - wrapper simple
+            kwargs.setdefault("use_exact_ber", False)
+            super().__init__(*args, **kwargs)
+
+    _flora_phy.FloraPHY = _FloraPHYFallback
 
 from launcher.simulator import Simulator  # noqa: E402
 from launcher.channel import Channel  # noqa: E402
