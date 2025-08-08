@@ -1476,4 +1476,6 @@ dashboard = pn.Row(
     sizing_mode="stretch_width",
 )
 dashboard.servable(title="Simulateur LoRa")
-pn.state.on_session_destroyed(lambda session_context: _cleanup_callbacks())
+pn.state.on_session_destroyed(
+    lambda session_context, _cleanup=_cleanup_callbacks: _cleanup()
+)
